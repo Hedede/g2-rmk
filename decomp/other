@@ -1,0 +1,32 @@
+Eventsys/zCEventMessage.h:104:		msg->subType = uint16_t(id >> 16);
+Eventsys/zCEventMessage.h:105:		msg->Unpack(buffer, evman);
+Game/zCEventManager.h:32:		if (msg->IsDeleteable()) {
+Game/zCEventManager.h:34:			msg->Release();
+Scripts/Externals/Npc2.h:900:		msg->name = nameVfx;
+Scripts/Externals/Npc2.h:919:		msg->name = nameVfx;
+Scripts/Externals/Npc.h:1180:			msg->other = dynamic_cast<oCNpc>(obj);
+Scripts/Externals/Npc.h:1186:			msg->victim = dynamic_cast<oCNpc>(obj);
+Scripts/Externals/Npc.h:1190:		msg->flags ^= (msg->flags ^ (2 * inRoutine)) & 2;
+Scripts/Externals/Npc.h:1349:		msg->unki[12] = unkparam;
+Scripts/Externals/Npc.h:1402:		msg->talkingWith = talkingWith;
+Scripts/Externals/Npc.h:1459:		msg->number = 0;
+Scripts/Externals/Npc.h:1477:		msg->number = state;
+Scripts/Externals/Npc.h:1592:		msg->targetMode = 1;
+Scripts/Externals/Npc.h:1610:		msg->targetMode = 0;
+Scripts/Externals/Npc.h:2549:			msg->SetObjectName(name);
+Scripts/Externals/Npc.h:2825:		if (msg && msg->subType == 9)
+Scripts/Externals/Npc.h:2852:		msg->spellId = spell;
+Scripts/Externals/Npc.h:2853:		msg->investMana = investMana;
+Scripts/Externals/Npc.h:3026:		msg->name = "Nein";
+Scripts/Externals/Npc.h:3027:		msg->text = "Ja";
+Scripts/Externals/Npc.h:3049:		msg->name = textNo;
+Scripts/Externals/Npc.h:3050:		msg->text = textYes;
+Scripts/Externals/Npc.h:3082:		msg->posY = 0;
+Scripts/Externals/Npc.h:3103:		msg->target = other;
+Scripts/Externals/Npc.h:3104:		msg->posY = 1;
+Scripts/Externals/Print.h:110:		omsg->posX = x;
+Scripts/Externals/Print.h:111:		omsg->posY = y;
+Scripts/Externals/Print.h:112:		omsg->timeSec = (double)timeSec;
+Scripts/Externals/Print.h:113:		omsg->dialogNr = dialogNr;
+Scripts/Externals/Print.h:114:		omsg->font = font;
+Scripts/Externals/Print.h:115:		omsg->text = text;

@@ -10,40 +10,22 @@ public:
 	{
 	}
 
+	virtual ~zCVob();
+
 	virtual void Archive(zCArchiver& arc);
 	virtual void Unarchive(zCArchiver& arc);
 
-	virtual ~zCVob();
-	virtual void OnTrigger(zCVob *,zCVob *)
-	{
-	}
-	virtual void OnUntrigger(zCVob *,zCVob *)
-	{
-	}
-	virtual void OnTouch(zCVob *)
-	{
-	}
-	virtual void OnUntouch(zCVob *)
-	{
-	}
-	virtual void OnTouchLevel()
-	{
-	}
-	virtual void OnDamage(zCVob *,zCVob *,float,int,zVEC3 const &)
-	{
-	}
-	virtual void OnMessage(zCEventMessage *,zCVob *)
-	{
-	}
-	virtual void OnTick()
-	{
-	}
-	virtual void OnTimer()
-	{
-	}
-	virtual void PostLoad()
-	{
-	}
+	virtual void OnTrigger(zCVob *,zCVob *) { }
+	virtual void OnUntrigger(zCVob *,zCVob *) { }
+	virtual void OnTouch(zCVob *) { }
+	virtual void OnUntouch(zCVob *) { }
+	virtual void OnTouchLevel() { }
+	virtual void OnDamage(zCVob *,zCVob *,float,int,zVEC3 const &) { }
+	virtual void OnMessage(zCEventMessage *,zCVob *) { }
+	virtual void OnTick() { }
+	virtual void OnTimer() { }
+	virtual void PostLoad() { }
+
 	virtual void GetCharacterClass(void);
 	virtual void SetSleepingMode(zTVobSleepingMode);
 	virtual void EndMovement(int);
@@ -59,7 +41,7 @@ public:
 		return 0;
 	}
 
-	virtual int SetByScriptInstance(zSTRING const *,int)
+	virtual int SetByScriptInstance(zSTRING const*, int)
 	{
 		return 0;
 	}
@@ -89,7 +71,7 @@ public:
 			SetSleepingMode(1);
 	}
 
-	void GetEM(int doNotCreate);
+	void GetEM(int doNotCreate = 0);
 private:
 	zCTree<zCVob>* globalVobTreeNode;
 
@@ -116,6 +98,7 @@ private:
 	zCVisual* visual;
 	float     visualAlpha;
 	float     vobFarClipZScale;
+
 	int       aniMode;
 	float     aniModeStrength;
 	int       zBias;
@@ -132,7 +115,6 @@ private:
 
 	float nextOnTimer;
 
-	int bitfield[5];
 	struct {
 		uint32_t showVisual                : 1;
 		uint32_t drawBBox3D                : 1;
@@ -158,10 +140,10 @@ private:
 	uint8_t visualCamAlign;
 
 	struct {
-		uint32_t collButNoMove             : 4;
-		uint32_t dontWriteIntoArchive      : 1;
-		uint32_t bIsInWater                : 1;
-		uint32_t bIsAmbientVob             : 1;
+		uint32_t collButNoMove            : 4;
+		uint32_t dontWriteIntoArchive     : 1;
+		uint32_t isInWater                : 1;
+		uint32_t isAmbientVob             : 1;
 	} flags3;
 
 	zCCollisionObjectDef* collisionObjectClass;

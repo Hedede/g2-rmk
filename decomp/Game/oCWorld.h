@@ -19,6 +19,13 @@ public:
 	virtual void DisableVob(zCVob *);
 	virtual void TraverseVobList(zCVobCallback &,void *);
 	virtual void DisposeVobs();
+
+private:
+	//nicht ausprobiert, aber hoffentlich ist der Name Programm.
+	//wie hier sortiert ist weiß ich nicht.
+	zCListSort<zCVob>*   voblist;
+	zCListSort<oCNpc>*   voblist_npcs;
+	zCListSort<oCItem>*  voblist_items;
 };
 
 void oCWorld::Archive(zCArchiver& arc)
@@ -28,17 +35,17 @@ void oCWorld::Archive(zCArchiver& arc)
 		return;
 
 	int npcCount = 0;
-	for (auto j = voblist_npcs->next; j; j = j->next) {
-		if (!j->data->IsSelfPlayer() && !j->data->homeWorld)
+	for (auto list : voblist_npcs) {
+		if (!list->Get()->IsSelfPlayer() && !list->Get()->homeWorld)
 			++npcCount;
 	}
 	arc.WriteInt("npcCount", npcCount);
 
 	int nr = 0;
-	for (auto j = voblist_npcs->next; j; j = j->next) {
-		auto npc = j->data;
+	for (auto list : voblist_npcs) {
+		auto npc = list->Get();
 		if (!npc->IsSelfPlayer() && !npc->homeWorld) {
-			arc.WriteObject("npc"+nr, npc);
+			arc.WriteObject("npc"_s + nr, npc);
 			++nr;
 		}
 	}

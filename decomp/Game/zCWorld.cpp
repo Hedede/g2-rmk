@@ -8,8 +8,8 @@ const int oCWorldTimer_TicksPerMin_approx = 4167; //< 1 sec / Tag daneben
 
 class oCWorldTimer {
 	//250000 Ticks pro Stunde
-	zREAL worldTime;    //zREAL   
-	int day;          //int      
+	zREAL worldTime;    //zREAL
+	int day;          //int
 };
 
 
@@ -26,8 +26,8 @@ class zCTree {
 };
 
 class zTTraceRayReport  {
-	zBOOL      foundHit;               //   
-	zCVob*     foundVob;               //       
+	zBOOL      foundHit;               //
+	zCVob*     foundVob;               //
 	zCPolygon* foundPoly;              //
 	zVEC3      foundIntersection;   //
 	zVEC3      foundPolyNormal;     //
@@ -93,11 +93,13 @@ class zCBspTree {
 };
 
 class zCWorld : zCObject {
+	Z_OBJECT(zCWorld);
 public:
-	virtual void zCClassDef& GetClassDef();
-	virtual void ~zCWorld(uint);
-	virtual void Archive(zCArchiver &);
-	virtual void Unarchive(zCArchiver &);
+	virtual ~zCWorld();
+
+	virtual void Archive(zCArchiver& arc);
+	virtual void Unarchive(zCArchiver& arc);
+
 	virtual void LoadWorld(zSTRING const &,zCWorld::zTWorldLoadMode);
 	virtual void SaveWorld(zSTRING const &,zCWorld::zTWorldSaveMode,int,int);
 	virtual void MergeVobSubtree(zSTRING const &,zCVob *,zCWorld::zTWorldLoadMergeMode);
@@ -120,34 +122,38 @@ public:
 	virtual void VobAddedToWorld(zCVob *);
 	virtual void VobRemovedFromWorld(zCVob *);
 	virtual void RenderWaynet(zCCamera *);
-};
 
-class oWorld : zCObject {
-	zCTree<zCVob>     globalVobTree;  //Jedes (?) Vob in der Welt ist hier drin.
+	enum zTWorldLoadMode {
+		zWLD_LOAD_GAME_STARTUP,
+		zWLD_LOAD_GAME_SAVED_DYN,
+		zWLD_LOAD_GAME_SAVED_STAT,
+		zWLD_LOAD_EDITOR_COMPILED,
+		zWLD_LOAD_EDITOR_UNCOMPILED,
+		zWLD_LOAD_MERGE
+	};
 
-	enum                zTWorldLoadMode         {
-		zWLD_LOAD_GAME_STARTUP,         
-		zWLD_LOAD_GAME_SAVED_DYN,       
-		zWLD_LOAD_GAME_SAVED_STAT,      
-		zWLD_LOAD_EDITOR_COMPILED,      
-		zWLD_LOAD_EDITOR_UNCOMPILED,    
-		zWLD_LOAD_MERGE 
+	enum zTWorldSaveMode         {
+		zWLD_SAVE_GAME_SAVED_DYN,
+		zWLD_SAVE_EDITOR_COMPILED,
+		zWLD_SAVE_EDITOR_UNCOMPILED,
+		zWLD_SAVE_COMPILED_ONLY
 	};
-	enum                zTWorldSaveMode         {
-		zWLD_SAVE_GAME_SAVED_DYN,       
-		zWLD_SAVE_EDITOR_COMPILED,      
-		zWLD_SAVE_EDITOR_UNCOMPILED,    
-		zWLD_SAVE_COMPILED_ONLY         
+
+	enum zTWorldLoadMergeMode {
+		zWLD_LOAD_MERGE_ADD,
+		zWLD_LOAD_MERGE_REPLACE_ROOT_VISUAL
 	};
-	enum                zTWorldLoadMergeMode    {
-		zWLD_LOAD_MERGE_ADD,                    
-		zWLD_LOAD_MERGE_REPLACE_ROOT_VISUAL 
-	};
+
+private:
+	//Jedes (?) Vob in der Welt ist hier drin.
+	zCTree<zCVob>     globalVobTree;
+
+
 
 	zTTraceRayReport  traceRayReport;
 
 
-	enum zTStaticWorldLightMode {   
+	enum zTStaticWorldLightMode {
 		zWLD_LIGHT_VERTLIGHT_ONLY,
 		zWLD_LIGHT_VERTLIGHT_LIGHTMAPS_LOW_QUAL,
 		zWLD_LIGHT_VERTLIGHT_LIGHTMAPS_MID_QUAL,
@@ -155,47 +161,49 @@ class oWorld : zCObject {
 	};
 
 	enum zTWld_RenderMode {
-		zWLD_RENDER_MODE_VERT_LIGHT,        
+		zWLD_RENDER_MODE_VERT_LIGHT,
 
-		zWLD_RENDER_MODE_LIGHTMAPS 
-	};  
+		zWLD_RENDER_MODE_LIGHTMAPS
+	};
 
-	//Sonstige Daten:
-	/*0x0060*/  zCSession*       ownerSession;      //
-	/*0x0064*/  zCCSPlayer*      csPlayer;          //
+	zCSession*       ownerSession;
+	zCCSPlayer*      csPlayer;
 
-	/*0x0068*/  zSTRING m_strlevelName; //zSTRING                    
-	/*0x007C*/  zBOOL            compiled;
-	/*0x0080*/  zBOOL            compiledEditorMode;
-	/*0x0084*/  zBOOL            traceRayIgnoreVobFlag;
-	/*0x0088*/  zBOOL            m_bIsInventoryWorld;
-	/*0x008C*/  zTWld_RenderMode worldRenderMode;
-	/*0x0090*/  zCWayNet*        wayNet;
-	/*0x0094*/  zTFrameCtr       masterFrameCtr;
-	/*0x0098*/  zREAL            vobFarClipZ;
-	/*0x009C*/  zREAL            vobFarClipZScalability;
+	zSTRING          levelName;
+	zBOOL            compiled;
+	zBOOL            compiledEditorMode;
+	zBOOL            traceRayIgnoreVobFlag;
+	zBOOL            isInventoryWorld;
+	zTWld_RenderMode worldRenderMode;
+	zCWayNet*        wayNet;
+	zTFrameCtr       masterFrameCtr;
+	zREAL            vobFarClipZ;
+	zREAL            vobFarClipZScalability;
 
 	zCArray<zCVob*>               traceRayVobList;
 	zCArray<zCVob*>               traceRayTempIgnoreVobList;
 
-	/*0x00B8*/  zBOOL             renderingFirstTime;         //         
-	/*0x00BC*/  zBOOL             showWaynet;                 // 
-	/*0x00C0*/  zBOOL             showTraceRayLines;          // 
-	/*0x00C4*/  zCViewProgressBar*progressBar;                // 
-	/*0x00C8*/  zDWORD            unarchiveFileLen;           //
-	/*0x00CC*/  zDWORD            unarchiveStartPosVobtree;   //
-	/*0x00D0*/  int               numVobsInWorld;             //              
+	zBOOL             renderingFirstTime;
+	zBOOL             showWaynet;
+	zBOOL             showTraceRayLines;
+
+	zCViewProgressBar* progressBar;
+
+	zDWORD unarchiveFileLen;
+	zDWORD unarchiveStartPosVobtree;
+
+	int numVobsInWorld;
 
 	zCArray<zCWorldPerFrameCallback*> perFrameCallbackList;
 
 	//Der Outdoorskycontroller ist der interessante
 	//Hat eine Outdoorwelt einen Indoorskycontroller für Portalräume?
-	/*0x00E0*/  zCSkyControler* skyControlerIndoor;        //
-	/*0x00E4*/  zCSkyControler* skyControlerOutdoor;       //
-	/*0x00E8*/  zCSkyControler* activeSkyControler;        //
+	zCSkyControler* skyControlerIndoor;
+	zCSkyControler* skyControlerOutdoor;
+	zCSkyControler* activeSkyControler;
 
-	// zones                    
-	zCArray<zCZone*>          zoneGlobalList;     //Defaut-Zonen sind am Anfang der Liste
+	//Defaut-Zonen sind am Anfang der Liste
+	zCArray<zCZone*>          zoneGlobalList;
 	zCArraySort<zCZone*>      zoneActiveList;
 
 	zCArraySort<zCZone*>      zoneLastClassList;
@@ -207,15 +215,17 @@ class oWorld : zCObject {
 	//Um die zur Zeit relevante Menge von Zonen einzugrenzen?
 	zCVobBBox3DSorter<zCZone>::zTBoxSortHandle    zoneActiveHandle;
 
-	/*0x01A0*/  zBOOL addZonesToWorld;                        //zBOOL
-	/*0x01A4*/  zBOOL showZonesDebugInfo;                     //zBOOL
+	zBOOL addZonesToWorld;
+	zBOOL showZonesDebugInfo;
 
 	//--------------------------------------
 	// Binary Space Partitioning Tree
 	//--------------------------------------
 
-	zCCBspTree*cbspTree;                               //   //"construction" Bsp. Was tut der?
-	zCBspTree bspTree;                    //Hier der eigentliche bsp Tree:
+	//"construction" Bsp. Was tut der?
+	zCCBspTree* cbspTree;
+	//Hier der eigentliche bsp Tree:
+	zCBspTree   bspTree;
 
 	zCArray<zCVob*>               activeVobList;  //aktive Vobs (Physik / AI)
 	zCArray<zCVob*>               walkList; // wird im jedem Frame als Kopie der activeVobList gesetzt. Dann bekommt jedes Objekt in der Liste die Gelegenheit seinen Kram zu erledigen.
@@ -227,10 +237,4 @@ class oWorld : zCObject {
 
 	zSTRING worldFilename;   //zSTRING Pfad des aktuellen Levels
 	zSTRING worldName;       //zSTRING Name des aktuellen Levels
-
-	//nicht ausprobiert, aber hoffentlich ist der Name Programm.
-	//wie hier sortiert ist weiß ich nicht.
-	zCListSort<zCVob>*   voblist;            //
-	zCListSort<oCNpc>*   voblist_npcs;       //
-	zCListSort<oCItem>*  voblist_items;      //
 };

@@ -98,6 +98,14 @@ public:
 		return numInArray;
 	}
 
+	void Resize(int newSize)
+	{
+		AllocAbs(newSize);
+		numInArray = newSize;
+		for (int i = 0; i < numInArray; ++i)
+			array[i] = {};
+	}
+
 	int InsertEnd(T const& val)
 	{
 		if (numAlloc < numInArray + 1) {
@@ -118,6 +126,7 @@ public:
 			else
 				AllocDelta(numAlloc, 16);
 		}
+
 		memmove(array[idx + 1], array[idx], sizeof(T) * (numInArray - idx));
 		array[idx] = val;
 		return numInArray++;

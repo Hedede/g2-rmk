@@ -132,5 +132,6 @@ public:
 	virtual void DeleteBuffer();
 private:
 	int DebugMessage(zSTRING const& msg);
+	void CheckObjectListSize(int numRequired);
 
 };

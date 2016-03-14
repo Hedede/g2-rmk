@@ -23,6 +23,17 @@ public:
 
 	virtual void CanBeUsed(zCVob const *);
 
+	int zCWaypoint::GetNumberOfWays() const
+	{
+		return wayList.GetNumInList();
+	}
+
+	zSTRING GetName()
+	{
+		if (wpvob)
+			name = wpvob->GetObjectName();
+		return name;
+	}
 private:
 	// Kürzeste Weg Suche durch das zCWaynet
 	// Diese Eigenschaften besser nicht nutzen,

@@ -1,3 +1,15 @@
+template<class Key, class Element>
+class zTRayTurboValMap {
+	struct zSNode {
+		Key             key;
+		Element         element;
+		unsigned long   u32Hash;
+		zSNode*         pNext;
+	};
+
+	zCArray<zSNode*> nodes;`
+};
+
 zCVobLight *__thiscall zCVobLight::zCVobLight(zCVobLight *this)
 {
   int v2; // edi@1

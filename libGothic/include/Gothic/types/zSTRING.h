@@ -133,4 +133,9 @@ zSTRING operator+(char c, zSTRING const& str)
 	tmp += str;
 	return tmp;
 }
+
+zSTRING operator ""_s (const char* str)
+{
+	return str;
+}
 #endif//G2_zSTRING_h

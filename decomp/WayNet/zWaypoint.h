@@ -34,6 +34,20 @@ public:
 			name = wpvob->GetObjectName();
 		return name;
 	}
+
+	void Init(zCVobWaypoint* wpwob)
+	{
+		this->wpvob = wpvob;
+
+		name = wpvob->GetObjectName();
+		name.Upper();
+
+		pos = wpvop->trafoObjToWorld.GetTranslation();
+		dir = wpvob->trafoObjToWorld.GetAtVector();
+
+		AddRef(wpvob);
+	}
+
 private:
 	// Kürzeste Weg Suche durch das zCWaynet
 	// Diese Eigenschaften besser nicht nutzen,

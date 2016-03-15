@@ -19,8 +19,8 @@ public:
 	virtual void WriteChunkStart(char const *,char const	*,ushort,ulong);
 	virtual void WriteChunkStart(char const *,ushort);
 	virtual void WriteChunkEnd();
-	virtual void WriteGroupBegin(char const	*);
-	virtual void WriteGroupEnd(char const *);
+	virtual void WriteGroupBegin(char const*) {}
+	virtual void WriteGroupEnd(char const*)   {}
 	virtual void ReadInt(char const	*);
 	virtual void ReadInt(char const *,int &);
 	virtual void ReadByte(char const *);
@@ -51,7 +51,10 @@ public:
 	virtual void ReadChunkStartNamed(char const *,ushort &);
 	virtual void SkipOpenChunk();
 	virtual void GetCurrentChunkVersion();
-	virtual void GetFile();
+	virtual zFILE* GetFile()
+	{
+		return file;
+	}
 	virtual void GetBufferString(zSTRING &);
 	virtual void GetBuffer();
 	virtual void EndOfArchive();
@@ -63,8 +66,14 @@ public:
 	virtual void SetChecksumEnabled(int);
 	virtual void SetNoReadSearchCycles(int);
 	virtual void InProperties();
-	virtual void InSaveGame();
-	virtual void InBinaryMode();
+	virtual bool InSaveGame() const
+	{
+		return inSaveGame;
+	}
+	virtual bool InBinaryMode() const
+	{
+		return true;
+	}
 	virtual void GetParentObject();
 	virtual void OpenWriteBuffer(zCBuffer *,zTArchiveMode,int,int,int);
 	virtual void OpenWriteFile(zFILE *,zTArchiveMode,int,int,int);

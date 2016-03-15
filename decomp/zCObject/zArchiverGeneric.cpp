@@ -1,3 +1,9 @@
+zCArchiverGeneric::zCArchiverGeneric()
+	: zCArchiver(), writeObjectEntries(0)
+{
+	writeObjectEntries.CreateObject(0x407);
+}
+
 zCArchiverGeneric::~zCArchiverGeneric()
 {
 	Close();
@@ -24,14 +30,37 @@ int zCArchiverGeneric::RestoreGetPos()
 	return file->Pos();
 }
 
-int32_t zCArchvierGeneric::ReadInt(char const* name)
+void zCArchiverGeneric::RestoreSeek(size_t pos)
+{
+	if ( pos != RestoreGetPos() ) {
+		if ( useBuffer )
+			buffer->SetPos(pos);
+		else
+			file->Seek(pos);
+	}
+}
+
+int zCArchiverGeneric::EndOfArchive()
+{
+	if ( useBuffer )
+		return buffer->GetPos() > buffer->GetSize(); // >= ?
+
+	if (!file->Eof()) {
+		if (file->Pos() + 3 <= file->Size())
+			return 0;
+	}
+
+	return 1;
+}
+
+int32_t zCArchiverGeneric::ReadInt(char const* name)
 {
 	int tmp;
 	ReadInt(name, tmp);
 	return tmp;
 }
 
-void zCArchvierGeneric::ReadInt(char const* name,int& value)
+void zCArchiverGeneric::ReadInt(char const* name,int& value)
 {
 	if ( inBinaryMode ) {
 		RestoreBuffer(value, sizeof(value));
@@ -42,14 +71,14 @@ void zCArchvierGeneric::ReadInt(char const* name,int& value)
 		value = tempString.ToInt();
 }
 
-uint8_t zCArchvierGeneric::ReadByte(char const* name)
+uint8_t zCArchiverGeneric::ReadByte(char const* name)
 {
 	uint8_t tmp;
 	ReadByte(name, tmp);
 	return tmp;
 }
 
-void zCArchvierGeneric::ReadByte(char const* name, uint8_t& byte)
+void zCArchiverGeneric::ReadByte(char const* name, uint8_t& byte)
 {
 	if ( inBinaryMode ) {
 		RestoreBuffer(value, sizeof(byte));
@@ -60,13 +89,13 @@ void zCArchvierGeneric::ReadByte(char const* name, uint8_t& byte)
 		value = tempString.ToInt();
 }
 
-uint16_t zCArchvierGeneric::ReadWord(char const* name)
+uint16_t zCArchiverGeneric::ReadWord(char const* name)
 {
 	uint16_t tmp;
 	ReadWord(name, tmp);
 	return tmp;
 }
-void zCArchvierGeneric::ReadWord(char const* name,uint16_t& word)
+void zCArchiverGeneric::ReadWord(char const* name,uint16_t& word)
 {
 	if ( inBinaryMode ) {
 		RestoreBuffer(value, sizeof(word));
@@ -77,14 +106,14 @@ void zCArchvierGeneric::ReadWord(char const* name,uint16_t& word)
 		value = tempString.ToInt();
 }
 
-void zCArchvierGeneric::ReadFloat(char const* name)
+void zCArchiverGeneric::ReadFloat(char const* name)
 {
 	float tmp;
 	ReadFloat(name, tmp);
 	return tmp;
 }
 
-void zCArchvierGeneric::ReadFloat(char const* name, float& value)
+void zCArchiverGeneric::ReadFloat(char const* name, float& value)
 {
 	if ( inBinaryMode ) {
 		RestoreBuffer(value, sizeof(value));
@@ -95,14 +124,14 @@ void zCArchvierGeneric::ReadFloat(char const* name, float& value)
 		value = tempString.ToFloat();
 }
 
-bool zCArchvierGeneric::ReadBool(char const* name)
+bool zCArchiverGeneric::ReadBool(char const* name)
 {
 	zBOOL val;
 	ReadBool(name, val);
 	return val;
 }
 
-void zCArchvierGeneric::ReadBool(char const* name, zBOOL& val)
+void zCArchiverGeneric::ReadBool(char const* name, zBOOL& val)
 {
 	if ( inBinaryMode ) {
 		val = ReadByte(name);
@@ -113,13 +142,13 @@ void zCArchvierGeneric::ReadBool(char const* name, zBOOL& val)
 		value = tempString.ToInt();
 }
 
-zSTRING zCArchvierGeneric::ReadString(char const* name)
+zSTRING zCArchiverGeneric::ReadString(char const* name)
 {
 	zSTRING str;
 	ReadString(name, str);
 	return str;
 }
-void zCArchvierGeneric::ReadString(char const* name, zSTRING& str)
+void zCArchiverGeneric::ReadString(char const* name, zSTRING& str)
 {
 	if ( inBinaryMode )
 		RestoreString0(str);
@@ -127,13 +156,13 @@ void zCArchvierGeneric::ReadString(char const* name, zSTRING& str)
 		ReadEntryASCII(name, str);
 }
 
-zVEC3 zCArchvierGeneric::ReadVec3(char const* name)
+zVEC3 zCArchiverGeneric::ReadVec3(char const* name)
 {
 	zVEC3 vec;
 	ReadVec3(name, vec);
 	return vec;
 }
-void zCArchvierGeneric::ReadVec3(char const* name,zVEC3& vec)
+void zCArchiverGeneric::ReadVec3(char const* name,zVEC3& vec)
 {
 	if ( inBinaryMode ) {
 		enu = ReadByte(name);
@@ -146,14 +175,14 @@ void zCArchvierGeneric::ReadVec3(char const* name,zVEC3& vec)
 	}
 }
 
-zCOLOR zCArchvierGeneric::ReadColor(char const* name)
+zCOLOR zCArchiverGeneric::ReadColor(char const* name)
 {
 	zCOLOR color;
 	ReadColor(name, color);
 	return color;
 }
 
-void zCArchvierGeneric::ReadColor(char const* name, zCOLOR& color)
+void zCArchiverGeneric::ReadColor(char const* name, zCOLOR& color)
 {
 	if ( inBinaryMode ) {
 		enu = ReadByte(name);
@@ -171,14 +200,14 @@ void zCArchvierGeneric::ReadColor(char const* name, zCOLOR& color)
 	}
 }
 
-uint32_t zCArchvierGeneric::ReadEnum(char const* name)
+uint32_t zCArchiverGeneric::ReadEnum(char const* name)
 {
 	uint32_t enu;
 	ReadEnum(name, enu);
 	return enu;
 }
 
-void zCArchvierGeneric::ReadEnum(char const* name, ulong enu)
+void zCArchiverGeneric::ReadEnum(char const* name, ulong enu)
 {
 	if ( inBinaryMode ) {
 		enu = ReadByte(name);
@@ -230,6 +259,22 @@ virtual void ReadRawFloat(char const* name, void* out, size_t size)
 		zSTRING word = tempString.PickWord(i, " ", " ");
 		*out++ = word.ToFloat();
 	}
+}
+
+int zCArchiverGeneric::StoreGetPos()
+{
+	if ( useBuffer )
+		return = buffer->GetPos(this->buffer);
+	return file->Pos();
+}
+
+
+void zCArchiverGeneric::StoreSeek(size_t pos)
+{
+	if ( useBuffer )
+		buffer->SetPos(pos);
+	else
+		file->Seek(pos);
 }
 
 void zCArchiverGeneric::StoreBuffer(void* buf, size_t size)
@@ -418,32 +463,33 @@ zCObject* zCArchiverGeneric::ReadObject(const char *name, zCObject* object)
 	if ( !ReadChunkStart(name) )
 		return object;
 
-	zSTRING chunkType = chunkRecords.End().className;
+	int numChunks = chunkRecords.GetNumInList();
+	zSTRING chunkType = chunkRecords[numChunks-1].className;
 
 	if (chunkType[0] == '%') {
-		SkipChunk(1);
+		SkipOpenChunk();
 		return object;
 	}
 
 	if (chunkType[0] == '§') {
-		int index = chunkRecords.End().objRef;
+		int index = chunkRecords[numChunks-1].objectIndex;
 
 		if ( index >= objectList.GetNumInList() )
-			zFATAL("D: zArchiver(::ReadObject): objRef, illegal object index: "_s + objRef); // 1167
+			zFATAL("D: zArchiver(::ReadObject): objRef, illegal object index: "_s + index); // 1167
 
 		if (!objectList[index])
 			zFATAL("D: zArchiver(::ReadObject): objRef, referenced object has not been read, object index: "_s + index); // 1168
 
 		if (!object) {
 			objectList[index]->AddRef();
-			SkipChunk(1);
+			SkipOpenChunk();
 			return objectList[index];
 		}
 
 		if ( objectList[index] != object )
 			zWARNING("D: zArchiver(::ReadObject): found an objectPtr in file, tried to write this to an 'objectUseThis'"); // 1176
 
-		SkipChunk(1);
+		SkipOpenChunk();
 		return object;
 	}
 
@@ -463,7 +509,7 @@ zCObject* zCArchiverGeneric::ReadObject(const char *name, zCObject* object)
 				zFAULT("D: zArchiver(::ReadObject): skipping object-chunk, class from file does not match class from 'objectUseThis', file: " + fileClass + ", obj: " + objClass); // 1224
 
 				skip = true;
-				int index = chunkRecords.End().objRef;
+				int index = chunkRecords[numChunks-1].objectIndex;
 
 				CheckObjectListSize(index + 1);
 
@@ -478,7 +524,7 @@ zCObject* zCArchiverGeneric::ReadObject(const char *name, zCObject* object)
 	}
 
 	if ( !retObj || skip ) {
-		SkipChunk(1);
+		SkipOpenChunk();
 		return object;
 	}
 
@@ -488,9 +534,9 @@ zCObject* zCArchiverGeneric::ReadObject(const char *name, zCObject* object)
 
 	if (chunkVersion != version && inBinaryMode) {
 		zWARNING("D: Archiver(::ReadObject): skipping object-chunk, tried to read object-chunk with out-of-date version: " + chunkVersion); // 1253
-		SkipChunk(1);
+		SkipOpenChunk();
 	} else {
-		int index = chunkRecords.End().objRef;
+		int index = chunkRecords[numChunks-1].objectIndex;
 
 		CheckObjectListSize(index + 1);
 
@@ -581,6 +627,39 @@ uint16_t zCArchiverGeneric::GetCurrentChunkVersion()
 	return chunk.version;
 }
 
+void zCArchiverGeneric::SkipChunk(int openChunk)
+{
+	int numChunks = chunkRecords.GetNumInList();
+	if (numChunks <= 0)
+		return;
+
+	if ( inBinaryMode ) {
+		auto& record = chunkRecords[numChunks - 1];
+		RestoreSeek(record.length + record.start);
+	} else {
+		zSTRING chunkhead;
+		size_t chunksToSkip  = 1;
+		size_t chunksSkipped = 0;
+
+		RestoreStringEOL(chunkhead);
+
+		while (chunksToSkip > 0) {
+			if (chunkhead[0] == '[') {
+				if (chunkhead[1] == ']')
+					--chunksToSkip;
+				else
+					++chunksToSkip;
+			}
+
+			if ( ++chunksSkipped > 1 )
+				__skipped_some_chunks = 1;
+		}
+	}
+
+	if ( openChunk )
+		chunkRecords.RemoveOrderIndex(numChunks - 1);
+}
+
 zCClassDef* zCArchiverGeneric::GetClassDefByString(zSTRING const& className)
 {
 	zCClassDef* classDef = nullptr;
@@ -602,4 +681,9 @@ zCObject* zCArchiverGeneric::CreateObject(zSTRING const& objName)
 	if ( !newinst )
 		zFAULT("D: zArchiver(zCArchiverGeneric::CreateObject): could not create object for: " + objName);
 	return newinst;
+}
+
+using Tester = void (*)(zCObject*, int, zCClassDef*, int *);
+void zCArchiverGeneric::TestClassIntegrity(Tester tester)
+{
 }

@@ -82,7 +82,10 @@ public:
 	virtual void ReadChunkStart(zSTRING&, ushort&);
 	virtual void ReadChunkStartNamed(char const *,ushort &);
 
-	virtual void SkipOpenChunk();
+	virtual void SkipOpenChunk()
+	{
+		SkipChunk(1);
+	}
 	virtual void GetCurrentChunkVersion();
 
 	virtual zFILE* GetFile();
@@ -188,7 +191,7 @@ private:
 
 	int checksumEnabled    = 0;
 	int arcFlags           = 0;
-	int notInProperties    = 0;
+	int notInProperties    = 1;
 	int noReadSearchCycles = 0;
 
 	zSTRING tempString;
@@ -197,5 +200,6 @@ private:
 
 	zCSparseArray<zCObject*,zTWriteObjectEntry> writeObjectEntries;
 
-	int unk_6[3];
+	int __skipped_some_chunks;
+	int unk_6[2];
 };

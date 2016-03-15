@@ -1,6 +1,20 @@
 class zCArchiver : public zCObject {
 	Z_OBJECT(zCArchiver);
 public:
+	struct zTChunkRecord {
+		zTChunkRecord() = default;
+		~zTChunkRecord() = default;
+		zTChunkRecord& operator(zTChunkRecord const&) = default;
+
+		int start;
+		int length;
+		int16_t versionSum;
+		int16_t version;
+		int objectIndex;
+		zSTRING className;
+		zSTRING chunkName;
+	};
+
 	virtual ~zCArchiver() = default;
 	virtual void WriteInt(char const *,int) = 0;
 	virtual void WriteByte(char const *,uchar) = 0;
@@ -90,4 +104,8 @@ public:
 	virtual void RestoreGetPos() = 0;
 	virtual void RestoreSeek(ulong) = 0;
 	virtual void DeleteBuffer() = 0;
+
+private:
+	int useBuffer;
+	int mode;
 };

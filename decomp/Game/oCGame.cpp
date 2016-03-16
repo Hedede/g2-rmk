@@ -1,18 +1,4 @@
 //statics:
-
-class zCSession {
-public:
-	virtual ~zCSession();
-	void CamInit(zCVob* camVob, zCCamera* camera);
-private:
-	zCCSManager*  csMan;
-	zCWorld*      world;
-	zCCamera*     camera;
-	zCAICamera*   aiCam;
-	zCVob*        camVob;
-	zCView*       viewport;
-};
-
 const int GAME_VIEW_MAX = 6;
 
 class oCGame : public zCSession {

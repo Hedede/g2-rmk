@@ -44,6 +44,11 @@ public:
 		return *this;
 	}
 
+	char const* Data()
+	{
+		return data.c_str();
+	}
+
 	char const* operator[](size_t index)
 	{
 		if (index >= data.size())
@@ -92,6 +97,7 @@ public:
 		return PickWord(nr, delim, " ");
 	}
 
+	uint32_t ToUint() const;
 	int32_t ToInt() const;
 	float ToFloat() const;
 	char ToChar() const;

@@ -227,6 +227,11 @@ zSTRING& zSTRING::UpperFirstLowerRest()
 	return *this;
 }
 
+unsigned long zSTRING::ToUint() const
+{
+	return stoul(data);
+}
+
 long zSTRING::ToInt() const
 {
 	return stol(data);

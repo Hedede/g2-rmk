@@ -1,103 +1,446 @@
-/*
-   The sense of "Temporary values" is probably, that the developers
-   thought of an "apply" button. If that "apply" button is used,
-   temporary values would have been made persistent.
-
-   Doesn't seem like this feature is used anywhere.
- */
-
-zSTRING[] zOPTION_PATHNAMES = {
-	"DIR_SYSTEM", "DIR_WEB", "DIR_SAVEGAMES", "DIR_DATA", "DIR_ANIMS",
-	"DIR_CUTSCENES", "DIR_OUTPUTUNITS", "DIR_MESHES", "DIR_SCRIPTS",
-	"DIR_SOUND", "DIR_VIDEO", "DIR_MUSIC", "DIR_TEX", "DIR_TEX_DESKTOP",
-	"DIR_WORLD", "DIR_PRESETS", "DIR_TOOLS_DATA", "DIR_COMPILED_ANIMS",
-	"DIR_COMPILED_MESHES", "DIR_COMPILED_SCRIPTS", "DIR_COMPILED_TEXTURES",
-	"DIR_TOOLS_CONFIG", "SUBDIR_INTERN", "", "DIR_ROOT", "DIR_EXECUTABLE",
+zCOption::zCOption()
+{
+	for (auto& dir : directory) {
+		dir = new zFILE_FILE();
+		// also assigns string some value,
+		// looks like assigns sdir_strings to itself
+	}
 }
 
-enum zTOptionPaths {
-	DIR_SYSTEM,
-	DIR_WEB,
-	DIR_SAVEGAMES,
-	DIR_DATA,
-	DIR_ANIMS,
-	DIR_CUTSCENES,
-	DIR_OUTPUTUNITS,
-	DIR_MESHES,
-	DIR_SCRIPTS,
-	DIR_SOUND,
-	DIR_VIDEO,
-	DIR_MUSIC,
-	DIR_TEX,
-	DIR_TEX_DESKTOP,
-	DIR_WORLD,
-	DIR_PRESETS,
-	DIR_TOOLS_DATA,
-	DIR_COMPILED_ANIMS,
-	DIR_COMPILED_MESHES,
-	DIR_COMPILED_SCRIPTS,
-	DIR_COMPILED_TEXTURES,
-	DIR_TOOLS_CONFIG,
-	SUBDIR_INTERN,
-	_UNKNOWN_,
-	DIR_ROOT,
-	DIR_EXECUTABLE,
-};
+zCOption::~zCOption()
+{
+	for (auto& sec : sectionList)
+		delete sec;
+	for (auto& dir : directory)
+		delete dir;
+}
 
-class zCOptionSection {
-	//name of the section. For example "GAME"
-	zSTRING secName;
-	//the entries in this section.
-	zCArray<zCOptionEntry*> entryList;
-};
+void zCOption::AddParameters(zSTRING params)
+{
+	commandline = params + " " + commandline;
+	commandline.Upper();
+}
 
-class zCOptionEntry {
-	zBOOL changed;            //zBOOL     //unused?
+void zCOption::ChangeDir(int dirId)
+{
+	auto dir = directory[dirId];
+	if ( dir ) {
+		dir->ChangeDir(0);
+	} else {
+		zFAULT("B: (zCOption::ChangeDir) directory-entry not defined!"); // 900
+	}
+}
 
-	zCArray <EntryChangeHandler> ccbList;
-	//engine functions that want to be informed, whenever this option changes. Quite useless for modders.
+zCOptionSection* zCOption::GetSectionByName(zSTRING const& secName, int create)
+{
+	zSTRING name = secName;
+	name.TrimLeft('[');
+	name.TrimRight(']');
+	name.Upper();
 
-	//  Variable-Data
-	zSTRING varName;         //name of the variable
-	zSTRING varValue;        //value of the variable (everything is converted to a string)
-	zSTRING varValueTemp;    //temporary value of the variable. See above. Useless as far as I can see.
-	int varFlag;           //int        //flags of the variable. The engine doesn't seem to care about these flags however.
-};
 
-const int NUM_ENTRIES = 26;
-
-class zCOption {
-public:
-	virtual ~zCOption();
-
-	void AddParameters(zSTRING params);
-	void ChangeDir(zTOptionPaths dirId);
-
-	zSTRING& zCOption::GetDirString(zTOptionPaths dirId)
-	{
-		return dir_string[dirId];
+	for (auto& section : sectionList) {
+		if (section->secName == secName)
+			return section;
 	}
 
-	uint32_t zCOption::GetNumSections() const
-	{
-		return sectionList.GetNumInList();
+	if (create) {
+		auto section = new zCOptionSection(secName);
+		sectionList.Insert(section);
+		return section;
 	}
 
-	int Parm(zSTRING const& parm);
-	int ReadRaw(zSTRING const& secName, char const* optName, char *& outArray,
-	        char* orArray, int orArraySize);
-private:
-	zBOOL m_bReadTemp;           //read "temporary" value instead of normal value.
+	return nullptr;
+ }
 
-	zCArray<zCOptionSection*> sectionList; //an ini files consists of sections
+bool zCOption::SectionExists(zSTRING const& secName)
+{
+	return GetSectionByName(secName, 1) != 0;
+}
 
-	zFILE* directory[NUM_ENTRIES];
-	zSTRING dir_string[NUM_ENTRIES];
-	//zCOptions is responsible for the command line as well.
-	zSTRING commandline;
-};
+int zCOption::RemoveSection(zSTRING const& secName)
+{
+	auto section = GetSectionByName(secName, 1); //BUG! should be 0
 
-void zDeinitOptions();
+	if (!section)
+		return 0;
+
+	sectionList.Remove(section);
+	return 1;
+}
+
+zCOptionEntry* zCOption::GetEntryByName(zCOptionSection* section, zSTRING const& name, int create)
+{
+	if ( !section )
+		return 0;
+
+	// int anz = section->entryList.GetNumInList();
+	for (auto& entry : section->entryList) {
+		if (entry->varName == name)
+			return entry;
+	}
+
+	if (create) {
+		auto entry = new zCOptionEntry(name, "");
+		section->entryList.Insert(entry);
+		return entry;
+	}
+
+	return nullptr;
+}
+
+bool zCOption::EntryExists(zSTRING const& secName, const char* name)
+{
+	auto sec = GetSectionByName(secName, 0);
+	if ( sec )
+		return GetEntryByName(sec, name, 0) != 0;
+	return false;
+}
+
+int zCOption::RemoveEntry(zSTRING const& secName, char const* name)
+{
+	auto section = GetSectionByName(secName, 1);
+	auto entry = GetEntryByName(section, name, 1);
+
+	if (entry) {
+		section->entryList.Remove(entry);
+		delete entry;
+	}
+	return 1;
+}
+
+void zCOption::SetFlag(zSTRING const& secName, const char* entryName, int flag)
+{
+	auto section = GetSectionByName(secName, 1);
+	auto entry = GetEntryByName(section, entryName, 1);
+	entry->varFlag |= flag;
+}
+
+int zCOption::Parm(zSTRING const& key)
+{
+	zSTRING param = "-" + key;
+	param.Upper();
+	commandline.Upper();
+
+	return commandline.Search(0, param, 1u) >= 0;
+}
+
+zSTRING zCOption::ParmValue(zSTRING const& key)
+{
+	zSTRING param = "-" + key + ":";
+	param.Upper();
+
+	int pos = commandline.Search(0, param, 1u);
+	if ( pos >= 0 ) {
+		int start = param.Length() + pos;
+		int end = start;
+		while(commandline[end] && commandline[end] != ' ')
+			++end;
+
+		return commandline.Copied(start, end - start);
+	}
+
+	return "";
+}
+
+float zCOption::ParmValueFloat(zSTRING const& key)
+{
+	zSTRING parmValue = ParmValue(key);
+	if (parmValue.IsEmpty)
+		return -1.0;
+	return parmValue.ToFloat();
+}
+
+int zCOption::ParmValueInt(zSTRING const& key)
+{
+	zSTRING parmValue = ParmValue(key);
+	if (parmValue.IsEmpty)
+		return -1;
+	return parmValue.ToInt();
+}
+
+zSTRING zCOption::ParmValueRaw(zSTRING const& key)
+{
+	return ParmValue(key);
+}
+
+void zCOption::InsertChangeHandler(zSTRING const& secName, const char* name, EntryChangeHandler ccb)
+{
+	auto section = GetSectionByName(secName, 1);
+	auto entry   = GetEntryByName(setion, name, 1);
+	entry->ccbList.Insert(ccb);
+}
+
+int zCOption::Load(zSTRING filename)
+{
+	zINFO(8,"B: INI: Loading " + filename + " ..."); // 229
+	filename.Lower();
+
+	sectionList.Clear();
+
+	ChangeDir(DIR_SYSTEM);
+
+	auto file = new zFILE_FILE(filename);
+	if ( !file )
+		return 0;
+
+	if ( !file->Exists() ) {
+		zWARNING("B: INI: File \"" + filename + "\" not found."); // 240
+		delete file;
+		return 0;
+	}
+
+	file->Open(0);
+
+	zSTRING secName = "HEAD";
+	auto head = new zCOptionSection(secName);
+	sectionList.Insert(head);
+
+	zINFO(8, "B: INI: Section: " + secName); // 254
+
+	zSTRING trash;
+	while ( !file->Eof() ) {
+		zSTRING readstr;
+		file->Read(readstr);
+
+		readstr.TrimLeft(' ');
+		readstr.TrimRight(' ');
+		
+		if (readstr.IsEmpty() || readstr[0] == ';') {
+			trash += readstr;
+
+			if ( file->Eof(file) )
+				continue;
+
+			trash += "\r\n";
+		} else {
+			if (!trash.IsEmpty()) {
+				auto entry = new zCOptionEntry("", trash);
+
+				entryList.Insert(entry);
+				zINFO(9,  "B: INI: Trash: ", trash); // 274
+			}
+
+			trash.Clear();
+
+			if (readstr[0] == '[') {
+				zINFO(8, ""); // 281
+
+				readstr.TrimLeft('[');
+				readstr.TrimRight(']');
+
+				auto sec = GetSectionByName(readstr, 1); // BUG! should be ,0
+				if (sec) {
+					zINFO(8, "B: INI: Section(cont): " + sec->secName); // 289
+				} else {
+					sec = new zCOptionSection(readstr);
+
+					sectionList.Insert(sec);
+
+					zINFO(8, "B: INI: Section: " + sec->secName); // 295
+				}
+
+				continue;
+			}
+
+			if (readstr.Search(0, "=", 1u) <= 0) {
+				zWARNING("B: INI: Unknown line: " + readstr); // 310
+				continue;
+			}
+
+			auto varName = readstr.Deleted("=", 3);
+			readstr.Delete("=", 4);
+
+			auto entry = new zCOptionEntry(varName, readstr);
+
+			entryList.Insert(entry);
+
+			zINFO(9, "B: INI: Entry: " + entry->varName + "=" + entry->varValue); // 306
+		}
+	}
+
+	if (!trash.IsEmpty()) {
+		auto entry = new zCOptionEntry("", trash);
+
+		entryList.Insert(entry);
+		zINFO(9,  "B: INI: Trash: ", trash); // 274
+	}
+
+	if (!trash.IsEmpty()) {
+		auto entry = new zCOptionEntry("", trash);
+
+		entryList.Insert(entry);
+		zINFO(9,  "B: INI: Trash: ", trash); // 320
+	}
+
+	file->Close();
+
+	char buffer[16];
+	int  size = 16;
+	GetComputerNameA(buffer, &size);
+
+	WriteString(zOPT_SEC_INTERNAL, "idComputerName", buffer, 0);
+
+	size = 16;
+	GetUserNameA(buffer, &size);
+	WriteString(zOPT_SEC_INTERNAL, "idUserName", buffer, 0);
+
+	zINFO(8, ""); // 346
+	zINFO(8, ""); // 347
+
+	delete file;
+	return 1;
+}
+
+int zCOption::Save(zSTRING filename)
+{
+	auto file = zfactory->CreateZFile(filename);
+	if (!file )
+		return 0;
+
+	zINFO(6, "B: INI: Saving " + filename + " ..."); // 374
+
+	ChangeDir(DIR_SYSTEM);
+
+	filename.Lower();
+
+	file->Create(filename);
+	int numSections = sectionList.GetNumInList();
+	for (auto section : sectionList) {
+		if (section->secName != "HEAD") {
+			auto secName = '[' + section->secName + ']' + "\r\n";
+			file->Write(secName);
+		}
+		zINFO(8, "B: INI: Section: ", section->secName); // 390
+
+		for (auto entry : section->entryList) {
+			if ((entry->varFlag & 1) != 1) {
+				if (entry->varName.IsEmpty())
+					continue;
+
+				auto var = entry->varName + "=" + entry->varValue + "\r\n";
+				file->Write(var);
+			}
+
+			zINFO(8,""); //407
+		}
+	}
+
+	delete file;
+
+	zINFO(6, ""); // 413
+
+	return 1;
+}
+
+int zCOption::ReadRaw(zSTRING const& secName, char const* optName, char *& outArray,
+                      char* orArray, int orArraySize)
+{
+	zCOptionSection* section = GetSectionByName(secName, 0);
+	zCOptionEntry* entry = GetEntryByName(section, optName, 0);
+
+	if (!section || !entry) {
+		if ( orArray )
+			WriteRaw(secName, optName, orArray, orArraySize, 0);
+	}
+
+	zSTRING rawstr;
+	ReadString(rawstr, secName, optName, 0);
+
+	int len = rawstr.Length();
+
+	outArray = new char[len/2];
+	int size = 0;
+
+	for (int i = 0; i < len; i += 2) {
+		uint32_t tmp;
+		sscanf(rawstr[i], "%2x", &tmp);
+		outArray[idx] = tmp;
+		size += 1;
+	}
+	return size;
+}
+
+zSTRING zCOption::ReadString(zSTRING const& secName, const char* optName, const char* defval)
+{
+	auto section = GetSectionByName(secName, 1);
+	auto option = GetEntryByName(section, optName, 1);
+
+	if (option->varValueTemp.IsEmpty() && defVal) {
+		varValueTemp = defVal;
+		varValue = defVal;
+	}
+
+	if ( !readTemp )
+		return optName->varValue;
+
+	return optName->varValueTemp;
+}
+
+zSTRING zCOption::ReadString(zSTRING const& secName, zSTRING const& optName, char const* defval)
+{
+	return ReadString(secName, optName.Data(), defval);
+}
+
+bool zCOption::ReadBool(zSTRING const& secName, const char* optName, bool defval)
+{
+	zSTRING val;
+	if (defval == true)
+		val = ReadString(secName, optName, "1");
+	else
+		val = ReadString(secName, optName, "0");
+
+	val.Upper();
+
+	if (val == "1" || val == "TRUE")
+		return true;
+
+	if (val == "0" || val == "FALSE")
+		return false;
+
+	return 0;
+}
+
+bool zCOption::ReadBool(zSTRING const& secName, zSTRING const& optName, bool defval)
+{
+	return ReadBool(secName, optName.Data(), defval);
+}
+
+int zCOption::ReadInt(zSTRING const& secName, const char* optName, int defval)
+{
+	zSTRING def = defval;
+	auto val = ReadString(secName, optName, def);
+	return val.ToInt();
+}
+
+int zCOption::ReadInt(zSTRING const& secName, zSTRING const& optName, int defval)
+{
+	return ReadInt(secName, optName.Data(), defval);
+}
+
+zDWORD zCOption::ReadDWord(zSTRING const& secName, const char* optName, zDWORD defval)
+{
+	zSTRING def = defval;
+	auto val = ReadString(secName, optName, def);
+	return val.ToUint();
+}
+
+zDWORD zCOption::ReadDWord(zSTRING const& secName, zSTRING const& optName, zDWORD defval)
+{
+	return ReadDWord(secName, optName.Data(), defval);
+}
+
+float zCOption::ReadReal(zSTRING const& secName, const char* optName, float defval)
+{
+	zSTRING def = defval;
+	auto val = ReadString(secName, optName, def);
+	return val.ToFloat();
+}
+
+float zCOption::ReadReal(zSTRING const& secName, zSTRING const& optName, float defval)
+{
+	return ReadReal(secName, optName.Data(), defval);
+}
 
 void zInitOptions()
 {
@@ -253,70 +596,4 @@ void zDeinitOptions()
 		Delete(zoptions);
 		Delete(zgameoptions);
 	}
-}
-
-void zCOption::AddParameters(zSTRING params)
-{
-	commandline = params + " " + commandline;
-	commandline.Upper();
-}
-
-void zCOption::ChangeDir(int dirId)
-{
-	auto dir = directory[dirId];
-	if ( dir ) {
-		dir->ChangeDir(0);
-	} else {
-		zFAULT("B: (zCOption::ChangeDir) directory-entry not defined!"); // 900
-	}
-}
-
-bool zCOption::EntryExists(zSTRING const& secName, const char* name)
-{
-	auto sec = GetSectionByName(secName, 0);
-	if ( sec )
-		return GetSectionByName(sec, name, 0) != 0;
-	return false;
-}
-
-bool zCOption::SectionExists(zSTRING const& secName)
-{
-  return GetSectionByName(secName, 1) != 0;
-}
-
-int zCOption::Parm(zSTRING const& parm)
-{
-	zSTRING search = "-" + parm;
-	search.Upper();
-	commandline.Upper();
-
-	return commandline.Search(0, search, 1u) >= 0;
-}
-
-int zCOption::ReadRaw(zSTRING const& secName, char const* optName, char *& outArray,
-                      char* orArray, int orArraySize)
-{
-	zCOptionSection* section = GetSectionByName(secName, 0);
-	zCOptionEntry* entry = GetEntryByName(section, optName, 0);
-
-	if (!section || !entry) {
-		if ( orArray )
-			WriteRaw(secName, optName, orArray, orArraySize, 0);
-	}
-
-	zSTRING rawstr;
-	ReadString(rawstr, secName, optName, 0);
-
-	int len = rawstr.Length();
-
-	outArray = new char[len/2];
-	int size = 0;
-
-	for (int i = 0; i < len; i += 2) {
-		uint32_t tmp;
-		sscanf(rawstr[i], "%2x", &tmp);
-		outArray[idx] = tmp;
-		size += 1;
-	}
-	return size;
 }

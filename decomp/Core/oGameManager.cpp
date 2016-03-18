@@ -1,4 +1,8 @@
-
+void CGameManager::RemoveSplashScreen()
+{
+	if ( idThread )
+		PostThreadMessageA(idThread, 0x12u, 0, 0);
+}
 
 void CGameManager::ExitGame()
 {

@@ -15,18 +15,71 @@ const int zERR_StackTraceOnlyForFirst = 0; /* nur für den ersten Error Stack Tr
 
 class zERROR {
 public:
+	virtual ~zERROR();
+
+	zSTRING GetFilterAuthors() const
+	{
+		return filter_authors;
+	}
+
+	zSTRING GetFilterFlagDescription() const
+	{
+		return "["_s + filter_flag + "]";
+	}
+
+	int GetFilterLevel() const
+	{
+		return filter_level;
+	}
+
+	zSTRING GetTargetDescription() const
+	{
+		zSTRING ret = "[";
+		if (target & 1)
+			ret += "SPY ";
+		if (target & 2)
+			ret += "FILE ";
+		return ret + "]";
+	}
 private:
-	var int _vtbl;
 	void (*onexit)();
+
 	zSTRING filter_authors;
-	var int	filter_flag;
-	var int filter_level;
-	var int	target;
+	int     filter_flag;
+	int     filter_level;
+
+	int target;
+
 	zERROR_TYPE ack_type;
 	zFILE* log_file;
 	zBYTE indent_depth;
-	HWND spyHandle;
+
+	HWND     spyHandle;
 	zCMutex* spyMutex;
 };
 
 zERROR zerr;
+
+
+BOOL zERROR::SearchForSpy()
+{
+	spyHandle = FindWindowA(0, "[zSpy]");
+	if ( spyHandle )
+		zINFO(5,"B: ZERR: Spy found."); // 465
+
+	return spyHandle != 0;
+}
+
+void zERROR::SendToSpy(zSTRING& msg)
+{
+	if ( spyHandle && spyMutex ) {
+		spyMutex->Lock(-1);
+
+		char const* m = msg.Data(); // ??
+		size_t len = strlen(m);
+
+		LPARAM data;
+		SendMessageA(spyHandle, 0x4A, 0, &data);
+		spyMutex->Unlock();
+	}
+}

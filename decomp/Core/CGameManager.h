@@ -11,6 +11,14 @@ public:
 	virtual ~CGameManager();
 	CGameManager();
 
+	void InsertMenuWorld(zSTRING& backWorld, zSTRING& backDatFile)
+	{
+	}
+
+	oCGame* GetGame() const
+	{
+		return this->gameSession;
+	}
 private:
 	zTRnd_AlphaBlendFunc   oldAlphaBlendFunc;
 	zTSystemContextHandle  sysContextHandle;
@@ -52,6 +60,35 @@ zSTRING chapTime;
 zSTRING chapTGA;
 zSTRING chapWAV;
 float chapTime;
+
+void CGameManager::ExitGame()
+{
+	exitGame = 1;
+}
+
+void CGameManager::ExitSession()
+{
+	exitSession = 1;
+	if ( gameSession ) {
+		if ( singleStep )
+			gameSession->Unpause();
+		gameSession->Pause(1);
+		oCGame::SetShowPlayerStatus(gameSession, 0);
+	}
+}
+
+bool CGameManager::IsGameRunning()
+{
+	return gameSession && gameSession->GetCamera();
+}
+
+void CGameManager::GameDone()
+{
+	oCarsten_ShutDown();
+	zCEngine::Shutdown();
+	Delete(zengine);
+	zengine = 0;
+}
 
 int CGameManager::IntroduceChapter(zSTRING chapter, zSTRING text, zSTRING tga, zSTRING wav, int time)
 {
@@ -459,4 +496,21 @@ void CGameManager::GameInit()
 
 	zCMenu::EnterCallback = MenuEnterCallback;
 	zCMenu::LeaveCallback = MenuLeaveCallback;
+}
+
+void CGameManager::Tool_ConvertData()
+{
+	zINFO(1,"B: Converting all data ..."); // 453,
+
+	zCScanDir dirScanner;
+
+	dirScanner.RegisterFileHandler(zCMorphMeshConvertFileHandler(), "zCMorphMesh")
+	dirScanner.RegisterFileHandler(zCMorphMeshConvertFileHandler(), "zCMorphMesh")
+	dirScanner.RegisterFileHandler(zCProgMeshConvertFileHandler(), "zCProgMeshProto")
+	// dirScanner.RegisterFileHandler(zCTextureFileHandler(), "zCTexture")
+	// какого-то черта просто вызывается конструктор и ничего дальше не делается
+
+	dirScanner.Scan(zoptions->GetDirString(DIR_DATA));
+
+	zINFO(1,"B: finished") // 469,
 }

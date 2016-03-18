@@ -442,6 +442,211 @@ float zCOption::ReadReal(zSTRING const& secName, zSTRING const& optName, float d
 	return ReadReal(secName, optName.Data(), defval);
 }
 
+int zCOption::WriteString(zSTRING const& section, const char* option, zSTRING value, int temp)
+{
+	auto sec = GetSectionByName(section, 1);
+	auto entry = GetEntryByName(sec, option, 1);
+
+
+	zSTRING& str = temp ? varValueTemp : varValue;
+
+	bool notify = str == value;
+
+	varValueTemp = value;
+	if (!temp)
+		varValue = value;
+
+	if (notify) {
+		for (auto func : ccbList) {
+			if (func())
+				break;
+		}
+	}
+	return 1;
+}
+
+int zCOption::WriteString(zSTRING const& secName, zSTRING const& entry, zSTRING value, int temp)
+{
+	return WriteString(secName, entry.Data(), value, temp);
+}
+
+int zCOption::WriteBool(zSTRING const& secName, const char* entry, int value, int temp)
+{
+	return WriteString(secName, entry, value ? "1" : "0", temp);
+}
+
+int zCOption::WriteBool(zSTRING const& secName, zSTRING const& entry, int value, int temp)
+{
+	return WriteBool(secName, entry.Data(), value, temp);
+}
+
+int zCOption::WriteDWord(zSTRING const& secName, const char* entry, uint32_t value, int temp)
+{
+	return WriteString(secName, entry, value, temp);
+}
+
+int zCOption::WriteDWord(zSTRING const& secName, zSTRING const& entry, uint32_t value, int temp)
+{
+	return WriteDWord(secName, entry.Data(), value, temp);
+}
+
+int zCOption::WriteInt(zSTRING const& secName, const char* entry, int32_t value, int temp)
+{
+	return WriteString(secName, entry, value, temp);
+}
+
+int zCOption::WriteInt(zSTRING const& secName, zSTRING const& entry, int32_t value, int temp)
+{
+	return WriteInt(secName, entry.Data(), value, temp);
+}
+
+int zCOption::WriteReal(zSTRING const& secName, const char* entry, float value, int temp)
+{
+	return WriteString(secName, entry, value, temp);
+}
+
+int zCOption::WriteReal(zSTRING const& secName, zSTRING const& entry, float value, int temp)
+{
+	return WriteReal(secName, entry.Data(), value, temp);
+}
+
+int zCOption::WriteRaw(zSTRING const& secName, const char* entry, void *buffer, int size, int temp)
+{
+	zSTRING value;
+	for (int i = 0; i < size: ++i) {
+		char temp[3];
+		sprintf(temp, "%02x", ((char*)buffer)[i]);
+		value += temp;
+	}
+	WriteString(secName, entry, value, temp);
+	return 1;
+}
+
+int zCOption::WriteRaw(zSTRING const& secName, zSTRING const& entry, void* buffer, int size, int temp)
+{
+	return WriteRaw(secName, entry.Data(), buffer, size, temp);
+}
+
+int zCOption::Init(zSTRING parmlist, bool do_init)
+{
+	if ( !do_init )
+		return 0;
+
+	zINFO(3,  "B: zOPT: Initialize configurations "); // 758
+
+	commandline += parmlist;
+	commandline.Upper();
+
+	char Filename[260];
+
+	GetModuleFileNameA(0, Filename, 0xFFu);
+
+	zSTRING filename = Filename;
+
+	int pos = filename.SearchRev("/",1);
+	filename.Delete(pos, -1);
+
+	_getcwd(Filename, 254);
+	if ( _access(pathsd, 0) == -1 ) {
+		zFATAL("B: zOPT: Could not find file " + pathsd); //781
+		return 0;
+	}
+
+	zINFO(3,"B: zOPT: Found file " + pathsd); //785
+
+	zINFO(5,"B: zOPT: Initialising Parser"); // 789
+
+	zparser.Reset();
+
+	zINFO(5, "B: zOPT: Parsing " + pathsd + " ..."); // 792
+	zparser.ParseFile(pathsd);
+
+	zINFO(5,  "B: zOPT: Analysing " + pathsd + " ..."); // 795
+
+	int idx = zparser.GetIndex(zOPTION_PATHNAMES[24]);
+	if (idx < 0)
+		zFATAL("B: zOPT: Entry missed in " + pathsd + ": " + zOPTION_PATHNAMES[24]); // 799
+
+	auto text = zparser.GetText(idx, 0);
+
+	chdir(text);
+	_getcwd(Filename, 254);
+
+	auto root = zFILE::SetRootDirectory(Filename);
+
+	dir_string[24] = root;
+
+	zINFO(6,"B: zOPT: Set root-directory to \"" + dir_string[24] + "\""); //806
+
+	zFILE_FILE file;
+
+	for (int i = 0; i < 24; ++i) {
+		if (zOPTION_PATHNAMES[i] == DIR_ROOT) // what the fuck?
+			break;
+
+		int idx = zparser.GetIndex(zOPTION_PATHNAMES[i]);
+		if (idx < 0) {
+			zFATAL("B: zOPT: Entry missed in " + pathd + ": " + zOPTION_PATHNAMES[i]); // 851
+		} else {
+			auto text = zparser.GetText(idx, 0);
+			auto game = zoptions->ParmValue("game");
+			if (!game.IsEmpty()) {
+				auto file = zfactory->CreateZFile(game);
+				if (file) {
+					zSTRING filename;
+					file->GetFilename(filename);
+					filename.Lower();
+					if (filename == "gothicgame") {
+						while (text[filename.Length()] == '\\')
+							text.DeleteRight(1);
+						text += "_" + filename + '\\';
+						text.Lower();
+					}
+					file->Close();
+					delete file;
+				}
+			}
+
+			text.Upper();
+			if (text.Search(0, "$DATA$", 1) > 0) {
+				int pos = text.Search(0, "$DATA$", 1);
+				text.Delete(pos, 0);
+				text.Insert(pos, dir_string[3]);
+				pos = text.Search(0, "\\\\", 1);
+				if (pos >= 0)
+					text.Delete(pos, 1);
+			}
+
+			directory[i]->SetPath(text);
+
+			zINFO(6,"B: zOPT: " + zOPTION_PATHNAMES[i] " = " + text); // 867
+		}
+
+		if ( !text.Search(0, "DIR_", 1u) ) {
+			file.SetPath(text);
+			auto path = file.GetFullPath();
+
+			if ( _access(path.Data(), 0) ) {
+				zFAULT("B: zOPT: The value of <" tetx "> in file \"" + pathsd + "\" is wrong:\r\n Directory \"" path "\" does not exist."); // 877
+			}
+		}
+	}
+
+
+	root.Delete(dir_string[24], 0);
+	root += '\\';
+	root += dir_string[25];
+	directory[DIR_EXECUTABLE]->SetPath(root);
+
+	zINFO(3,"B: zOPT: DIR_EXECUTABLE = " + root); // 887
+
+	zparser->Reset();
+
+	zINFO(3,""); // 891
+
+	return 0;
+}
+
 void zInitOptions()
 {
 	if ( zoptions )

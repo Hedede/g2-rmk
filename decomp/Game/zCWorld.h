@@ -1,17 +1,3 @@
-//--------------------------------------
-// Timer (technisch und spieltechnisch)
-//--------------------------------------
-
-
-const int oCWorldTimer_TicksPerHour		  = 250000;
-const int oCWorldTimer_TicksPerMin_approx = 4167; //< 1 sec / Tag daneben
-
-class oCWorldTimer {
-	//250000 Ticks pro Stunde
-	zREAL worldTime;    //zREAL
-	int day;          //int
-};
-
 
 const int zCWorld_DIMENSION = 3; //achwas
 const int zCWorld_VobHashTable_Offset = 600; //0x0258

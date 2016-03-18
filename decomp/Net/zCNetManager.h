@@ -7,4 +7,8 @@ public:
 	virtual void CreateNetMessage(ushort const &,zCObject *);
 	virtual void HandleNetMessage(zCNetMessage *,ushort const &,zCClassDef *,zCWorld *);
 	virtual void ProcessMessages();
+
+	void zCNetManager::SendWorldTime()
+	{
+	}
 };

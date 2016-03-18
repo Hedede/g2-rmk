@@ -1,65 +1,4 @@
-//######################################################
-//
-//	Game Manager: Kümmert sich darum
-//  Game Sessions zu starten zu speichern usw.
-//
-//######################################################
 
-class CGameManager {
-public:
-	virtual int HandleEvent(int key);
-	virtual ~CGameManager();
-	CGameManager();
-
-	void InsertMenuWorld(zSTRING& backWorld, zSTRING& backDatFile)
-	{
-	}
-
-	oCGame* GetGame() const
-	{
-		return this->gameSession;
-	}
-private:
-	zTRnd_AlphaBlendFunc   oldAlphaBlendFunc;
-	zTSystemContextHandle  sysContextHandle;
-
-	oCGame*            gameSession;        //
-	oCGame*            backLoop;           //
-	zBOOL              exitGame;	    //
-	zBOOL              exitSession;	    //
-	zBOOL              gameIdle;           //
-	zBOOL              lastWorldWasGame;   //
-	oCSavegameManager* savegameManager;    //
-
-	zCArray<zSTRING>	lastDatFileList;
-	zCArray<zSTRING>	lastWorldList;
-
-	zSTRING backWorldRunning;    //zSTRING
-	zSTRING backDatFileRunning;  //zSTRING
-
-	zCView*        vidScreen;              //
-	zCView*        initScreen;             //
-
-	zBOOL          introActive;            //
-	zBOOL          dontStartGame;          //
-
-	oCBinkPlayer*  videoPlayer;            //
-	zBOOL          videoPlayInGame;        //
-
-	zCMenu*        menu_chgkeys;           //
-	zCMenu*        menu_chgkeys_ext;       //
-	oCMenuSavegame*menu_save_savegame;     //
-	oCMenuSavegame*menu_load_savegame;	//
-
-	int playTime;	 //wird selten (?) aktualisiert. Mindestens aber beim Speichern und Laden.
-};
-
-bool chapBool;
-zSTRING chapName;
-zSTRING chapTime;
-zSTRING chapTGA;
-zSTRING chapWAV;
-float chapTime;
 
 void CGameManager::ExitGame()
 {
@@ -231,8 +170,7 @@ void CGameManager::InitScreen_Close()
 {
 	zINFO(4,"B: GMAN: Close InitScreen");
 
-	if (initScreen)
-	{
+	if (initScreen) {
 		delete initScreen;
 		initScreen = 0;
 	}
@@ -496,6 +434,78 @@ void CGameManager::GameInit()
 
 	zCMenu::EnterCallback = MenuEnterCallback;
 	zCMenu::LeaveCallback = MenuLeaveCallback;
+}
+
+void CGameManager::InitSettings() // static?
+{
+	zerr.Separator("");
+
+	oCSystemInfo sysInfo;
+
+	sysInfo.AnalyseNow();
+
+	zerr.Separator("");
+
+	/* Not really necessary (maybe inlined function,
+	 * removed by the linker?)
+	   mov     [esp+0C4h+sysInfo.cpuLow],   700.0
+	   mov     [esp+0C4h+sysInfo.cpuHigh],  1200.0
+	   mov     [esp+0C4h+sysInfo.memLow],   256.0
+	   mov     [esp+0C4h+sysInfo.memHigh],  512.0
+	   mov     [esp+0C4h+sysInfo.gmemLow],  16.0
+	   mov     [esp+0C4h+sysInfo.gmemHigh], 64.0
+	   */
+
+	sysInfo.ScoreNow();
+
+	zerr.Separator("");
+
+	sysInfo.ResetSettings(-1.0);
+
+	zerr.Separator("");
+}
+
+void CGameManager::GameSessionInit()
+{
+	if ( gameSession )
+		zFATAL("B: GameMan: Call GameSessionInit once, not twice!"); // 1047,
+
+	gameSession = new oCGame;
+	ogame = gameSession;
+
+	gameSession->Init();
+	gameSession->savegameManager = savegameManager;
+	gameSession->SetGameInfo(gameSession, 0);
+}
+
+void CGameManager::Read_Savegame(int slot)
+{
+	if ( slot >= 0 ) {
+		auto sav = savegameManager->GetSavegame(slot);
+		if ( sav && !sav->saveIncompatible ) {
+			if ( oCSavegameInfo::DoesSavegameExist(sav) ) {
+				zINFO(4, "B: GMAN: Loading game from slot "_s + slot); //1548
+
+				exitSession = 0;
+
+				if ( !gameSession )
+					zFATAL("B: GameMan: Call GameSessionInit before GameSessionReset() "); //1039,
+
+				// auto sm = savegameManager;
+				oCSavegameManager::ClearCurrent();
+
+				gameSession->SetGameInfo(0);
+				gameSession->LoadSavegame(sav->slot, 1);
+
+				if ( zmusic )
+					zmusic->Stop();
+
+				playTime = sav->playTimeSeconds;
+
+				time(&Time);
+			}
+		}
+	}
 }
 
 void CGameManager::Tool_ConvertData()

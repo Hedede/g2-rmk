@@ -194,120 +194,21 @@ void oCGame::SetShowPlayerStatus(int show)
 	showPlayerStatus = show;
 }
 
+void oCGame::SetGameInfo(oCGameInfo* gameinfo)
+{
+	if (this->gameInfo != gameinfo)
+		Delete(this->gameInfo);
+
+	if (!gameinfo) {
+		gameinfo = zfactory->CreateGameInfo();
+		gameinfo->Init();
+	}
+
+	gameInfo = gameinfo;
+}
+
 int oCGame::HandleEvent(int key)
 {
-	double v2; // st7@0
-	zCWorld *world; // eax@1 MAPDST
-	zSTRING__vtable *v5; // edi@3
-	oCNpc *player; // ecx@17
-	struct zCEventManager *v8; // eax@20
-	oCAniCtrl_Human *v9; // eax@21
-	int sym; // esi@24
-	int v11; // esi@28
-	struct zCEventManager *v12; // eax@35
-	oCAniCtrl_Human *v13; // eax@37
-	int v14; // esi@41
-	char v15; // cl@42
-	char *v16; // eax@42
-	char v18; // cl@48
-	char *v19; // eax@48
-	char v20; // cl@55
-	char *v21; // eax@55
-	char v22; // cl@61
-	char *v23; // eax@61
-	int v24; // eax@70
-	zCWorld *v25; // eax@74
-	struct zCSkyControler *v26; // eax@74
-	oCMag_Book *v27; // eax@77
-	struct oCMobInter *v28; // eax@81
-	struct oCMobInter *v29; // eax@82
-	struct oCMobInter *v30; // eax@82
-	struct zCObject *v31; // esi@84
-	zCEventMessage *v32; // esi@86
-	struct zCObject *v33; // esi@87
-	struct zCEventManager *v34; // eax@90
-	struct zCObject *v35; // esi@91
-	zCEventMessage *v36; // esi@92
-	oCMag_Book *v37; // eax@96
-	struct oCMobInter *v38; // eax@99
-	struct oCMobInter *v39; // eax@100
-	struct oCMobInter *v40; // eax@100
-	struct oCItem *v41; // eax@102
-	struct zCObject *v42; // esi@104
-	struct oCItem *v43; // eax@108
-	struct zCObject *v44; // esi@110
-	zCEventMessage *v45; // esi@111
-	struct zCEventManager *v46; // eax@113
-	struct zCObject *v47; // esi@113
-	struct oCMobInter *v48; // eax@121
-	struct oCMobInter *v49; // eax@122
-	struct oCMobInter *v50; // eax@122
-	struct oCMobInter *v51; // eax@123
-	struct oCMobInter *v52; // eax@124
-	struct oCMobInter *v53; // eax@124
-	int v54; // eax@125
-	struct zCObject *v55; // esi@127
-	zCEventMessage *v56; // esi@128
-	struct zCEventManager *v57; // eax@130
-	struct zCObject *v58; // esi@131
-	signed int v59; // esi@135
-	struct oCMobInter *v60; // eax@138
-	struct oCMobInter *v61; // eax@139
-	struct oCMobInter *v62; // eax@139
-	oCMag_Book *v63; // eax@142
-	oCMag_Book *v64; // eax@143
-	oCMag_Book *v65; // eax@150
-	int v66; // eax@150
-	int v67; // ST1C_4@151
-	oCMag_Book *v68; // eax@151
-	oCMag_Book *v69; // eax@152
-	oCSpell *v70; // eax@152
-	oCSpell *v71; // esi@152
-	struct zSTRING *v72; // eax@153
-	char v73; // cl@154
-	void *v74; // eax@154
-	struct zSTRING *v75; // eax@158
-	char v76; // cl@159
-	void *v77; // eax@159
-	int v78; // eax@165
-	struct zCObject *v79; // esi@167
-	zCEventMessage *v80; // esi@168
-	struct zCEventManager *v81; // eax@170
-	struct zCObject *v82; // esi@171
-	struct zCEventManager *v83; // eax@174
-	char v84; // cl@179
-	double v85; // st7@185
-	double v86; // st6@185
-	char v87; // cl@187
-	char *v88; // eax@187
-	char v89; // cl@191
-	char *v90; // eax@191
-	char v91; // cl@196
-	char v92; // [sp+13h] [bp-EDh]@0
-	char v93; // [sp+18h] [bp-E8h]@1
-	float v94; // [sp+18h] [bp-E8h]@46
-	std::string v95; // [sp+20h] [bp-E0h]@3
-	struct zSTRING v96; // [sp+30h] [bp-D0h]@54
-	struct zSTRING v97; // [sp+44h] [bp-BCh]@60
-	struct zSTRING v98; // [sp+58h] [bp-A8h]@47
-	float v99; // [sp+6Ch] [bp-94h]@185
-	float v100; // [sp+70h] [bp-90h]@185
-	float v101; // [sp+74h] [bp-8Ch]@185
-	float v102; // [sp+78h] [bp-88h]@70
-	struct zSTRING v103; // [sp+7Ch] [bp-84h]@53
-	zSTRING__vtable *v104; // [sp+90h] [bp-70h]@153
-	int v105; // [sp+98h] [bp-68h]@153
-	int v106; // [sp+9Ch] [bp-64h]@158
-	int v107; // [sp+A0h] [bp-60h]@158
-	zSTRING__vtable *v108; // [sp+A4h] [bp-5Ch]@158
-	int v109; // [sp+ACh] [bp-54h]@158
-	int v110; // [sp+B0h] [bp-50h]@163
-	int v111; // [sp+B4h] [bp-4Ch]@163
-	zSTRING msg; // [sp+B8h] [bp-48h]@14
-	zSTRING symname; // [sp+CCh] [bp-34h]@24
-	zSTRING v114; // [sp+E0h] [bp-20h]@25
-	int v115; // [sp+FCh] [bp-4h]@3
-
 	zCWorld* world = GetWorld();
 	oCNpc* player = oCNpc::player;
 	if ( world->csPlayer->GetPlayingGlobalCutscene() || !player )
@@ -329,7 +230,7 @@ int oCGame::HandleEvent(int key)
 		oCNpc::OpenScreen_Log();
 		return 1;
 	case GAMEKEY_SCREEN_MAP:
-		zERR_INFO8("N: MAP: GAME_SCREEN_MAP");
+		zINFO(8,"N: MAP: GAME_SCREEN_MAP"); // 630
 
 		if ( !player )
 			break;
@@ -345,10 +246,9 @@ int oCGame::HandleEvent(int key)
 		    player->GetBodyState() != 5        &&
 		    player->GetBodyState() != 7)
 		{
-			int sym = zparser->GetIndex("PLAYER_HOTKEY_SCREEN_MAP");
-			if (!sym)
-			{
-				zERR_FAULT("N: MAP: Skript function PLAYER_HOTKEY_SCREEN_MAP not found!");
+			int sym = zparser.GetIndex("PLAYER_HOTKEY_SCREEN_MAP");
+			if (!sym) {
+				zFAULT("N: MAP: Skript function PLAYER_HOTKEY_SCREEN_MAP not found!"); // 643
 				break;
 			}
 
@@ -363,7 +263,7 @@ int oCGame::HandleEvent(int key)
 		}
 		return 1;
 	case GAMEKEY_INVENTORY:
-		if ( flt_99B3D8 != 0.0 && player->IsUnconscious() )
+		if ( _defaultfactormotion != 0.0 && player->IsUnconscious() )
 			break;
 
 		if ( !player )
@@ -388,8 +288,7 @@ int oCGame::HandleEvent(int key)
 	case KEY_F2:
 	case KEY_F3:
 	case KEY_F4:
-		if ( !game_testmode )
-		{
+		if ( !game_testmode ) {
 			world = ogame->GetWorld();
 			zCSkyControler* sktrl = world->GetActiveSkyControler();
 			if ( sktrl ) {
@@ -450,10 +349,8 @@ int oCGame::HandleEvent(int key)
 
 
 		oCMsgWeapon* msg;
-		if ( player->GetWeaponMode() <= FMODE_MAGIC )
-		{
-			if ( player->GetWeaponMode() != FMODE_NONE )
-			{
+		if ( player->GetWeaponMode() <= FMODE_MAGIC ) {
+			if ( player->GetWeaponMode() != FMODE_NONE ) {
 				msg = new oCMsgWeapon(3, 0, 0);
 				player->GetEM()->OnMessage(msg, player);
 			}

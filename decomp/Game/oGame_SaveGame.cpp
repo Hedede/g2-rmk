@@ -1,3 +1,40 @@
+void oCGame::SaveWorld(zSTRING const& pwf, zCWorld::zTWorldSaveMode savemode, int savemesh, int saveBin)
+{
+	auto player = oCNpc::player;
+	zMAT4 playerTrafo;
+
+	if ( oCNpc::player ) {
+		playerTrafo = oCNpc::player->trafoObjToWorld;
+
+		if ( oCNpc::player ) {
+			AddRef(oCNpc::player->refCtr);
+			oCNpc::player->groundPoly = 0;
+			oCNpc::player->ClearPerceptionLists();
+
+
+			GetGameWorld()->RemoveVob(oCNpc::player);
+			oCNpc::player = 0;
+		}
+	}
+
+	if ( GetWorld() )
+		GetWorld()->SaveWorld(pwf, savemode, savebin, savemesh);
+
+	if ( player && !player->homeWorld )
+		playerTrafo.MakeOrthonormal();
+
+		player->groundPoly = 0;
+		GetWorld()->AddVob(player);
+
+		player->SetCollDetStat(0);
+		player->SetCollDetDyn(0);
+		player->SetTrafoObjToWorld(playerTrafo);
+		player->SetOnFloor(playerTrafo.GetTranslation());
+		player->SetCollDetStat(1);
+		player->SetCollDetDyn(1);
+		oCNpc::player = player;
+	}
+}
 void oCGame::WriteSavegame(int slotnr, int saveGlobals)
 {
 	if ( saveGlobals )

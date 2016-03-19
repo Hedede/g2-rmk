@@ -1,0 +1,128 @@
+void oCGame::WriteSavegame(int slotnr, int saveGlobals)
+{
+	if ( saveGlobals )
+		OpenSavescreen(1);
+
+	if ( progressBar )
+		progressBar->SetPercent(0, "");
+
+	zoptions->ChangeDir(2);
+
+	auto current = oCSavegameManager::GetSlotDirName(SAVEGAME_SLOT_CURRENT);
+	auto slotDir = oCSavegameManager::GetSlotDirName(slotnr);
+
+	if (GetWorld()) {
+		if ( progressBar )
+			progressBar->SetPercent(5, "");
+
+		if ( slotnr >= SAVEGAME_SLOT_QUICK && slotnr <= SAVEGAME_SLOT_MAX )
+			savegameManager->CopyFromCurrent(slotnr);
+
+		if ( progressBar )
+			progressBar->SetPercent(10, "");
+
+		auto worldName = GetGameWorld()->GetWorldFilename();
+
+		{
+		auto file = zfactory->CreateZFile(slotDir + "savehdr.sav");
+		file->Create();
+		file->Write(worldName + "\n");
+		delete file;
+		}
+
+		if ( progressBar )
+			progressBar->SetPercent(12, "");
+
+		zPATH wpath = {worldName};
+
+		zSTRING worldFile = zoptions->GetDirString(DIR_SAVEGAMES);
+		worldFile += slotDir + wpath.GetFilename() + "." + SAVEGAME_EXT;
+
+		if ( progressBar )
+			progressBar->SetRange(12, 92);
+
+		for (auto& npc : GetGameWorld()->voblist_npcs)
+			npc->PreSaveGameProcessing();
+
+		for (auto& vob : GetGameWorld()->voblist) {
+			auto fire = zDYNAMIC_CAST<oCMobFire>(vob);
+			if (fire)
+				fire->PreSave();
+		}
+
+		oCVisualFX::PreSaveGameProcessing(!saveGlobals);
+
+		GetWorld()->SaveWorld(worldFile, 0, 1, 0);
+
+		PostSaveGameProcessing();
+
+		if ( progressBar ) {
+			// PROBABLY INLINED, WERENT UNDER SAME IF
+			progressBar->ResetRange();
+			progressBar->SetPercent(92, "");
+		}
+
+		if (GetCameraVob() && GetWorld() ) {
+			GetCameraVob()->SetCollDetStat(0);
+			GetCameraVob()->SetCollDetDyn(0);
+
+			GetWorld()->RemoveVob(GetCameraVob());
+			GetWorld()->AddVob(GetCameraVob());
+			GetCameraVob()->SetAI(GetCameraAI());
+			GetCameraVob()->SetSleeping(0);
+		}
+	}
+
+	if ( saveGlobals ) {
+		if ( progressBar )
+			progressBar->SetPercent(95, "");
+
+		auto file = zoptions->GetDirString(DIR_SAVEGAMES);
+		file += slotDir + SAVEGAME_GLOBAL_FILE;
+
+		auto arc = zarcFactory->CreateArchiverWrite(file, 3, 1, 0);
+
+		int hour, min;
+		wldTimer->GetTime(hour, min);
+		int day = wldTimer->GetDay();
+
+		arc->WriteInt("day", day);
+		arc->WriteInt("hour", hour);
+		arc->WriteInt("min", min);
+
+		infoman->Archive(*arc);
+		misMan->Archive(*arc);
+		oCLogManager::GetLogManager()->Archive(*arc);
+
+		arc->WriteObject(GetCutsceneManager());
+
+		zparser.SaveGlobalVars(*arc);
+		guilds->SaveGuildTable(*arc);
+
+		arc->Close();
+		delete arc;
+
+		if ( progressBar )
+			progressBar->SetPercent(98, "");
+	}
+
+	if ( GetCameraVob() && GetWorld() ) {
+		GetCameraVob()->SetCollDetStat(0);
+		GetCameraVob()->SetCollDetDyn(0);
+
+		GetWorld()->RemoveVob(GetCameraVob());
+		GetWorld()->AddVob(GetCameraVob());
+		GetCameraVob()->SetAI(GetCameraAI());
+		GetCameraVob()->SetSleeping(0);
+	}
+
+	if ( gLogStatistics ) {
+		auto dir = zoptions->GetDirString(DIR_SAVEGAMES) + slotDir;
+		LogStatisticsWrite(dir);
+	}
+	if ( progressBar )
+		progressBar->SetPercent(100, "");
+
+	if ( saveGlobals )
+		CloseSavescreen();
+}

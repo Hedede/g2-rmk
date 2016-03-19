@@ -263,7 +263,7 @@ int oCGame::HandleEvent(int key)
 		}
 		return 1;
 	case GAMEKEY_INVENTORY:
-		if ( _defaultfactormotion != 0.0 && player->IsUnconscious() )
+		if (ztimer.frameTimeFloat != 0.0 && player->IsUnconscious() )
 			break;
 
 		if ( !player )
@@ -1306,8 +1306,6 @@ int oCGame::ConsoleEvalFunc(zSTRING const& str, zSTRING& msg)
 	if (word1 == "SET") {
 		if ( word2 == "TIME" ) {
 			auto word4 = str.PickWord(4, " ", zSTR_SKIP);
-			v226.numInArray = zSTRING::ToInt(&a1);
-			v226.numAlloc = zSTRING::ToInt(&word3);
 
 			auto timer = ogame->GetWorldTimer();
 			auto day = timer->GetDay();
@@ -1489,3 +1487,4 @@ int oCGame::ConsoleEvalFunc(zSTRING const& str, zSTRING& msg)
 	msg = "Unknown command : " + word1;
 	return 0;
 }
+

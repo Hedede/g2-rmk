@@ -15,3 +15,23 @@ void zCSession::CamInit(zCVob *theCamVob, zCCamera *theCamera)
 
 	zsound->SetListener(camVob);
 }
+
+zCCamera* zCSession::GetCamera() const
+{
+	return this->camera;
+}
+
+zCAICamera* zCSession::GetCameraAI() const
+{
+	return this->aiCam;
+}
+
+zCVob* zCSession::GetCameraVob() const
+{
+	return this->camVob;
+}
+
+void zCSession::SetCamera(zCCamera *camera)
+{
+	this->camera = camera;
+}

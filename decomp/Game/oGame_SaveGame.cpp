@@ -1,40 +1,58 @@
-void oCGame::SaveWorld(zSTRING const& pwf, zCWorld::zTWorldSaveMode savemode, int savemesh, int saveBin)
+// private
+oCNpc* oCGame::RemovePlayerFromWorld()
 {
 	auto player = oCNpc::player;
+
+	if ( player ) {
+		AddRef(player->refCtr);
+		player->groundPoly = 0;
+		player->ClearPerceptionLists();
+
+
+		GetGameWorld()->RemoveVob(player);
+		oCNpc::player = 0;
+	}
+
+	return player;
+}
+
+void oCGame::InsertPlayerIntoWorld(oCNpc* npc, zMAT4& trafo)
+{
+	if ( npc && !npc->homeWorld ) {
+		trafo.MakeOrthonormal();
+
+		npc->groundPoly = 0;
+		GetWorld()->AddVob(npc);
+
+		npc->SetCollDetStat(0);
+		npc->SetCollDetDyn(0);
+
+		npc->SetTrafoObjToWorld(trafo);
+		npc->SetOnFloor(trafo.GetTranslation());
+
+		npc->SetCollDetStat(1);
+		npc->SetCollDetDyn(1);
+
+		oCNpc::player = npc;
+	}
+}
+
+void oCGame::SaveWorld(zSTRING const& pwf, zCWorld::zTWorldSaveMode savemode, int savemesh, int saveBin)
+{
+	oCNpc* player;
 	zMAT4 playerTrafo;
 
 	if ( oCNpc::player ) {
 		playerTrafo = oCNpc::player->trafoObjToWorld;
-
-		if ( oCNpc::player ) {
-			AddRef(oCNpc::player->refCtr);
-			oCNpc::player->groundPoly = 0;
-			oCNpc::player->ClearPerceptionLists();
-
-
-			GetGameWorld()->RemoveVob(oCNpc::player);
-			oCNpc::player = 0;
-		}
+		player = RemovePlayerFromWorld();
 	}
 
 	if ( GetWorld() )
 		GetWorld()->SaveWorld(pwf, savemode, savebin, savemesh);
 
-	if ( player && !player->homeWorld )
-		playerTrafo.MakeOrthonormal();
-
-		player->groundPoly = 0;
-		GetWorld()->AddVob(player);
-
-		player->SetCollDetStat(0);
-		player->SetCollDetDyn(0);
-		player->SetTrafoObjToWorld(playerTrafo);
-		player->SetOnFloor(playerTrafo.GetTranslation());
-		player->SetCollDetStat(1);
-		player->SetCollDetDyn(1);
-		oCNpc::player = player;
-	}
+	InsertPlayerIntoWorld(player, playerTrafo);
 }
+
 void oCGame::WriteSavegame(int slotnr, int saveGlobals)
 {
 	if ( saveGlobals )

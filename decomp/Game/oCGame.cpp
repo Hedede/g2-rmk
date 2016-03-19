@@ -66,6 +66,9 @@ public:
 
 private:
 	void SetCameraPosition();
+	oCNpc* RemovePlayerFromWorld();
+	void InsertPlayerIntoWorld(oCNpc* npc, zMAT4& trafo);
+
 
 private:
 	zREAL  cliprange;

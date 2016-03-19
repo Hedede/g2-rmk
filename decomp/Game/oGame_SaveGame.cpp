@@ -62,15 +62,7 @@ void oCGame::WriteSavegame(int slotnr, int saveGlobals)
 			progressBar->SetPercent(92, "");
 		}
 
-		if (GetCameraVob() && GetWorld() ) {
-			GetCameraVob()->SetCollDetStat(0);
-			GetCameraVob()->SetCollDetDyn(0);
-
-			GetWorld()->RemoveVob(GetCameraVob());
-			GetWorld()->AddVob(GetCameraVob());
-			GetCameraVob()->SetAI(GetCameraAI());
-			GetCameraVob()->SetSleeping(0);
-		}
+		SetCameraPosition();
 	}
 
 	if ( saveGlobals ) {
@@ -106,15 +98,7 @@ void oCGame::WriteSavegame(int slotnr, int saveGlobals)
 			progressBar->SetPercent(98, "");
 	}
 
-	if ( GetCameraVob() && GetWorld() ) {
-		GetCameraVob()->SetCollDetStat(0);
-		GetCameraVob()->SetCollDetDyn(0);
-
-		GetWorld()->RemoveVob(GetCameraVob());
-		GetWorld()->AddVob(GetCameraVob());
-		GetCameraVob()->SetAI(GetCameraAI());
-		GetCameraVob()->SetSleeping(0);
-	}
+	SetCameraPosition();
 
 	if ( gLogStatistics ) {
 		auto dir = zoptions->GetDirString(DIR_SAVEGAMES) + slotDir;

@@ -63,6 +63,10 @@ public:
 	{
 		return guilds;
 	}
+
+private:
+	void SetCameraPosition();
+
 private:
 	zREAL  cliprange;
 	zREAL  fogrange;
@@ -79,7 +83,7 @@ private:
 		GAME_VIEW_CHOICE        ,
 		GAME_VIEW_NOISE         ,
 		GAME_VIEW_MAX
-	}
+	};
 
 	//Views sind Kanäle, über die die Engine
 	//Informationen anzeigen kann.
@@ -205,6 +209,20 @@ void oCGame::SetGameInfo(oCGameInfo* gameinfo)
 	}
 
 	gameInfo = gameinfo;
+}
+
+void oCGame::SetCameraPosition()
+{
+	if (GetCameraVob() && GetWorld()) {
+		GetCameraVob()->SetCollDetStat(0);
+		GetCameraVob()->SetCollDetDyn(0);
+
+		GetWorld()->RemoveVob(GetCameraVob());
+		GetWorld()->AddVob(GetCameraVob());
+
+		GetCameraVob()->SetAI(GetCameraAI());
+		GetCameraVob()->SetSleeping(0);
+	}
 }
 
 int oCGame::HandleEvent(int key)

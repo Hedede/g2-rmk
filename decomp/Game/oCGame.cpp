@@ -201,6 +201,9 @@ private:
 	}
 
 	void CacheVisualsOut();
+
+	void PreSaveGameProcessing(int saveGlobals);
+	void PostSaveGameProcessing();
 private:
 	zREAL  cliprange;
 	zREAL  fogrange;
@@ -292,8 +295,8 @@ private:
 	//Debug:
 	zCArray<zCVob*>           debugInstances;
 
-	int debugChannels;          //int
-	int debugAllInstances;      //zBOOL
+	int debugChannels;
+	int debugAllInstances;
 
 	//Objektroutinen ("Wld_SetObjectRoutine"), z.B. Laternen: nur Nachts an
 	typedef struct {
@@ -497,10 +500,88 @@ void oCGame::CloseLoadscreen()
 		GetWorld()->progressBar = 0;
 }
 
+void oCGame::UpdateViewSettings()
+{
+	bool animatedWindows = zoptions->ReadBool(zOPT_SEC_GAME, "animatedWindows", 1);
+
+	array_view[0]->fxClose = 0;
+	array_view[0]->fxOpen = 0;
+
+	array_view[1]->fxClose = animatedWindows;
+	array_view[1]->fxOpen = animatedWindows;
+
+	array_view[2]->fxClose = 0;
+	array_view[2]->fxOpen = 0;
+
+	array_view[3]->fxClose = 0;
+	array_view[3]->fxOpen = 0;
+
+	array_view[4]->fxClose = animatedWindows;
+	array_view[4]->fxOpen = animatedWindows;
+
+	array_view[5]->fxClose = animatedWindows;
+	array_view[5]->fxOpen = animatedWindows;
+}
+
 void oCGame::ClearObjectRoutineList()
 {
 	objRoutineList.DeleteListDatas();
 	currentObjectRoutine = 0;
+}
+
+void oCGame::CheckObjectRoutines()
+{
+	if (!currentObjectRoutine) {
+		if ( oldRoutineDay != wldTimer->GetDay() ) {
+			currentObjectRoutine = objRoutineList.next;
+			oldRoutineDay = wldTimer->GetDay();
+		}
+	}
+	while (currentObjectRoutine) {
+		auto rtn = currentObjectRoutine->Get();
+
+		if (!wldTimer->IsLater(rtn->hour, rtn->min))
+			break;
+
+		if (rtn->type == 0)
+			oCMobInter::SetAllMobsToState(GetGameWorld(), rtn->objectName, rtn->state);
+
+		if (rtn->type == 1)
+			auto vob = GetGameWorld()->SearchVobByName(rtn->objectName);
+			if ( vob ) {
+				if (rtn->state == 0) {
+					vob->GetEM()->OnUnrigger(0,0);
+				if (rtn->state == 1) {
+					vob->GetEM()->OnTrigger(0,0);
+			}
+		}
+
+		currentObjectRoutine = currentObjectRoutine->next;
+	}
+}
+
+void oCGame::RemoveHelperVobs(zCTree<zCVob>* node)
+{
+	for (auto i = node; i; i = i->next ) {
+		switch ( i->data->type ) {
+		case VOB_TYPE_LIGHT:
+			i->data->SetVisual(0);
+			i->data->flags.showVisual = 1; // (flags & 0xFE) ^ 1
+			break;
+		case VOB_TYPE_WAYPOINT:
+		case VOB_TYPE_SOUND:
+		case 4:
+		case 5:
+		case VOB_TYPE_STARTPOINT:
+			i->data->flags.showVisual = 0;
+			i->data->SetCollDetDyn(0);
+			i->data->SetCollDetStat(0);
+		default:
+			break;
+		}
+
+		RemoveHelperVobs(i->firstChild);
+	}
 }
 
 void oCGame::SetTime(int day, int hour2, int min2)

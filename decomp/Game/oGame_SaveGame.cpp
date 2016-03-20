@@ -53,6 +53,36 @@ void oCGame::SaveWorld(zSTRING const& pwf, zCWorld::zTWorldSaveMode savemode, in
 	InsertPlayerIntoWorld(player, playerTrafo);
 }
 
+void oCGame::PreSaveGameProcessing(int saveGlobals)
+{
+	for (auto& npc : GetGameWorld()->voblist_npcs)
+		npc->PreSaveGameProcessing();
+
+	for (auto& vob : GetGameWorld()->voblist) {
+		auto fire = zDYNAMIC_CAST<oCMobFire>(vob);
+		if (fire)
+			fire->PreSave();
+	}
+
+	oCVisualFX::PreSaveGameProcessing(!saveGlobals);
+}
+
+void oCGame::PostSaveGameProcessing()
+{
+	for (auto& npc : GetGameWorld()->voblist_npcs)
+		npc->PostSaveGameProcessing();
+
+	if ( !inLevelChange ) {
+		for (auto& vob : GetGameWorld()->voblist) {
+			auto fire = zDYNAMIC_CAST<oCMobFire>(vob);
+			if (fire)
+				fire->PostSave();
+		}
+	}
+
+	oCVisualFX::PostSaveGameProcessing();
+}
+
 void oCGame::WriteSavegame(int slotnr, int saveGlobals)
 {
 	if ( saveGlobals )
@@ -96,16 +126,7 @@ void oCGame::WriteSavegame(int slotnr, int saveGlobals)
 		if ( progressBar )
 			progressBar->SetRange(12, 92);
 
-		for (auto& npc : GetGameWorld()->voblist_npcs)
-			npc->PreSaveGameProcessing();
-
-		for (auto& vob : GetGameWorld()->voblist) {
-			auto fire = zDYNAMIC_CAST<oCMobFire>(vob);
-			if (fire)
-				fire->PreSave();
-		}
-
-		oCVisualFX::PreSaveGameProcessing(!saveGlobals);
+		PreSaveGameProcessing();
 
 		GetWorld()->SaveWorld(worldFile, 0, 1, 0);
 

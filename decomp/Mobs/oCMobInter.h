@@ -1,10 +1,5 @@
-const int oCMobInter_bitfield_npcsMax       = ((1 << 8) -1) <<  0;
-const int oCMobInter_bitfield_npcsNeeded    = ((1 << 8) -1) <<  8;
-const int oCMobInter_bitfield_npcsCurrent   = ((1 << 8) -1) << 16;
-const int oCMobInter_bitfield_tmpState      = ((1 << 8) -1) << 24;
-
 class oCMobInter : public oCMob {
-	CLASSDEF_DEFINE;
+	Z_OBJECT(oCMobInter);
 public:
 	virtual void Archive(zCArchiver &);
 	virtual void Unarchive(zCArchiver &);
@@ -65,10 +60,15 @@ private:
 	zTModelAniID  mobStateAni;
 	zTModelAniID  npcStateAni;
 
-	int bitfield; //siehe oben
-	zBOOL tmpStateChanged;                //
+	uint8_t npcsMax;
+	uint8_t npcsNeeded;
+	uint8_t npcsCurrent;
 
-	TMobInterDirection  Direction;                      //"Richtung in die das Mob benutzt wird????", (0 = none, 1 = up, 2 = down)
+	uint8_t tmpState;
+	zBOOL tmpStateChanged;
+
+	//"Richtung in die das Mob benutzt wird????", (0 = none, 1 = up, 2 = down)
+	TMobInterDirection  Direction;
 
 	zBOOL onInterruptReturnToSlotPos;
 
@@ -106,4 +106,15 @@ void oCMobInter::Unarchive(zCArchiver& arc)
 	arc.ReadBool("rewind", rewind);
 
 	Reset();
+}
+
+void oCMobInter::SetTempState(int state)
+{
+	if ( state != this->tmpState || state != this->state ) {
+		this->tmpStateChanged = 1;
+		this->tmpState = state;
+	} else {
+		this->tmpStateChanged = 0;
+		this->tmpState = state;
+	}
 }

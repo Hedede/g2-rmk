@@ -138,3 +138,17 @@ void oCWorldTimer::AddTime(int& hour, int& min, int dh, int dm)
 	if (hour > 23)
 		hour %= 24;
 }
+
+void oCWorldTimer::Timer()
+{
+	worldTime += ztimer.frameTimeFloat;
+	if ( worldTime > TicksPerDay) {
+		worldTime -= TicksPerDay;
+		++day;
+	}
+
+	if (ogame)
+		ogame->RefreshNpcs();
+
+	rtnMan.CheckRoutines();
+}

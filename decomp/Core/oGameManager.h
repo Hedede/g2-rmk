@@ -11,18 +11,16 @@ public:
 	virtual ~CGameManager();
 	CGameManager();
 
-	void InsertMenuWorld(zSTRING& backWorld, zSTRING& backDatFile)
-	{
-	}
-
-	void RemoveMenuWorld()
-	{
-	}
+	void InsertMenuWorld(zSTRING& backWorld, zSTRING& backDatFile) { }
+	void RemoveMenuWorld() { }
 
 	oCGame* GetGame() const
 	{
 		return this->gameSession;
 	}
+
+	void ShowIntro() { }
+	void ShowExtro() { }
 private:
 	zTRnd_AlphaBlendFunc   oldAlphaBlendFunc;
 	zTSystemContextHandle  sysContextHandle;

@@ -196,3 +196,14 @@ void zCWayNet::Unarchive(zCArchiver& arc)
 
 	zINFO(5, "U:WAY: Waynet ok."); // 1661
 }
+
+
+void zCWayNet::Draw(zCCamera* camera)
+{
+	camera->Activate();
+
+	for (auto& way : wayList) {
+		way->Draw(camera);
+	}
+}
+

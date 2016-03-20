@@ -2,5 +2,10 @@
 class zCVobWaypoint : public zCVob {
 	Z_OBJECT(zCVobWaypoint);
 public:
-	virtual ~zCVobWaypoint();
+	zCVobWaypoint()
+	{
+		type = VOB_TYPE_WAYPOINT;
+	}
+
+	virtual ~zCVobWaypoint() = default;
 };

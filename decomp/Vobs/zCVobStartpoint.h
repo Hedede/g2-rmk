@@ -1,4 +1,10 @@
-class zCVobStartpoint {
- virtual void _GetClassDef();
- virtual void ~zCVobStartpoint(uint);
+class zCVobStartpoint : public zCVob {
+	Z_OBJECT(zCVobStartpoint);
+public:
+	zCVobStartpoint()
+	{
+		type = VOB_TYPE_STARTPOINT;
+	}
+
+	virtual ~zCVobStartpoint() = default;
 };

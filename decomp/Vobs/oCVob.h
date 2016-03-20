@@ -1,5 +1,9 @@
 class oCVob : public zCVob {
+	Z_OBJECT(oCVob);
 public:
+	oCVob() = default;
+	virtual ~oCVob() = default;
+
 	virtual void Archive(zCArchiver& arc)
 	{
 		zCVob::Archive(arc);
@@ -9,7 +13,6 @@ public:
 		zCVob::Unarchive(arc);
 	}
 
-	virtual ~oCVob();
 	virtual void Init()
 	{
 	}

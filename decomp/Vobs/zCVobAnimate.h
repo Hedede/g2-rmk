@@ -1,7 +1,12 @@
 class zCVobAnimate : public zCEffect {
 	Z_OBJECT(zCVobAnimate);
 public:
-	virtual ~zCVobAnimate();
+	zCVobAnimate()
+	{
+		ignoredByTraceRay = 1;
+	}
+
+	virtual ~zCVobAnimate() = default;
 
 	virtual void Archive(zCArchiver& arc)
 	{
@@ -39,6 +44,6 @@ public:
 	virtual void SetVisual(zCVisual *);
 
 private:
-	bool startOn;
-	bool isRunning;
+	bool startOn   = true;
+	bool isRunning = false;
 };

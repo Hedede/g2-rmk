@@ -6,7 +6,12 @@ public:
 	virtual void Archive(zCArchiver& arc);
 	virtual void Unarchive(zCArchiver& arc);
 
+	void ArchiveOldFormat(zCArchiver& arc);
+	void UnarchiveOldFormat(zCArchiver& arc);
+
 	bool HasWaypoint(zCWaypoint* wp) const;
+
+	void Draw(zCCamera* camera);
 
 private:
 	zCWorld* world;
@@ -14,7 +19,7 @@ private:
 	// Alle Waypoints   im Netz
 	zCListSort  <zCWaypoint> wplist;
 	// Alle Ways im Netz
-	zCList<zCWay>     waylist;
+	zCList<zCWay>     wayList;
 
 	enum {
 		WAY_LIST_NONE,
@@ -25,5 +30,4 @@ private:
 	zCListSort    <zCWaypoint>        openList;
 
 	int routeCtr;
-
 };

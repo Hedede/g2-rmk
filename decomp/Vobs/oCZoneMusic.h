@@ -13,7 +13,14 @@ public:
 	virtual void GetDebugDescString();
 	virtual void OnTrigger(zCVob *);
 	virtual void OnUntrigger(zCVob *);
-public:
+
+protected:
+	static int IsDaytime()
+	{
+		return ogame->GetWorldTimer()->IsDay();
+	}
+
+private:
 	zBOOL enabled;
 	zBOOL local_enabled;
 	int priority;

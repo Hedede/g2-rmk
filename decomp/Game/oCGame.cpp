@@ -3,31 +3,57 @@ const int GAME_VIEW_MAX = 6;
 
 class oCGame : public zCSession {
 public:
+	static oCNpc* GetSelfPlayerVob()
+	{
+		return oCNpc::player;
+	}
+
+	oCGame();
 	virtual ~oCGame();
-	virtual void HandleEvent(int);
+
+	virtual bool HandleEvent(int key);
+
 	virtual void Init();
 	virtual void Done();
+
 	virtual void Render();
 	virtual void RenderBlit();
-	virtual void SaveWorld(zSTRING const &,zCWorld::zTWorldSaveMode,int,int);
-	virtual void LoadWorld(zSTRING const &,zCWorld::zTWorldLoadMode);
-	virtual void SetTime(int,int,int);
-	virtual void GetTime(int &,int &,int &);
-	virtual void DesktopInit();
+
+	virtual void SaveWorld(zSTRING const& dwf, zCWorld::zTWorldSaveMode,int,int);
+	virtual void LoadWorld(zSTRING const& dwf, zCWorld::zTWorldLoadMode);
+
 	virtual void EnterWorld(oCNpc *,int,zSTRING const &);
+
+	virtual void DesktopInit();
+	virtual void EnvironmentInit();
+
 	virtual void Pause(int);
 	virtual void Unpause();
-	virtual void SetDrawWaynet(int);
-	virtual void GetDrawWaynet();
+
+	virtual void SetDrawWaynet(bool b)
+	{
+		game_showwaynet = b;
+	}
+
+	virtual bool GetDrawWaynet() const
+	{
+		return game_showwaynet;
+	}
 	virtual void RenderWaynet();
-	virtual void EnvironmentInit();
+
 	virtual void SetRanges();
 	virtual void SetRangesByCommandLine();
-	virtual void GetStartPos();
+
+	virtual zVEC3 GetStartPos() const
+	{
+		return startpos;
+	}
 	virtual void SetGameInfo(oCGameInfo *);
 	virtual void LoadParserFile(zSTRING const &);
 	virtual void TriggerChangeLevel(zSTRING const &,zSTRING const &);
-	virtual void GetGameWorld();
+
+	virtual oCWorld* GetGameWorld() const;
+
 	virtual oCGameInfo& GetGameInfo()
 	{
 		return gameInfo;
@@ -45,13 +71,22 @@ public:
 	virtual void CheckIfSavegameExists(zSTRING const &);
 	virtual void CompileWorld();
 	virtual void WorldInit();
-	virtual void NpcInit(zCTree<zCVob> *);
-	virtual void NpcInit();
+
+	virtual void SetTime(int day, int hour, int min);
+	virtual void GetTime(int& day, int& hour, int& min) const
+	{
+		day = wldTimer->GetDay(wldTimer);
+		wldTimer->GetTime(hour, min);
+	}
+
+private:virtual void NpcInit(zCTree<zCVob>* vobtree);
+public: virtual void NpcInit();
+
 	virtual void SetAsPlayer(zSTRING const &);
 
 	oCNewsManager& GetNewsManager()
 	{
-		return this->newsman;
+		return newsman;
 	}
 
 	oCInfoManager& GetInfoManager()
@@ -64,12 +99,108 @@ public:
 		return guilds;
 	}
 
+	int IsDebuggingAllInstances() const
+	{
+		return debugAllInstances;
+	}
+
+	oCWorldTimer* GetWorldTimer() const
+	{
+		return wldTimer;
+	}
+
+	oCTradeManager* GetTradeManager() const
+	{
+		return trademan;
+	}
+
+	zCView* GetTextView() const
+	{
+		return game_text;
+	}
+
+	oCInfoManager* GetInfoManager() const
+	{
+		return infoman;
+	}
+
+	oCSVMManager* GetSVMManager() const
+	{
+		return svmman;
+	}
+
+	oCPortalRoomManager* GetPortalRoomManager(oCGame *this) const
+	{
+		return portalman;
+	}
+
+	oCSpawnManager* GetSpawnManager(oCGame *this) const
+	{
+		return spawnman;
+	}
+
+	int GetShowPlayerStatus(oCGame *this) const
+	{
+		return showPlayerStatus;
+	}
+
+	void ToggleShowFreePoints(oCGame *this)
+	{
+		showFreePoints = !showFreePoints;
+	}
+
+
+	struct TObjectRoutine {
+		~TObjectRoutine() = default;
+
+		void Release()
+		{
+			delete this;
+		}
+
+		zSTRING objectName;
+		int hour;
+		int min;
+		int state;
+		int type;
+	};
+
+	bool IsDebuggingChannel(int channel) const
+	{
+		return (debugChannels & (1 << (channel - 1))) != 0;
+	}
+
+	bool IsDebuggingInstance(zCVob* vob) const
+	{
+		return debugInstances.IsInList(vob);
+	}
+
 private:
 	void SetCameraPosition();
 	oCNpc* RemovePlayerFromWorld();
 	void InsertPlayerIntoWorld(oCNpc* npc, zMAT4& trafo);
 
+	static int Sort_Routine(TObjectRoutine* entry1, TObjectRoutine* entry2)
+	{
+		if (entry1->hour >= entry2->hour) {
+			if (entry1->hour1 > entry2->hour || entry1->min >= entry2->min)
+				return 1;
+			return -1;
+		}
 
+		return -1;
+	}
+
+	static void CreateVobList(zCList<zCVob>& resultList, zCTree<zCVob>& node, zTVobType vobtyp)
+	{
+		for (auto i = &node; i; i = i->next) {
+			if ( i->data->type == vobtyp )
+				resultList.Insert(i->data);
+			CreateVobList(resultList, i->firstChild, vobtyp);
+		}
+	}
+
+	void CacheVisualsOut();
 private:
 	zREAL  cliprange;
 	zREAL  fogrange;
@@ -214,6 +345,27 @@ void oCGame::SetGameInfo(oCGameInfo* gameinfo)
 	gameInfo = gameinfo;
 }
 
+void oCGame::SetShowNews(oCNpc* npc)
+{
+	for (auto list : GetGameWorld()->voblist_npcs )
+		list->SetShowNews(npc == list);
+}
+
+oCWorld* oCGame::GetGameWorld() const
+{
+	return zDYNAMIC_CAST<oCWorld>(GetWorld());
+}
+
+int oCGame::GetHeroStatus() const
+{
+	if (oCNpc::player) {
+		auto ai = zDYNAMIC_CAST<oCAIHuman>(oCNpc::player->callback_ai);
+		if (ai)
+			return ai->GetEnemyThreat();
+	}
+	return 0;
+}
+
 void oCGame::SetCameraPosition()
 {
 	if (GetCameraVob() && GetWorld()) {
@@ -226,6 +378,164 @@ void oCGame::SetCameraPosition()
 		GetCameraVob()->SetAI(GetCameraAI());
 		GetCameraVob()->SetSleeping(0);
 	}
+}
+
+void oCGame::SetRanges()
+{
+	GetCamera()->SetFarClipZ(cliprange);
+	zrenderer->SetFogRange(fogrange, GetCamera()->farClipZ, 0);
+	zrenderer->SetFog(1);
+}
+
+void oCGame::RenderBlit()
+{
+	zrenderer->Vid_Blit(1, 0, 0);
+}
+
+void oCGame::RenderWaynet()
+{
+	if ( game_showwaynet ) {
+		auto waynet = GetWorld()->wayNet;
+		if (waynet) {
+			waynet->Draw(GetCamera());
+		}
+	}
+}
+
+int oCGame::OpenView(oEGameDialogView view)
+{
+	if ( !array_view_visible[view] && array_view_enabled[view] ) {
+		array_view_visible[view] = 1;
+		array_view[view]->Open();
+	}
+	return 1;
+}
+
+int oCGame::CloseView(oEGameDialogView view)
+{
+	if ( !array_view_visible[view] && array_view_enabled[view] ) {
+		array_view_visible[view] = 0;
+		array_view[view]->Close();
+	}
+	return 1;
+}
+
+int oCGame::LoadWorld(zSTRING const& pwf, zCWorld::zTWorldLoadMode mode)
+{
+	int ret = 0;
+	if ( GetWorld() ) {
+		ret = GetWorld()->LoadWorld(pwf, mode);
+		oCGame::RemoveHelperVobs(GetWorld()->globalVobTree.firstChild);
+	}
+	return ret;
+}
+
+void oCGame::NpcInit()
+{
+	NpcInit(GetWorld()->globalVobTree);
+
+	rtnMan.InitWayBoxes();
+	/*
+	for (auto npc : ogame->GetGameWorld()->voblist_npcs) {
+		if ( !npc->IsDead() || !npc->IsAPlayer() )
+			rtnMan->CreateWayBoxes(npc);
+	}*/
+}
+
+void oCGame::NpcInit(zCTree<zCVob>* vobtree)
+{
+	zCVob* vob = vobtree->data;
+	if ( vob && vob->type == VOB_TYPE_NPC )
+		vob->SetSleepingMode(1);
+
+	for (auto i = vobtree->firstChild; i; i = i->next )
+		NpcInit(i);
+}
+
+void oCGame::InitNpcAttitudes(oCGame* this)
+{
+	if (!oCNpc::player)
+		return;
+
+	for (auto npc : GetGameWorld()->voblist_npcs) {
+		if (npc == oCNpc::player)
+			continue;
+
+		// may be inlined
+		auto playerGuild = oCNpc::player->GetTrueGuild();
+		auto npcGuild = npc->GetTrueGuild();
+
+		auto att = ogame->guilds->GetAttitude(npcGuild, playerGuild);
+
+		npc->SetTmpAttitude(att);
+		npc->SetAttitude(att);
+	}
+}
+
+void oCGame::RefreshNpcs()
+{
+	for (auto npc : GetGameWorld()->voblist_npcs) {
+		if ( !npc->IsAPlayer() )
+			npc->RefreshNpc();
+	}
+	DeleteTorches();
+}
+
+void oCGame::CloseSavescreen()
+{
+	Delete(progressBar);
+	Delete(save_screen);
+	if ( GetWorld() )
+		GetWorld()->progressBar = 0;
+}
+
+void oCGame::CloseLoadscreen()
+{
+	Delete(progressBar);
+	Delete(load_screen);
+	if ( GetWorld() )
+		GetWorld()->progressBar = 0;
+}
+
+void oCGame::ClearObjectRoutineList()
+{
+	objRoutineList.DeleteListDatas();
+	currentObjectRoutine = 0;
+}
+
+void oCGame::SetTime(int day, int hour2, int min2)
+{
+	int hour1, min1;
+
+	wldTimer->GetTime(hour1, min1);
+	wldTimer->SetDay(day + hour2 / 24);
+	wldTimer->SetTime(hour2, min2);
+
+	rtnMan.SetDailyRoutinePos(1);
+	SetObjectRoutineTimeChange(hour1, min1, hour2, min2);
+
+	if ( spawnman )
+		spawnman->SpawnImmediately(1);
+}
+
+void oCGame::RecurseCacheVobs(zCTree<zCVob>* tree)
+{
+	if ( tree ) {
+		auto vob = tree->data;
+		if (vob && vob->visual)
+			visualList.Insert(vob->visual);
+
+		for (auto i = tree->firstChild; i; i = i->next )
+			RecurseCacheVobs(i);
+	}
+}
+
+void oCGame::CacheVisualsOut()
+{
+	for (auto visual : visualList)
+		Release(visual);
+
+	visual.Clear();
 }
 
 int oCGame::HandleEvent(int key)

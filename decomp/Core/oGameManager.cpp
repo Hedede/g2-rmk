@@ -1,3 +1,10 @@
+HANDLE CGameManager::ShowSplashScreen()
+{
+	lParam = (LPARAM)LoadBitmapA(hInstApp, (LPCSTR)0xA9);
+	hSplashThread = CreateThread(0, 0, SplashThreadProc, 0, 0, &idThread);
+	return hSplashThread;
+}
+
 void CGameManager::RemoveSplashScreen()
 {
 	if ( idThread )
@@ -32,6 +39,7 @@ void CGameManager::GameDone()
 	Delete(zengine);
 	zengine = 0;
 }
+
 
 int CGameManager::IntroduceChapter(zSTRING chapter, zSTRING text, zSTRING tga, zSTRING wav, int time)
 {
@@ -68,7 +76,6 @@ CGameManager::CGameManager()
 	videoPlayInGame = 0;
 
 	playTime = 0;
-	return this;
 }
 
 void CGameManager::Init(HWND& hWndApp)

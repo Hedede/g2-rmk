@@ -72,6 +72,7 @@ public:
 	}
 
 	void GetEM(int doNotCreate = 0);
+
 private:
 	zCTree<zCVob>* globalVobTreeNode;
 

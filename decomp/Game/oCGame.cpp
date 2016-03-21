@@ -1207,3 +1207,56 @@ void oCGame::UpdatePlayerStatus()
 
 	screen->Print(anx, any, name + "\n");
 }
+
+void oCGame::SwitchCamToNextNpc()
+{
+	bool showAI = 0;
+	if ( watchn ) {
+		showAI = watchn->callback_ai->GetShowAI();
+		watchn->callback_ai->SetShowAI(0);
+	}
+
+
+	do {
+		watchn = nullptr;
+
+		int i;
+		for (auto npc : GetGameWorld()->voblist_npcs ) {
+			if (i == npcNr) {
+				watchn = npc;
+				break;
+			}
+			++i;
+		}
+
+		if ( watchn ) {
+			if ( watchn->homeWorld ) {
+				watchn->callback_ai->SetShowAI(showAI);
+			} else {
+				watchn = 0;
+			}
+		} else {
+			npcNr = -1;
+		}
+
+		++npcNr;
+	} while ( !watchn );
+
+	GetCameraAI()->SetTarget(watchn);
+	if ( watchn && (watchn->variousFlags & 4) == 4)
+		GetCameraAI()->__ghostAlpha = zoptions->ReadReal("INTERNAL", "GhostAlpha", 0.3);
+
+	GetCameraAI()->ReceiveMsg(0x8000);
+
+	auto tmp = oCNpc::player;
+	if ( oCNpc::player->flags2.sleepingMode )
+	{
+		HandleEvent(KEY_F4);
+	}
+	else
+	{
+		oCNpc::player = 0;
+		HandleEvent(v1, KEY_F4);
+		oCNpc::player = tmp;
+	}
+}

@@ -487,3 +487,130 @@ int oCGame::TestKeys(int key)
 	}
 	return 0;
 }
+
+int oCGame::IA_TestWay(int key)
+{
+	static zCWaypoint* mwp1 = 0;
+	static zCWaypoint* mwp2 = 0;
+	static zSTRING vobname = "A";
+
+	switch ( key ) {
+	case KEY_N: {
+		auto vob = new zCVobWaypoint();
+		vob->SetVobName(vobname);
+
+		GetWorld()->AddVob(vob);
+
+		vob->SetCollDetStat(0);
+		vob->SetCollDetDyn(0);
+
+		vob->SetPositionWorld(oCNpc::player->GetPositionWorld());
+		vob->SetHeadingAtWorld(oCNpc::player->GetHeadingAtWorld());
+
+		auto wp = zfactory->CreateWaypoint();
+
+		wp->Init(vob);
+		wp->SetName(vobname);
+
+		++vobname[0];
+
+		GetWorld()->wayNet->InsertWaypoint(wp);
+		return 1;
+	}
+	case KEY_1: {
+		auto wp = GetWorld()->wayNet->GetNearestWaypoint(oCNpc::player::GetPositionWorld());
+		if ( wp )
+			zCView::PrintDebug("< Select WP1 " + wp->GetName() + ">\n");
+
+		mwp1 = wp;
+		return 1;
+	}
+	case KEY_2: {
+		auto wp = GetWorld()->wayNet->GetNearestWaypoint(oCNpc::player::GetPositionWorld());
+		if ( wp )
+			zCView::PrintDebug("< Select WP2 " + wp->GetName() + ">\n");
+
+		mwp2 = wp;
+		return 1;
+	}
+	case KEY_C:
+		if ( mwp1 ) {
+			auto vob = new zCVobWaypoint();
+			vob->SetVobName(vobname);
+
+			GetWorld()->AddVob(vob);
+
+			vob->SetCollDetStat(0);
+			vob->SetCollDetDyn(0);
+
+			vob->SetPositionWorld(oCNpc::player->GetPositionWorld());
+			vob->SetHeadingAtWorld(oCNpc::player->GetHeadingAtWorld());
+
+
+			mwp2 = zfactory->CreateWaypoint();
+
+			mwp2->Init(vob);
+			mwp2->SetName(vobname);
+
+			++vobname[0];
+
+			GetWorld()->wayNet->InsertWaypoint(mwp2);
+			GetWorld()->wayNet->CreateWay(mwp1, mwp2);
+			mwp1 = mwp2;
+		}
+		return 1;
+	case KEY_W:
+		if (zinput->KeyPressed(KEY_LCONTROL)) {
+			zCView::PrintDebug("< Waynet - Mode aus >\n");
+			game_editwaynet = 0;
+		} else if ( mwp1 && mwp2 ) {
+			GetWorld()->wayNet->CreateWay(mwp1, mwp2);
+		}
+		return 1;
+	case KEY_B:
+		if ( mwp1 ) {
+			auto view = new zCView(0, 0, 2048, screen->FontY(), 2);
+
+			screen->InsertItem(view, 0);
+
+			auto name = mwp1->GetName();
+			name = view->Input(30, name);
+			mwp1->SetName(name);
+
+			auto vob = mwp1->GetVob();
+			if (vob)
+				vob->SetVobName(name);
+
+			screen->RemoveItem(view);
+
+			Delete(view);
+		}
+		return 1;
+	case KEY_E:
+		if ( mwp1 ) {
+			auto view = new zCView(0, 0, 2048, screen->FontY(), 2);
+
+			screen->InsertItem(view, 0);
+
+			auto str = view->Input(8, str);
+
+			screen->RemoveItem(view);
+
+			Delete(view);
+		}
+		return 1;
+	case KEY_D:
+		if (zinput->KeyPressed(KEY_LCONTROL)) {
+			GetWorld()->wayNet->DeleteWaypoint(mwp1);
+		} else if (zinput->KeyPressed(KEY_LSHIFT)) {
+			GetWorld()->wayNet->DeleteWay(mwp1, mwp2);
+		}
+		return 1;
+	case KEY_A:
+		GetWorld()->wayNet->CorrectHeight();
+		return 1;
+	default:
+		break;
+	}
+	return 0;
+}

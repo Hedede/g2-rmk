@@ -26,21 +26,23 @@ public:
 private:
 	//Da oCAIHuman (eine Unterklasse) nicht mehr viel zusätzlich enthält, hier einfach mal drangeklatscht:
 	//Ich habe sowieso nicht den Eindruck, dass diese Eigenschaften sehr nüztlich sind.
-	zCList<zCVob>     ignoreVobList;
+	zCList<zCVob> ignoreVobList;
 
-	zCAICamera* oCAIHuman_aiCam;                    //
+	zCAICamera* oCAIHuman_aiCam;
 
-	zBOuL               forcejump               :1;
-	zBOOL               lookedAround            :1;
-	zBOOL               sprintActive            :1;
-	zBOOL               crawlActive             :1;
-	zBOOL               showai                  :1;
-	zBOOL               startObserveIntruder    :1;
-	zBOOL               dontKnowAniPlayed       :1;
-	zBOOL               spellReleased           :1;
-	zBOOL               spellCastedLastFrame    :1;
-	zBOOL               eyeBlinkActivated       :1;
-	zBOOL               thirdPersonFallback     :1;
+	struct {
+		zBOOL               forcejump               :1;
+		zBOOL               lookedAround            :1;
+		zBOOL               sprintActive            :1;
+		zBOOL               crawlActive             :1;
+		zBOOL               showai                  :1;
+		zBOOL               startObserveIntruder    :1;
+		zBOOL               dontKnowAniPlayed       :1;
+		zBOOL               spellReleased           :1;
+		zBOOL               spellCastedLastFrame    :1;
+		zBOOL               eyeBlinkActivated       :1;
+		zBOOL               thirdPersonFallback     :1;
+	} flags;
 
-	zREAL oCAIHuman_createFlyDamage;  //
+	zREAL oCAIHuman_createFlyDamage;
 };

@@ -183,9 +183,7 @@ zCAIPlayer zCAIPlayer::zCAIPlayer()
 	autoRollPosDest = 1.0;
 	autoRollSpeed = 0.003;
 	autoRollMaxAngle = 10.0;
-	int unk = ((bitfield[0] >> 8) & 0xFD ^ 2);
-	bitfield[0] &= ~(0xFD << 8);
-	bitfield[0] |= unk;
+	flags2.autoRollEnabled = 1;
 	return this;
 }
 

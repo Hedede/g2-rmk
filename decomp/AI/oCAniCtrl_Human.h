@@ -53,6 +53,7 @@ public:
 			arc.ReadInt("actionMode", actionMode);
 		}
 	}
+
 	virtual ~oCAniCtrl_Human();
 	virtual void StartStandAni();
 	virtual void StartFallDownAni();
@@ -65,7 +66,7 @@ public:
 			world = ogame->GetWorld();
 
 			SetScriptValues();
-			bitfield[0] = bitfield[0] & 0xFB ^ 4;
+			flags.zMV_DO_DETECT_WALK_STOP_CHASM = 1;
 			InitAnimations();
 		}
 	}

@@ -83,6 +83,17 @@ void oCGame::PostSaveGameProcessing()
 	oCVisualFX::PostSaveGameProcessing();
 }
 
+void oCGame::InitWorldSavegame(int& slotID, zSTRING& levelname)
+{
+	OpenLoadscreen(1, "");
+
+	zINFO(5,"B: GAM: InitWorldSavegame"); // 2984,
+
+	savegameManagero->CopyToCurrent(slotID);
+
+	slotID = SAVEGAME_SLOT_CURRENT;
+}
+
 void oCGame::WriteSavegame(int slotnr, int saveGlobals)
 {
 	if ( saveGlobals )
@@ -185,4 +196,215 @@ void oCGame::WriteSavegame(int slotnr, int saveGlobals)
 
 	if ( saveGlobals )
 		CloseSavescreen();
+}
+
+void oCGame::LoadGame(int slotID, zSTRING const& levelpath)
+{
+	ClearGameState();
+
+	OpenLoadscreen(1, levelpath);
+
+	if ( progressBar )
+		progressBar->SetPercent(0, "");
+	if ( progressBar )
+		progressBar->SetRange( 0, 92);
+
+	LoadWorld(slotID, levelpath);
+
+	if ( progressBar )
+		progressBar->ResetRange();
+	if ( progressBar )
+		progressBar->SetRange(92, 100);
+
+	EnterWorld(0, 1, "");
+
+	if ( progressBar )
+		progressBar->ResetRange();
+
+	if ( slotID == SAVEGAME_SLOT_NEW )
+		InitNpcAttitudes();
+
+	SetTime(0, initial_hour, initial_minute);
+
+	if ( progressBar )
+		progressBar->SetPercent(100, "");
+
+	CloseLoadscreen();
+}
+
+void oCGame::LoadSavegame(int slotnr, int loadGlobals)
+{
+	ClearGameState();
+
+	OpenLoadscreen(this, 1, "");
+
+	if ( progressBar )
+		progressBar->SetPercent(0, "");
+
+	auto slotDir = oCSavegameManager::GetSlotDirName(slotnr);
+
+	if ( progressBar )
+		progressBar->SetRange(0, 5);
+
+	zSTRING levelname;
+
+	InitWorldSavegame(slotnr, levelname);
+
+	if ( progressBar )
+		progressBar->ResetRange();
+
+	auto current = oCSavegameManager::GetSlotDirName(SAVEGAME_SLOT_CURRENT);
+
+	auto savehdr = current + "savehdr.sav";
+
+	auto file = zfactory->CreateZFile(savehdr);
+
+	file->Open(0);
+	file->read(levelname);
+
+	delete file;
+
+	if ( progressBar )
+		progressBar->SetPercent(5, "");
+
+	auto playerInfo = dynamic_cast<oCPlayerInfo>(zCPlayerInfo::GetActivePlayer());
+	if ( playerInfo )
+		playerInfo->SetPlayerVob(0);
+
+	auto worldName = GetGameWorld()->worldFilename;
+
+	bool deleteVisuals;
+	if (worldFilename != "") {
+		GetGameWorld()->DisposeWorld();
+	} else {
+		deleteVisuals = true;
+		CacheVisualsIn();
+		GetGameWorld()->DisposeVobs();
+	}
+
+	CheckObjectConsistency(1);
+
+	if ( progressBar )
+		progressBar->SetPercent(8, "");
+
+	oCNpc::player = 0;
+
+	int day, hour, min;
+	wldTimer->GetTime(hour, min);
+
+	zCArchiver* arc;
+	if ( loadGlobals ) {
+		auto dir = zoptions->GetDirString(DIR_SAVEGAMES);
+		auto global = dir + slotDir + SAVEGAME_GLOBAL_FILE;
+
+		arc = zCArchiverFactory::CreateArchiverRead(global, 0);
+
+		arc->ReadInt("day", day);
+		arc->ReadInt("hour", hour);
+		arc->ReadInt("min", min);
+
+		wldTimer->SetDay(day);
+		wldTimer->SetTime(hour, min);
+	}
+
+	if ( progressBar )
+		progressBar->SetRange(10, 92);
+
+	LoadWorld(slotnr, levelname);
+
+	if ( progressBar )
+		progressBar->ResetRange();
+
+	if ( deleteVisuals ) {
+		for (auto visual : visualList)
+			Release(visual);
+
+		visualList.DeleteList();
+	}
+
+	if ( progressBar )
+		progressBar->SetRange(92, 98);
+
+	if ( !oCNpc::player )
+		zFATAL("U: GAME: No player found. Did you try to load an incompatible savgame ?"); // 2245,
+
+	EnterWorld(oCNpc::player, 0, "");
+
+	if ( progressBar )
+		progressBar->ResetRange();
+
+	if ( loadGlobals ) {
+		infoman->Unarchive(*arc);
+		misMan.Unarchive(*arc);
+		oCLogManager::GetLogManager()->Clear();
+		oCLogManager::GetLogManager()->Unarchive(*arc);
+
+		auto csMan = GetCutsceneManager();
+
+		arc->ReadObject(csMan);
+		zparser.LoadGlobalVars(*arc);
+		guilds->LoadGuildTable(*arc);
+
+		arc->Close();
+
+		rtnMan.UpdateGlobalRoutineEntry();
+	}
+
+	CallScriptInit();
+
+	if ( gLogStatistics )
+		LogStatisticsRead(zoptions->GetDirString(DIR_SAVEGAMES) + slotDir);
+
+	SetCameraPosition();
+
+	for (auto& npc : GetGameWorld()->voblist_npcs) {
+		if (npc && npc->homeWorld) { {
+			if ( npc->IsDead() && npc->GetAnictrl() && npc->GetModel() ) {
+				if ( npc->GetAnictrl()->actionMode == 5 ||
+				     npc->GetAnictrl()->actionMode == 6 )
+				{
+					npc->GetModel()->StartAni("S_DROWNED", 0);
+					npc->SetPhysicsEnabled(0);
+				} else {
+					rand();
+
+					std::string::assign(&v95.data, , strlen("S_DEADB"));
+					npc->GetModel()->StartAni("S_DEADB", 0);
+					npc->GetModel()->AdvanceAnis();
+
+					auto sa = npc->GetAnictrl()->flags2.zMV_DO_SURFACE_ALIGN;
+					npc->GetAnictrl()->flags2.zMV_DO_SURFACE_ALIGN = 1;
+
+					npc->GetAnictrl()->Begin(npc);
+					npc->GetAnictrl()->End(npc);
+
+					npc->GetAnictrl()->flags2.zMV_DO_SURFACE_ALIGN = sa;
+				}
+			} else {
+				zCVob* vob = nullptr;
+				zVEC3 pos = npc->trafoObjToWorld->GetTranslation();
+				npc->GetFloorPositionWithVob(pos, vob);
+
+				auto dyn = npc->GetCollDetDyn();
+				auto stat = npc->GetCollDetStat();
+
+				if ( vob ) {
+					auto mob = zDYNAMIC_CAST<oCMobInter>(vob);
+					if (mob && mob->GetFreePosition(npc, pos))
+						npc->SearchNpcPosition(pos);
+				}
+
+				npc->SetPositionWorld(pos);
+				npc->SetCollDetDyn(dyn)
+				npc->SetCollDetStat(stat);
+			}
+		}
+	}
+
+	SetObjectRoutineTimeChange(0, 0, hour, min);
+
+	if ( progressBar )
+		progressBar->SetPercent(100, "");
+
+	CloseLoadscreen();
 }

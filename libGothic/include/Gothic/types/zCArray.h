@@ -203,4 +203,11 @@ int CalcArraySize(zCArray<T> const& array)
 {
 	return sizeof(T) * array.GetNumInList();
 }
+
+// my addition
+template <typename C>
+int Count(C const& array)
+{
+	return array.GetNumInList();
+}
 #endif//G2_zCArray

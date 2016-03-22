@@ -118,7 +118,7 @@ public:
 		zWLD_LOAD_MERGE
 	};
 
-	enum zTWorldSaveMode         {
+	enum zTWorldSaveMode {
 		zWLD_SAVE_GAME_SAVED_DYN,
 		zWLD_SAVE_EDITOR_COMPILED,
 		zWLD_SAVE_EDITOR_UNCOMPILED,
@@ -129,6 +129,9 @@ public:
 		zWLD_LOAD_MERGE_ADD,
 		zWLD_LOAD_MERGE_REPLACE_ROOT_VISUAL
 	};
+
+
+	void SetOwnerSession(zCSession* owner);
 
 private:
 	//Jedes (?) Vob in der Welt ist hier drin.

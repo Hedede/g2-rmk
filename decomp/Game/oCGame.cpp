@@ -58,18 +58,24 @@ public:
 	{
 		return gameInfo;
 	}
+
 	virtual zCView* GetTextView();
+
 	virtual void OpenLoadscreen(bool,zSTRING);
 	virtual void OpenSavescreen(bool);
+
 	virtual void CloseLoadscreen();
 	virtual void CloseSavescreen();
+
 	virtual void ChangeLevel(zSTRING const &,zSTRING const &);
 	virtual void LoadWorldStartup(zSTRING const &);
 	virtual void LoadWorldStat(zSTRING);
 	virtual void LoadWorldDyn(zSTRING const &);
 	virtual void InitWorldSavegame(int &,zSTRING &);
+
 	virtual void CheckIfSavegameExists(zSTRING const &);
 	virtual void CompileWorld();
+
 	virtual void WorldInit();
 
 	virtual void SetTime(int day, int hour, int min);
@@ -394,7 +400,7 @@ void oCGame::SetRanges()
 
 void oCGame::RenderBlit()
 {
-	zrenderer->Vid_Blit(1, 0, 0);
+	zCSession::RenderBlit();
 }
 
 void oCGame::RenderWaynet()
@@ -618,7 +624,18 @@ void oCGame::CacheVisualsOut()
 	for (auto visual : visualList)
 		Release(visual);
 
-	visual.Clear();
+	visualList.Clear();
+}
+
+void oCGame::CacheVisualsIn()
+{
+	if ( GetWorld() ) {
+		visualList.Clear();
+
+		RecurseCacheVobs(GetWorld()->globalVobTree);
+
+		zINFO(5, "U: Cached "_s + Count(visualList) + " visuals."); // 2109
+	}
 }
 
 int oCGame::HandleEvent(int key)

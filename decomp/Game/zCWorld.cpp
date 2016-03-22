@@ -1,3 +1,13 @@
+void zCWorld::SetOwnerSession(zCSession* owner)
+{
+	ownerSession = owner;
+	if ( owner ) {
+		csPlayer = owner->GetCutsceneManager()->CreateCutscenePlayer(this);
+	} else {
+		Release(csPlayer);
+	}
+}
+
 void zCWorld::Archive(zCArchiver& arc)
 {
 	zCRenderLightContainer::S_ReleaseVobLightRefs(this);

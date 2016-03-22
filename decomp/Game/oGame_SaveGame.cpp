@@ -89,7 +89,7 @@ void oCGame::InitWorldSavegame(int& slotID, zSTRING& levelname)
 
 	zINFO(5,"B: GAM: InitWorldSavegame"); // 2984,
 
-	savegameManagero->CopyToCurrent(slotID);
+	savegameManager->CopyToCurrent(slotID);
 
 	slotID = SAVEGAME_SLOT_CURRENT;
 }
@@ -104,8 +104,8 @@ void oCGame::WriteSavegame(int slotnr, int saveGlobals)
 
 	zoptions->ChangeDir(2);
 
-	auto current = oCSavegameManager::GetSlotDirName(SAVEGAME_SLOT_CURRENT);
-	auto slotDir = oCSavegameManager::GetSlotDirName(slotnr);
+	auto current = savegameManager->GetSlotDirName(SAVEGAME_SLOT_CURRENT);
+	auto slotDir = savegameManager->GetSlotDirName(slotnr);
 
 	if (GetWorld()) {
 		if ( progressBar )
@@ -407,4 +407,23 @@ void oCGame::LoadSavegame(int slotnr, int loadGlobals)
 		progressBar->SetPercent(100, "");
 
 	CloseLoadscreen();
+}
+
+int oCGame::CheckIfSavegameExists(zSTRING const& levelpath)
+{
+	zoptions->ChangeDir(DIR_SAVEGAMES);
+
+	zSTRING path;
+	{
+		zFILE_FILE file{levelpath};
+		auto fileName = file.GetFilename();
+		auto slotDir = savegameManager->GetSlotDirName(SAVEGAME_SLOT_CURRENT);
+		path = slotDir + filename + "." + SAVEGAME_EXT;
+	}
+
+	auto file = zfactory->CreateZFile(path);
+	bool ret = file->Exists();
+	delete file;
+
+	return ret;
 }

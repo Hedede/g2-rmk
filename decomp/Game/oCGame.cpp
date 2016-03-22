@@ -1260,3 +1260,207 @@ void oCGame::SwitchCamToNextNpc()
 		oCNpc::player = tmp;
 	}
 }
+
+void oCGame::TriggerChangeLevel(zSTRING const& levelpath, zSTRING const& start)
+{
+	loadNextLevel = 1;
+	loadNextLevelName = levelpath;
+	loadNextLevelStart = start;
+	if ( oCNpc::player ) {
+		if ( oCNpc::player->GetWeaponMode() == FMODE_MAGIC )
+			oCNpc::player->EV_ForceRemoveWeapon(nullptr);
+	}
+}
+
+void oCGame::ChangeLevel(zSTRING const& levelpath, zSTRING const& start)
+{
+	zparser.ClearAllInstanceRefs();
+	if ( zresMan ) {
+		zresMan->PurgeCaches(0);
+		zresMan->cacheInImmedMsec = 1.0e8;
+	}
+
+	OpenLoadscreen(0, levelpath);
+	bool musicEnabled = zoptions->ReadBool(zOPT_SEC_SOUND, "musicEnabled", 1);
+
+	zCZoneMusic::SetAutochange(0);
+	zCMusicSystem::DisableMusicSystem(1);
+
+	if ( zsound ) {
+		zsound->StopAllSounds();
+		zFILE_FILE file{levelpath};
+		auto filename = "LOADING_SFX_" + file->GetFilename();
+		auto sfx = zsound->LoadSoundFXScript(filename.Upper());
+		if ( sfx ) {
+			zsound->PlaySound(sfx, 0);
+			Release(sfx);
+		}
+	}
+
+	if ( progressBar )
+		progressBar->SetPercent(0, "");
+
+	auto player = oCNpc::player;
+	if ( oCNpc::player ) {
+		oCNpc::player->AddRef();
+		oCNpc::player->groundPoly = 0;
+		oCNpc::player->ClearPerceptionLists();
+		GetGameWorld()->RemoveVob(oCNpc::player);
+		oCNpc::player = 0;
+	}
+
+	if ( progressBar )
+		progressBar->SetPercent(2, "");
+
+	oCNpc::dontArchiveThisNpc = player;
+
+	DeleteTorches();
+
+	inLevelChange = 1;
+
+	if ( progressBar )
+		progressBar->SetRange(5, 35);
+
+	WriteSavegame(SAVEGAME_SLOT_CURRENT, 0);
+
+	if ( progressBar )
+		progressBar->ResetRange();
+
+	inLevelChange = 0;
+
+	oCNpc::dontArchiveThisNpc = 0;
+
+	int slot;
+	if ( CheckIfSavegameExists(levelpath) ) {
+		zINFO(9,"B: (oCGame::ChangeLevel) Savegame exists"); // 2402,
+		slot = SAVEGAME_SLOT_CURRENT;
+	} else {
+		zINFO(9,"B: (oCGame::ChangeLevel) Savegame does not exist"); // 2402,
+		slot = SAVEGAME_SLOT_NEW;
+	}
+
+	if ( progressBar )
+		progressBar->SetPercent(37, "");
+
+	spawnman->ClearList();
+	GetGameWorld()->DisposeWorld();
+	CamInit();
+	oCVob::ClearDebugList();
+
+	if ( portalman )
+		portalman->CleanUp();
+
+	objRoutineList.DeleteDatas();
+
+	currentObjectRoutine = 0;
+
+	CheckObjectConsistency(0);
+
+	if ( progressBar )
+		progressBar->SetPercent(40, "");
+
+	if ( progressBar )
+		progressBar->SetRange(40, 92);
+
+	LoadWorld(slot, levelpath);
+
+	if ( progressBar )
+		progressBar->ResetRange();
+
+	if ( progressBar )
+		progressBar->SetRange(95, 98);
+
+	if ( player && oCNpc::player )
+		zFAULT("U: CHL: Two Players found..."); //2450
+
+	EnterWorld(player, 1, start);
+
+	if ( progressBar )
+		progressBar->ResetRange();
+
+	CallScriptInit();
+
+	Release(player);
+
+	RefreshNpcs();
+
+	loadNextLevel = 0;
+	rtnMan.SetDailyRoutinePos(slot != SAVEGAME_SLOT_NEW);
+
+	int day, hour, min;
+	GetTime(day, hour, min);
+
+	SetObjectRoutineTimeChange(0, 0, hour, min);
+
+	if ( spawnman )
+		spawnman->SpawnImmediately(1);
+
+	if ( slot == SAVEGAME_SLOT_NEW )
+		InitNpcAttitudes();
+
+	ogame->infoman->RestoreParserInstances();
+
+	if (progressBar)
+		progressBar->SetPercent(100, "");
+
+	zCZoneMusic::SetAutochange(musicEnabled);
+	zCMusicSystem::DisableMusicSystem(!musicEnabled);
+
+	CloseLoadscreen();
+
+	if ( zresMan )
+		zresMan->cacheInImmedMsec = 1500.0;
+}
+
+void oCGame::EnterWorld(oCNpc* playerVob, int changePlayerPos, zSTRING const& startpoint)
+{
+	zINFO(9,"B: (oCGame::EnterWorld)"); // 3011,
+
+	if ( progressBar )
+		progressBar->SetPercent(0, "");
+
+	if ( progressBar )
+		progressBar->SetRange(0, 55);
+
+	if (changePlayerPos) {
+		SetupPlayers(playerVob, startpoint);
+	} else {
+		auto pinfo = dynamic_cast<oCPlayerInfo>(zCPlayerInfo::GetActivePlayer());
+		if (!pinfo) {
+			pinfo = zfactory->CreatePlayerInfo();
+			gameInfo->AddPlayer(pinfo);
+			pinfo->SetPlayerVob(playerVob);
+			pinfo->SetActive();
+		}
+	}
+
+	if ( progressBar )
+		progressBar->ResetRange();
+
+	CamInit();
+
+	oCNpc::player->SetAsPlayer();
+	if ( playerVob && playerVob->GetAnictrl() )
+		playerVob->GetAnictrl()->SetFightAnis(playerVob->GetWeaponMode());
+
+	if ( progressBar )
+		progressBar->SetPercent(60, "");
+
+	EnvironmentInit();
+
+	if ( progressBar )
+		progressBar->SetPercent(75, "");
+
+	NpcInit();
+
+	if ( progressBar )
+		progressBar->SetPercent(96, "");
+
+	if ( progressBar )
+		progressBar->SetPercent(100, "");
+
+	CloseLoadscreen();
+
+	enterWorldTimer = 0;
+	worldEntered = 1;
+}

@@ -5,10 +5,39 @@ const int zCVob_trafoObjToWorld_Z = 11;
 
 class zCVob : public zCObject {
 	Z_OBJECT(zCObject);
+private:
+	static zBOOL s_enableAnimations;
+	static zBOOL s_showHelperVisuals;
 public:
-	static void SetVobID(uint32_t const&)
+	static int GetAnimationsEnabled()
 	{
+		return s_enableAnimations;
 	}
+	
+	static int GetShowHelperVisuals()
+	{
+		return s_showHelperVisuals;
+	} 
+
+	static SetAnimationsEnabled(int b)
+	{
+		s_enableAnimations = b;
+	}
+
+	static SetShowHelperVisuals(int b)
+	{
+		s_showHelperVisuals = b;
+	}
+
+	struct zTModelLimbColl {
+		zTModelLimbColl() = default;
+		~zTModelLimbColl() = default;
+
+		zCVob* vob;
+		zCMaterial* unk2;
+		zCList<zCModelNodeInst> nodes;
+		zVEC3 center;
+	};
 
 	virtual ~zCVob();
 
@@ -26,13 +55,52 @@ public:
 	virtual void OnTimer() { }
 	virtual void PostLoad() { }
 
-	virtual void GetCharacterClass(void);
+	virtual uint32_t GetCharacterClass() const
+	{
+		return 0;
+	}
 	virtual void SetSleepingMode(zTVobSleepingMode);
 	virtual void EndMovement(int);
-	virtual void CanThisCollideWith(zCVob *);
+	virtual bool CanThisCollideWith(zCVob* vob)
+	{
+		return 1;
+	}
 	virtual void Render(zTRenderContext &);
 	virtual void SetVisual(zSTRING const &);
 	virtual void SetVisual(zCVisual *);
+
+	zCVisual GetVisual() const
+	{
+		return visual;
+	}
+
+	zVEC3 GetPositionWorld() const
+	{
+		return {trafoObjToWorld[2][3],
+		        trafoObjToWorld[1][3],
+		        trafoObjToWorld[0][3]};
+	}
+
+	zVEC3 GetAtVectorWorld() const
+	{
+		return {trafoObjToWorld[2][2],
+		        trafoObjToWorld[1][2],
+		        trafoObjToWorld[0][2]};
+	}
+
+	zVEC3 GetUpVectorWorld() const
+	{
+		return {trafoObjToWorld[2][1],
+		        trafoObjToWorld[1][1],
+		        trafoObjToWorld[0][1]};
+	}
+
+	zVEC3 GetRightVectorWorld() const
+	{
+		return {trafoObjToWorld[2][0],
+		        trafoObjToWorld[1][0],
+		        trafoObjToWorld[0][0]};
+	}
 
 	virtual void GetScriptInstance(zSTRING*& outname, int& outidx)
 	{
@@ -46,9 +114,15 @@ public:
 		return 0;
 	}
 
-	virtual void GetCSStateFlags(void);
+	virtual uint32_t GetCSStateFlags() const
+	{
+		return 0;
+	}
 	virtual void TraceRay(zVEC3 const &,zVEC3 const &,int,zTTraceRayReport &);
-	virtual void GetTriggerTarget(int);
+	virtual zSTRING const* GetTriggerTarget(int i) const
+	{
+		return 0;
+	}
 
 	virtual void ThisVobAddedToWorld(zCWorld* world)
 	{
@@ -72,6 +146,42 @@ public:
 	}
 
 	void GetEM(int doNotCreate = 0);
+
+	zCCollisionObject* GetCollisionObject()
+	{
+		return collisionObject;
+	}
+
+	/* Unused */
+
+	static uint32_t GetNextFreeVobID()
+	{
+		return zCVob::s_nextFreeID;
+	}
+
+	/* Gothic 1 demo, удалено в релизной версии
+	uint32_t GetVobID() const
+	{
+		return id;
+	}
+	*/
+
+	void SetVobID(uint32_t const& id)
+	{
+		/* Gothic 1 demo, удалено в релизной версии
+		this->id = id;
+		if (id >= s_nextFreeID)
+			s_nextFreeID = id + 1;
+			*/
+	}
+
+	void SetVobPresetName(zSTRING const& presetName) { }
+	zSTRING& GetVobPresetName() const
+	{
+		if (!presetName)
+			return zSTR_EMPTY;
+		return *vobPresetName;
+	}
 
 private:
 	zCTree<zCVob>* globalVobTreeNode;

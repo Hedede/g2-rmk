@@ -2,7 +2,7 @@ class zCModel : public zCVisualAnimate {
 	Z_OBEJCT(zCModel);
 public:
 	virtual ~zCModel();
-	virtual void Render(zTRenderContext	&);
+	virtual void Render(zTRenderContext&);
 	virtual void IsBBox3DLocal();
 	virtual void GetBBox3D();
 	virtual void GetVisualName();
@@ -17,4 +17,16 @@ public:
 	virtual void StopAnimation(zSTRING const &);
 	virtual void IsAnimationActive(zSTRING const &);
 	virtual void GetAnyAnimation();
+
+	zTBBox3D GetBBox3DNodeWorld(zCModelNodeInst* node)
+	{
+		CalcNodeListBBoxWorld();
+		return node->bbox;
+	}
+
+	zVEC3 GetNodePositionWorld(zCModelNodeInst* node)
+	{
+		CalcNodeListBBoxWorld();
+		return node->trafoWorld->GetTranslation();
+	}
 };

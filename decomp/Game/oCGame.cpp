@@ -1,337 +1,3 @@
-//statics:
-const int GAME_VIEW_MAX = 6;
-
-class oCGame : public zCSession {
-public:
-	static oCNpc* GetSelfPlayerVob()
-	{
-		return oCNpc::player;
-	}
-
-	oCGame();
-	virtual ~oCGame();
-
-	virtual bool HandleEvent(int key);
-
-	virtual void Init();
-	virtual void Done();
-
-	virtual void Render();
-	virtual void RenderBlit();
-
-	virtual void SaveWorld(zSTRING const& dwf, zCWorld::zTWorldSaveMode,int,int);
-	virtual void LoadWorld(zSTRING const& dwf, zCWorld::zTWorldLoadMode);
-
-	virtual void EnterWorld(oCNpc *,int,zSTRING const &);
-
-	virtual void DesktopInit();
-	virtual void EnvironmentInit();
-
-	virtual void Pause(int);
-	virtual void Unpause();
-
-	virtual void SetDrawWaynet(bool b)
-	{
-		game_showwaynet = b;
-	}
-
-	virtual bool GetDrawWaynet() const
-	{
-		return game_showwaynet;
-	}
-	virtual void RenderWaynet();
-
-	virtual void SetRanges();
-	virtual void SetRangesByCommandLine();
-
-	virtual zVEC3 GetStartPos() const
-	{
-		return startpos;
-	}
-	virtual void SetGameInfo(oCGameInfo *);
-	virtual void LoadParserFile(zSTRING const &);
-	virtual void TriggerChangeLevel(zSTRING const &,zSTRING const &);
-
-	virtual oCWorld* GetGameWorld() const;
-
-	virtual oCGameInfo& GetGameInfo()
-	{
-		return gameInfo;
-	}
-
-	virtual zCView* GetTextView();
-
-	virtual void OpenLoadscreen(bool,zSTRING);
-	virtual void OpenSavescreen(bool);
-
-	virtual void CloseLoadscreen();
-	virtual void CloseSavescreen();
-
-	virtual void ChangeLevel(zSTRING const &,zSTRING const &);
-	virtual void LoadWorldStartup(zSTRING const &);
-	virtual void LoadWorldStat(zSTRING);
-	virtual void LoadWorldDyn(zSTRING const &);
-	virtual void InitWorldSavegame(int &,zSTRING &);
-
-	virtual void CheckIfSavegameExists(zSTRING const &);
-	virtual void CompileWorld();
-
-	virtual void WorldInit();
-
-	virtual void SetTime(int day, int hour, int min);
-	virtual void GetTime(int& day, int& hour, int& min) const
-	{
-		day = wldTimer->GetDay(wldTimer);
-		wldTimer->GetTime(hour, min);
-	}
-
-private:virtual void NpcInit(zCTree<zCVob>* vobtree);
-public: virtual void NpcInit();
-
-	virtual void SetAsPlayer(zSTRING const &);
-
-	oCNewsManager& GetNewsManager()
-	{
-		return newsman;
-	}
-
-	oCInfoManager& GetInfoManager()
-	{
-		return infoman;
-	}
-
-	oCGuilds& GetGuilds()
-	{
-		return guilds;
-	}
-
-	int IsDebuggingAllInstances() const
-	{
-		return debugAllInstances;
-	}
-
-	oCWorldTimer* GetWorldTimer() const
-	{
-		return wldTimer;
-	}
-
-	oCTradeManager* GetTradeManager() const
-	{
-		return trademan;
-	}
-
-	zCView* GetTextView() const
-	{
-		return game_text;
-	}
-
-	oCInfoManager* GetInfoManager() const
-	{
-		return infoman;
-	}
-
-	oCSVMManager* GetSVMManager() const
-	{
-		return svmman;
-	}
-
-	oCPortalRoomManager* GetPortalRoomManager(oCGame *this) const
-	{
-		return portalman;
-	}
-
-	oCSpawnManager* GetSpawnManager(oCGame *this) const
-	{
-		return spawnman;
-	}
-
-	int GetShowPlayerStatus(oCGame *this) const
-	{
-		return showPlayerStatus;
-	}
-
-	void ToggleShowFreePoints(oCGame *this)
-	{
-		showFreePoints = !showFreePoints;
-	}
-
-
-	struct TObjectRoutine {
-		~TObjectRoutine() = default;
-
-		void Release()
-		{
-			delete this;
-		}
-
-		zSTRING objectName;
-		int hour;
-		int min;
-		int state;
-		int type;
-	};
-
-	bool IsDebuggingChannel(int channel) const
-	{
-		return (debugChannels & (1 << (channel - 1))) != 0;
-	}
-
-	bool IsDebuggingInstance(zCVob* vob) const
-	{
-		return debugInstances.IsInList(vob);
-	}
-
-private:
-	void SetCameraPosition();
-	oCNpc* RemovePlayerFromWorld();
-	void InsertPlayerIntoWorld(oCNpc* npc, zMAT4& trafo);
-
-	int IsInWorld(zSTRING& levelpath);
-
-	static int Sort_Routine(TObjectRoutine* entry1, TObjectRoutine* entry2)
-	{
-		if (entry1->hour >= entry2->hour) {
-			if (entry1->hour1 > entry2->hour || entry1->min >= entry2->min)
-				return 1;
-			return -1;
-		}
-
-		return -1;
-	}
-
-	static void CreateVobList(zCList<zCVob>& resultList, zCTree<zCVob>& node, zTVobType vobtyp)
-	{
-		for (auto i = &node; i; i = i->next) {
-			if ( i->data->type == vobtyp )
-				resultList.Insert(i->data);
-			CreateVobList(resultList, i->firstChild, vobtyp);
-		}
-	}
-
-	void CacheVisualsOut();
-
-	void PreSaveGameProcessing(int saveGlobals);
-	void PostSaveGameProcessing();
-private:
-	zREAL  cliprange;
-	zREAL  fogrange;
-	zBOOL  inScriptStartup;
-	zBOOL  inLoadSaveGame;
-	zBOOL  inLevelChange;
-
-	enum oTGameDialogView
-	{
-		GAME_VIEW_SCREEN        ,
-		GAME_VIEW_CONVERSATION  ,
-		GAME_VIEW_AMBIENT       ,
-		GAME_VIEW_CINEMA        ,
-		GAME_VIEW_CHOICE        ,
-		GAME_VIEW_NOISE         ,
-		GAME_VIEW_MAX
-	};
-
-	//Views sind Kanäle, über die die Engine
-	//Informationen anzeigen kann.
-	//Beispiel sind die normalen Dialoguntertitelboxen.
-	zCView*  array_view[GAME_VIEW_MAX];
-	zBOOL    array_view_visible[GAME_VIEW_MAX];
-	zBOOL    array_view_enabled[GAME_VIEW_MAX];
-
-	oCSavegameManager*  savegameManager;
-	zCView*             game_text;
-	zCView*             load_screen;
-	zCView*             save_screen;
-	zCView*             pause_screen;
-	oCViewStatusBar*    hpBar;
-	oCViewStatusBar*    swimBar;
-	oCViewStatusBar*    manaBar;
-	oCViewStatusBar*    focusBar;
-	zBOOL               showPlayerStatus;
-
-	// Debugsachen
-	zBOOL  game_drawall;           //  //"toggle Desktop"
-	zBOOL  game_frameinfo;         //
-	zBOOL  game_showaniinfo;       //
-	zBOOL  game_showwaynet;        //
-	zBOOL  game_testmode;          //
-	zBOOL  game_editwaynet;        //
-	zBOOL  game_showtime;          //
-	zBOOL  game_showranges;        //
-	zBOOL  drawWayBoxes;           //
-	zBOOL  scriptStartup;          //
-	zBOOL  showFreePoints;         //
-	oCNpc* showRoutineNpc;         //
-
-	// Levelinfos
-	zBOOL loadNextLevel;          //
-	zSTRING  loadNextLevelName;   //
-	zSTRING  loadNextLevelStart;  //
-
-	// Spielerspezifika
-	zVEC3 startpos;            //
-	oCGameInfo* gameInfo;               // //etwas auf den ersten Blick uninteressantes
-	zCVobLight*  pl_light;               //
-	zREAL        pl_lightval;            //
-
-	// Timer
-	oCWorldTimer* wldTimer;               //
-	zREAL timeStep;               //                          // Ermöglicht Einzelbildschaltung
-	zBOOL singleStep;             //
-
-	// Referenzen auf Einzelstückklassen.
-	oCGuilds*            guilds;                 //
-	oCInfoManager*       infoman;                //
-	oCNewsManager*       newsman;                //
-	oCSVMManager*        svmman;                 //
-	oCTradeManager*      trademan;               //
-	oCPortalRoomManager* portalman;              //
-	oCSpawnManager*      spawnman;               //
-
-	//Zeug
-	zREAL  music_delay;            //
-	oCNpc* watchnpc;               //
-
-	//Kurz nachdem Laden kurze Pause, damit
-	//sich die Systemressourcen erholen.
-	zBOOL  m_bWorldEntered;        //
-	zREAL  m_fEnterWorldTimer;     //
-
-	//Klar:
-	int initial_hour;           //int
-	int initial_minute;         //int
-
-	//Debug:
-	zCArray<zCVob*>           debugInstances;
-
-	int debugChannels;
-	int debugAllInstances;
-
-	//Objektroutinen ("Wld_SetObjectRoutine"), z.B. Laternen: nur Nachts an
-	typedef struct {
-		zSTRING     objName;
-		int         stateNum;
-		int         hour1,min1;
-		int         type;
-	} TObjectRoutine;
-
-	int oldRoutineDay;          //int
-
-	zCListSort<TObjectRoutine>    objRoutineList;
-
-	zCListSort<TObjectRoutine>* currentObjectRoutine;
-
-	//ProgressBar
-	zCViewProgressBar* progressBar;                            //
-
-	//Nicht jedes Fass in der Welt hat ein privates Visual.
-	//Ich schätze mal, dass alle benutzten Visuals hier gesammelt werden
-	//und Vobs nur Kopien der Referenzen halten.
-
-	zCArray   <zCVisual*>     visualList;
-};
-
-oCGame* ogame;
-
 void oCGame::SetShowPlayerStatus(int show)
 {
 	if ( !show ) {
@@ -1480,4 +1146,266 @@ void oCGame::EnterWorld(oCNpc* playerVob, int changePlayerPos, zSTRING const& st
 
 	enterWorldTimer = 0;
 	worldEntered = 1;
+}
+
+void oCGame::Render()
+{
+	if ( game_testmode || !worldEntered ) {
+		zrenderer->BeginFrame();
+
+		if ( gLogStatistics )
+			LogStatistics(oCNpc::player);
+
+		oCItemContainer::Container_PrepareDraw();
+
+		if ( !game_holdtime )
+			wldTimer->Timer();
+
+		auto skyCtl = GetWorld()->GetActiveSkyControler();
+
+		skyCtl->SetTime(wldTimer->GetSkyTime());
+
+		oCVisualFX::SetupAIForAllFXInWorld();
+
+		GetWorld()->Render(GetCamera());
+
+		zCTimer::FrameUpdate();
+
+		spawnman->CheckInsertNpcs();
+
+		oCNpc::ProcessAITimer();
+
+		if ( loadNextLevel ) {
+			zINFO(5,"B: GAM: Start changing level"); // 2671,
+
+			ChangeLevel(loadNextLevelName, loadNextLevelStart);
+
+			zINFO(5,"B: GAM: Level changed suucessfully"); // 2673,
+		}
+
+		if ( game_drawall ) {
+			RenderWaynet();
+
+			ShowDebugInfos();
+			UpdatePlayerStatus();
+
+			screen->DrawItems();
+
+			oCItemContainer::Container_Draw();
+
+			if ( drawWayBoxes )
+				rtnMan->DrawWayBoxes();
+			if ( showFreePoints )
+				ShowFreePoints();
+
+			static auto& infoman = oCInformationManager::GetInformationManager();
+			if ( infoman.WaitingForEnd() )
+				infoman.Update();
+
+			GetScreen()->Render();
+		}
+
+		GetCamera()->ShowVobDebugInfo();
+
+		zrenderer->Vid_Unlock();
+
+		oCarsten_PerFrame();
+
+		oCGame::CheckObjectRoutines();
+
+		GetWorld()->AdvanceClock(timeStep);
+
+		zrenderer->EndFrame();
+
+		if ( singleStep )
+			timeStep = 0;
+
+	} else {
+		GetWorld()->AdvanceClock(timeStep);
+
+		zCTimer::FrameUpdate();
+
+		GetCamera()->Activate();
+
+		GetWorld()->MoveVobs();
+
+		if ( zresMan )
+			zresMan->DoFrameActivity();
+
+		spawnman->CheckInsertNpcs();
+
+		enterWorldTimer += ztimer.frameTimeFloat;
+		if ( enterWorldTimer >= 2500.0 ) {
+			worldEntered = 0;
+			enterWorldTimer = 0;
+		}
+	}
+}
+
+void oCGame::SetupPlayers(oCNpc*& playerVob, zSTRING const& startpoint)
+{
+	if ( progressBar )
+		progressBar->SetPercent(0, "");
+
+	zMAT4 insertTrafo;
+
+	v4 = Alg_Identity3D(&v62);
+	zMAT4::operator=(&v60, v4);
+	if ( startpoint->Length() > 0 ) {
+		auto sp = GetGameWorld()->SearchVobByName(startpoint);
+		if ( sp ) {
+			insertTrafo = sp->trafoObjToWorld();
+		} else {
+			auto wp = GetGameWorld()->wayNet->GetWaypoint(startpoint);
+			if ( wp ) {
+				insertTrafo->SetTranslation(wp->GetPositionWorld());
+				insertTrafo->SetAtVector(wp->dir);
+			} else {
+				zWARNING("U: WLD: Startpoint " + startpoint + " not found."); // 1541,
+
+				insertTrafo->SetTranslation({0, 150.0, 0});
+				insertTrafo->SetAtVector({0, 0.0, 0});
+			}
+		}
+	} else {
+		zCList<zCVob> vobList;
+		auto vobTree = GetWorld()->globalVobTree.firstChild;
+		if ( vobTree ) {
+			if ( vobTree->data->type == VOB_TYPE_STARTPOINT )
+				vobList.Insert(vobTree->data);
+			CreateVobList(vobList, vobTree->firstChild, VOB_TYPE_STARTPOINT);
+			CreateVobList(vobList, vobTree->next, VOB_TYPE_STARTPOINT);
+		}
+
+		auto num = vobList.GetNumInList();
+		if ( num > 0 ) {
+			auto vob = vobList.Get(0);
+
+			insertTrafo.SetTranslation(vob->GetPositionWorld());
+			insertTrafo.SetAtVector(vob->GetHeadingAtWorld());
+		} else {
+			insertTrafo->SetTranslation({0, 150.0, 0});
+		}
+	}
+
+	if ( progressBar )
+		progressBar->SetPercent(30, "");
+
+	zSTRING pc_hero;
+	if ( !playerVob ) {
+		if ( zgameoptions ) {
+			pc_hero = zgameoptions->ReadString(zOPT_SEC_SETTINGS, "Player", 0);
+		} else {
+			pc_hero = zoptions->(zOPT_SEC_INTERNAL, "playerInstanceName", 0);
+		}
+
+		if (pc_hero.IsEmpty())
+			pc_hero =  "PC_Hero";
+
+		playerVob = GetGameWorld()->CreateVob(VOB_TYPE_NPC, pc_hero);
+		if (!playerVob)
+			zFATAL("U: GAME: Player-creation failed: " + pc_hero); // 1590
+	}
+
+	if ( progressBar )
+		progressBar->SetPercent(90, "");
+
+	startpos = insertTrafo.GetTranslation();
+
+	playerVob->SetCollDetStat(0);
+	playerVob->SetCollDetDyn(0);
+
+	playerVob->GetModel();
+
+	InsertPlayerIntoWorld(playerVob, insertTrafo);
+
+	playerVob->SetOnFloor(startpos);
+	playerVob->ResetXZRotationsWorld();
+
+	playerVob->SetCollDetStat(1);
+	playerVob->SetCollDetDyn(1);
+
+	Release(playerVob);
+
+	auto playerInfo = dynamic_cast<oCPlayerInfo>(zCPlayerInfo::GetActivePlayer());
+	if ( playerInfo ) {
+		playerInfo = zfactory->CreatePlayerInfo();
+		gameInfo->AddPlayer(playerInfo);
+		gameInfo->SetPlayerVob(playerVob);
+		gameInfo->SetActive();
+	}
+
+	oCNpc::player = playerVob;
+
+	playerVob->SetAsPlayer();
+
+	if ( progressBar )
+		progressBar->SetPercent(100, "");
+
+	if ( oCNpc::player || oCNpc::player->GetInstance() < 0 )
+		zFATAL("U: GAME: Player-Script-Instance not found : " + pc_hero); // 1632
+}
+
+// private
+void oCGame::LoadWorldStat(zSTRING levelpath)
+{
+	zINFO(3,"U: GAM: Loading static data: " + levelpath); // 3158
+	if ( progressBar )
+		progressBar->SetRange(0, 100);
+
+
+	auto pos = levelpath.Search(0, "." + SAVEGAME_EXT, 1u);
+	if ( pos >= 0 )
+		levelpath.Overwrite(pos, ".ZEN");
+
+	GetWorld()->LoadWorld(levelpath, zWLD_LOAD_GAME_SAVED_STAT);
+	if ( progressBar )
+		progressBar->ResetRange();
+
+	zINFO(3,"");
+}
+
+void oCGame::ShowDebugInfos(oCGame *this)
+{
+	if ( game_frameinfo ) {
+		auto Y = GetViewport()->FontY();
+		GetViewport()->Print(0, 0, vidGetFPSRate() + " fps"_s);
+
+		zTRnd_Stats stats;
+		zrenderer->GetStatistics(stats);
+		GetViewport()->Print(0, Y, stats.numTris + " tris"_s);
+	}
+	if ( game_showranges ) {
+		auto Y = GetViewport()->FontY();
+
+		float farClipZ = zCCamera::activeCam->farClipZ;
+		float userFogFar = zCCamera::activeCam->connectedVob->homeWorld->GetActiveSkyControler()->GetFarZ();
+		float userFogFarScale = zCCamera::activeCam->connectedVob->homeWorld->GetActiveSkyControler()->GetFarZScalability();
+
+		GetViewport()->Print(0, 2 * Y + 1200, "farclipz: "_s + farClipZ);
+		GetViewport()->Print(0, 3 * Y + 1200, "userFogFar: "_s + userFogFar);
+		GetViewport()->Print(0, 3 * Y + 1200, "userFogFarScale: "_s + userFogFarScale);
+
+		zTRnd_Stats stats;
+		zrenderer->GetStatistics(stats);
+
+		GetViewport()->Print(0, 0, stats.numTris + " tris"_s);
+
+	}
+	if ( game_showtime ) {
+		auto timeString = wldTimer->GetTimeString();
+		auto Y = GetViewport()->FontSize();
+
+		screen->Print(0x1FFF - Y, 0, timeString);
+	}
+	if ( game_showaniinfo ) {
+		oCNpc::player->GetModel()->PrintStatus(0, 6000);
+		oCNpc::player->GetModel()->ShowAniList(6200);
+	}
+
+	if ( game_species_con && game_species_con->IsVisible() )
+		game_species_con->Update();
+
+	if ( showRoutineNpc )
+		rtnMan.ShowRoutine(0, 1500, showRoutineNpc);
 }

@@ -213,92 +213,94 @@ private:
 	void PreSaveGameProcessing(int saveGlobals);
 	void PostSaveGameProcessing();
 private:
-	zREAL  cliprange;
-	zREAL  fogrange;
-	zBOOL  inScriptStartup;
-	zBOOL  inLoadSaveGame;
-	zBOOL  inLevelChange;
+	zREAL  cliprange = 1600.0;
+	zREAL  fogrange  = 400.0;
+	zBOOL  inScriptStartup = 0;
+	zBOOL  inLoadSaveGame  = 0;
+	zBOOL  inLevelChange   = 0;
 
-	enum oTGameDialogView
-	{
-		GAME_VIEW_SCREEN        ,
-		GAME_VIEW_CONVERSATION  ,
-		GAME_VIEW_AMBIENT       ,
-		GAME_VIEW_CINEMA        ,
-		GAME_VIEW_CHOICE        ,
-		GAME_VIEW_NOISE         ,
+	enum oTGameDialogView {
+		GAME_VIEW_SCREEN,
+		GAME_VIEW_CONVERSATION,
+		GAME_VIEW_AMBIENT,
+		GAME_VIEW_CINEMA,
+		GAME_VIEW_CHOICE,
+		GAME_VIEW_NOISE,
 		GAME_VIEW_MAX
 	};
 
 	//Views sind Kanäle, über die die Engine
 	//Informationen anzeigen kann.
 	//Beispiel sind die normalen Dialoguntertitelboxen.
-	zCView*  array_view[GAME_VIEW_MAX];
-	zBOOL    array_view_visible[GAME_VIEW_MAX];
-	zBOOL    array_view_enabled[GAME_VIEW_MAX];
+	zCView*  array_view[GAME_VIEW_MAX]         = {};
+	zBOOL    array_view_visible[GAME_VIEW_MAX] = {};
+	zBOOL    array_view_enabled[GAME_VIEW_MAX] = {};
 
-	oCSavegameManager*  savegameManager;
-	zCView*             game_text;
-	zCView*             load_screen;
-	zCView*             save_screen;
-	zCView*             pause_screen;
-	oCViewStatusBar*    hpBar;
-	oCViewStatusBar*    swimBar;
-	oCViewStatusBar*    manaBar;
-	oCViewStatusBar*    focusBar;
-	zBOOL               showPlayerStatus;
+	oCSavegameManager*  savegameManager = 0;
+	zCView*             game_text    = 0;
+	zCView*             load_screen  = 0;
+	zCView*             save_screen  = 0;
+	zCView*             pause_screen = 0;
+	oCViewStatusBar*    hpBar     = 0;
+	oCViewStatusBar*    swimBar   = 0;
+	oCViewStatusBar*    manaBar   = 0;
+	oCViewStatusBar*    focusBar  = 0;
+	zBOOL               showPlayerStatus = 1;
 
 	// Debugsachen
-	zBOOL  game_drawall;           //  //"toggle Desktop"
-	zBOOL  game_frameinfo;         //
-	zBOOL  game_showaniinfo;       //
-	zBOOL  game_showwaynet;        //
-	zBOOL  game_testmode;          //
-	zBOOL  game_editwaynet;        //
-	zBOOL  game_showtime;          //
-	zBOOL  game_showranges;        //
-	zBOOL  drawWayBoxes;           //
-	zBOOL  scriptStartup;          //
-	zBOOL  showFreePoints;         //
-	oCNpc* showRoutineNpc;         //
+	zBOOL  game_drawall      = 1; //"toggle Desktop"
+	zBOOL  game_frameinfo    = 0;
+	zBOOL  game_showaniinfo  = 0;
+	zBOOL  game_showwaynet   = 0;
+	zBOOL  game_testmode     = 0;
+	zBOOL  game_editwaynet   = 0;
+	zBOOL  game_showtime     = 0;
+	zBOOL  game_showranges   = 0;
+	zBOOL  drawWayBoxes      = 0;
+	zBOOL  scriptStartup     = 1;
+	zBOOL  showFreePoints    = 0;
+	oCNpc* showRoutineNpc    = 0;
 
 	// Levelinfos
-	zBOOL loadNextLevel;          //
-	zSTRING  loadNextLevelName;   //
-	zSTRING  loadNextLevelStart;  //
+	zBOOL   loadNextLevel = 0;
+	zSTRING loadNextLevelName;
+	zSTRING loadNextLevelStart;
 
 	// Spielerspezifika
-	zVEC3 startpos;            //
-	oCGameInfo* gameInfo;               // //etwas auf den ersten Blick uninteressantes
-	zCVobLight*  pl_light;               //
-	zREAL        pl_lightval;            //
+	zVEC3 startpos;
+	//etwas auf den ersten Blick uninteressantes
+	oCGameInfo* gameInfo = 0;
+
+	zCVobLight*  pl_light = 0;
+	zREAL        pl_lightval = 5000.0;
 
 	// Timer
-	oCWorldTimer* wldTimer;               //
-	zREAL timeStep;               //                          // Ermöglicht Einzelbildschaltung
-	zBOOL singleStep;             //
+	oCWorldTimer* wldTimer = 0;
+	// Ermöglicht Einzelbildschaltung
+	zREAL timeStep = -1.0;
+	zBOOL singleStep = 0;
 
 	// Referenzen auf Einzelstückklassen.
-	oCGuilds*            guilds;                 //
-	oCInfoManager*       infoman;                //
-	oCNewsManager*       newsman;                //
-	oCSVMManager*        svmman;                 //
-	oCTradeManager*      trademan;               //
-	oCPortalRoomManager* portalman;              //
-	oCSpawnManager*      spawnman;               //
+	oCGuilds*            guilds    = 0;
+	oCInfoManager*       infoman   = 0;
+	oCNewsManager*       newsman   = 0;
+	oCSVMManager*        svmman    = 0;
+	oCTradeManager*      trademan  = 0;
+	oCPortalRoomManager* portalman = 0;
+	oCSpawnManager*      spawnman  = 0;
 
 	//Zeug
-	zREAL  music_delay;            //
-	oCNpc* watchnpc;               //
+	zREAL  music_delay = 0;
+	oCNpc* watchnpc    = 0;
 
 	//Kurz nachdem Laden kurze Pause, damit
 	//sich die Systemressourcen erholen.
-	zBOOL  m_bWorldEntered;        //
-	zREAL  m_fEnterWorldTimer;     //
+	zBOOL  worldEntered;
+	zREAL  enterWorldTimer;
 
 	//Klar:
-	int initial_hour;           //int
-	int initial_minute;         //int
+	int initial_hour;
+	int initial_minute;
 
 	//Debug:
 	zCArray<zCVob*>           debugInstances;
@@ -314,19 +316,18 @@ private:
 		int         type;
 	} TObjectRoutine;
 
-	int oldRoutineDay;          //int
+	int oldRoutineDay = -1;
 
 	zCListSort<TObjectRoutine>    objRoutineList;
 
-	zCListSort<TObjectRoutine>* currentObjectRoutine;
+	zCListSort<TObjectRoutine>* currentObjectRoutine = 0;
 
 	//ProgressBar
-	zCViewProgressBar* progressBar;                            //
+	zCViewProgressBar* progressBar;
 
 	//Nicht jedes Fass in der Welt hat ein privates Visual.
 	//Ich schätze mal, dass alle benutzten Visuals hier gesammelt werden
 	//und Vobs nur Kopien der Referenzen halten.
-
 	zCArray   <zCVisual*>     visualList;
 };
 

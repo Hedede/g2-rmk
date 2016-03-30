@@ -1,3 +1,86 @@
+oCGame::oCGame()
+	: zCSession()
+{
+	game_testmode = zoptions->Parm("DEVMODE");
+	objRoutineList.compareFunc = oCGame::Sort_Routine;
+
+	SetEnableHandleEvent(1);
+
+	worldEntered = 0;
+	enterWorldTimer = 0;
+
+	debugChannels = -(zoptions->ReadBool(zOPT_SEC_INTERNAL, "debugAllChannels", 0));
+	debugAllInstances = zoptions->ReadBool(zOPT_SEC_INTERNAL, "debugAllInstances", 0);
+	if ( !debugChannels ) {
+		auto channels = zoptions->ReadString(zOPT_SEC_INTERNAL, "debugChannels", 0);
+		for (size_t i = 1; !word.IsEmpty(); ++i) {
+			auto word = channels.PickWord(i, ",; ", ",; ");
+			auto chan = word.ToLong();
+			if ( chan >= 1 && chan <= 32 )
+				debugChannels |= 1 << (chan - 1);
+		}
+	}
+}
+
+void oCGame::Done()
+{
+	oCNpc::ReleaseStatics();
+
+	objRoutineList.DeleteListDatas();
+	currentObjectRoutine = 0;
+
+	Delete(guilds);
+	Delete(infoman);
+	Delete(newsman);
+	Delete(svmman);
+	Delete(trademan);
+	Delete(portalman);
+	Delete(wldTimer);
+	Delete(gameInfo);
+	Delete(spawnman);
+
+	if (game_text) {
+		screen->RemoveItem(game_text);
+		Delete(game_text);
+	}
+	if (hpBar) {
+		screen->RemoveItem(hpBar);
+		Delete(hpBar);
+	}
+	if (swimBar) {
+		screen->RemoveItem(swimBar);
+		Delete(swimBar);
+	}
+	if (manaBar) {
+		screen->RemoveItem(manaBar);
+		Delete(manaBar);
+	}
+	if (focusBar) {
+		screen->RemoveItem(focusBar);
+		Delete(focusBar);
+	}
+	for (auto& view : array_view) {
+		if (view) {
+			view->Close();
+			Delete(view);
+		}
+	}
+
+	Release(pl_light);
+
+	oCarsten_ShutDown();
+	oCNpcFocus::ExitFocusModes();
+
+	savegameManager->ClearCurrent();
+
+	zCSession::Done();
+}
+
+oCGame::~oCGame()
+{
+	Done();
+}
+
 void oCGame::SetShowPlayerStatus(int show)
 {
 	if ( !show ) {
@@ -1408,4 +1491,341 @@ void oCGame::ShowDebugInfos(oCGame *this)
 
 	if ( showRoutineNpc )
 		rtnMan.ShowRoutine(0, 1500, showRoutineNpc);
+}
+
+void oCGame::SetAsPlayer(zSTRING const& name)
+{
+	auto index = zparser.GetIndex(name);
+
+	auto vobTree = GetWorld()->globalVobTree;
+
+	auto vob = zDYNAMIC_CAST<oCVob>(vobTree.data);
+
+	if (!vob || vob->GetInstance() != index) {
+		for (auto i = vobTree->firstChild; i; i = i->next) {
+			vob = SearchVobByInstance(index);
+		}
+	} else if ( vob ) {
+		vob->SetAsPlayer(v7);
+		return;
+	}
+
+	auto i = GetGameWorld()->voblist_npcs->next;
+	if (i) {
+		while (1) {
+			vob = i->data;
+			auto inst = npc->GetInstanceName();
+			if (inst == name)
+				break;
+			i = i->next;
+			if (!i) {
+				npc->SetAsPlayer();
+				return;
+			}
+		}
+		if ( !vob->homeWorld )
+			vob->Enable(vob->GetPositionWorld());
+		npc->SetAsPlayer();
+		return;
+	}
+
+	zINFO(5,"U: GAME: Npc " + name + " not found."); // 1507
+}
+
+void oCGame::Pause(oCGame *this, int noscreen)
+{
+	if ( !singleStep ) {
+		zINFO(5,"B: GAM: Game paused"); // 2744
+		if ( !noscreen ) {
+			zoptions->ChangeDir(DIR_TEX_DESKTOP);
+
+			pause_screen = new zCView(100, 100, 2000, 500, 2);
+			screen->InsertItem(pause_screen);
+			pause_screen->Print(10, 10, "PAUSED");
+
+			zrenderer->BeginFrame();
+			screen->DrawItems();
+			zrenderer->EndFrame();
+		}
+		singleStep = 1;
+		timeStep = 0;
+	}
+}
+
+
+void oCGame::WorldInit()
+{
+	GetWorld()->bspTree.drawVobBBox3D = 0;
+
+	wldTimer = new oCWorldTimer();
+
+	initial_hour = 8;
+	initial_minute = 0;
+
+	auto parm = zoptions->Parm("TIME");
+
+	if ( parm ) {
+		auto time = zoptions->ParmValue("TIME");
+
+		initial_hour   = time.PickWord(1, " :", zSTR_SKIP).ToLong();
+		initial_minute = time.PickWord(3, " :", zSTR_SKIP).ToLong();
+	}
+
+	rtnMan.SetWorld(GetWorld());
+}
+
+void oCGame::DesktopInit()
+{
+	zoptions->ChangeDir(DIR_TEX_DESKTOP);
+	screen->SetFont();
+
+	zCSession::DesktopInit();
+
+	game_text = new zCView(0, 0, 100, 100, 2);
+	screen->InsertItem(game_text, 0);
+
+	auto scroll = zoptions->ReadInt(zOPT_SEC_GAME, "gametextAutoScroll", 1000);
+
+	game_text->SetAutoScroll(scroll);
+	game_text->SetFont(0);
+
+	for (auto& view : array_view)
+		view = new zCView(0, 0, 100, 100, 2);
+
+	array_view[0]->Create("",                     0, 0, -2.0, 0);
+	array_view[1]->Create("dlg_conversation.tga", 0, 0, -2.0, 0);
+	array_view[2]->Create("dlg_ambient.tga",      0, 0, -2.0, 0);
+	array_view[3]->Create("",                     0, 0, -2.0, 0);
+	array_view[4]->Create("dlg_choice.tga",       0, 0, -2.0, 0);
+	array_view[5]->Create("dlg_noise.tga",        0, 0, -2.0, 0);
+
+	UpdateViewSettings();
+
+	if ( !array_view_visible[0] && array_view_enabled[0] ) {
+		array_view_visible[0] = 1;
+		array_view->Open();
+	}
+
+	for (auto view : array_view)
+		view->SetFont(0);
+
+	if ( array_view_visible[2] && array_view_enabled[2] ) {
+		array_view_visible[2] = 0;
+		array_view_enabled[2] = 0;
+		array_view[2]->Close();
+	}
+
+	zCView::PrintDebug("<Textfenster>\n");
+
+	zCView::stdoutput = game_text;
+}
+
+void oCGame::CallScriptStartup()
+{
+	if ( !scriptStartup )
+		return;
+
+	auto worldName = GetGameWorld()->GetWorldName();
+
+	auto startup_global = zparser.GetIndex("STARTUP_GLOBAL");
+	auto startup_world  = zparser.GetIndex("STARTUP_" + worldName);
+	
+	if (startup_global <= 0)
+		zFATAL("Global Startup Function not found."); // 855
+
+	inScriptStartup = 1;
+
+	zparser.CallFunc(startup_global);
+
+	if ( startup_world > 0 ) {
+		zINFO(3, "U: GAM: Calling Startup-Script ..."); // 862,
+
+		zparser.progressBar = progressBar;
+		zparser.CallFunc(startup_world);
+		zparser.progressBar = 0;
+
+		zINFO(3,"U: GAM: Startup-Script finished."); // 866,
+	}
+
+	inScriptStartup = 0;
+}
+
+void oCGame::CallScriptInit()
+{
+	auto worldName = GetGameWorld()->GetWorldName();
+
+	auto init_global = zparser.GetIndex("INIT_GLOBAL");
+	auto init_world  = zparser.GetIndex("INIT_" + worldName);
+
+	if (init_global <= 0)
+		zFATAL("Global Init Function not found."); // 881
+
+	inScriptStartup = 1;
+
+	zparser.CallFunc(init_global);
+
+	if ( init_world > 0 ) {
+		zINFO(3, "U: GAM: Calling Init-Script ..."); // 888,
+
+		zparser.progressBar = progressBar;
+		zparser.CallFunc(worldName);
+		zparser.progressBar = 0;
+
+		zINFO(3, "U: GAM: Init-Script finished."); // 892,
+	}
+
+	inScriptStartup = 0;
+}
+
+void oCGame::ClearGameState()
+{
+	zparser.ResetGlobalVars();
+
+	zparser.SetInstance("SELF", 0);
+	zparser.SetInstance("OTHER", 0);
+	zparser.SetInstance("VICTIM", 0);
+	zparser.SetInstance("ITEM", 0);
+
+	spawnman->ClearList();
+
+	Delete(infoman);
+	infoman = new oCInfoManager(zparser);
+
+	misMan.ClearMissions();
+
+	oCLogManager::GetLogManager().Clear();
+
+	Delete(newsman);
+	newsman = new oCNewsManager();
+
+	zsound->StopAllSounds();
+
+	oCVisualFX::PreSaveGameProcessing(1);
+	oCVisualFX::PostSaveGameProcessing();
+
+	CamInit();
+
+	oCVob::ClearDebugList();
+
+	if ( portalman )
+		portalman->CleanUp();
+
+	objRoutineList.DeleteListDatas();
+	currentObjectRoutine = 0;
+}
+
+void oCGame::LoadWorldStartup(zSTRING const& levelpath)
+{
+	zINFO(3,"U: GAM: Loading startup-data: \"" + levelpath + "\"..."); // 3127
+
+	if ( progressBar )
+		progressBar->SetRange(0, 75);
+
+	GetWorld()->LoadWorld(levelpath, 0);
+
+	if ( progressBar )
+		progressBar->ResetRange();
+
+	zINFO(3,"U: GAM: Loading startup-data \"" + levelpath + "\" finished."); // 3131,
+	if ( progressBar )
+		progressBar->SetPercent(76, "");
+
+	zINFO(3,"U: GAM: Cleaning world..."); // 3138,
+
+	RemoveHelperVobs(GetWorld()->globalVobTree.firstChild);
+
+	zINFO(3,"U: GAM: .. finished"); // 3140
+
+	if ( progressBar )
+		progressBar->SetPercent(79, "");
+
+	if ( progressBar )
+		progressBar->SetRange(80, 100);
+
+	CallScriptStartup();
+	CallScriptInit();
+
+	if ( progressBar )
+		progressBar->ResetRange();
+}
+
+void oCGame::OpenSavescreen(bool saveGame)
+{
+	if ( save_screen )
+		CloseSavescreen();
+
+	zINFO(5,"B: GAM: OpenSavescreen "); // 915,
+
+	if ( saveGame ) {
+		auto anx = screen->anx(320) / 2;
+		auto any = screen->any(200) / 2;
+
+		save_screen = new zCView(4096-anx, 4096-any, anx+4096, any+4096, 2);
+		screen->InsertItem(save_screen, 0);
+
+		zoptions->ChangeDir(DIR_TEX_DESKTOP);
+
+		save_screen->InsertBack("saving.tga");
+	
+		progressBar = new zCViewProgressBar(v9, 2000, 5700, 6192, 6900, 2);
+	} else {
+		save_screen = 0;
+	}
+
+	if ( progressBar ) {
+		save_screen->InsertItem(progressBar, 0);
+		progressBar->Init();
+	}
+
+	screen->DrawItems();
+	zrenderer->Vid_Blit(0,0,0);
+
+	if ( GetWorld() )
+		GetWorld()->progressBar = progressBar;
+
+	zINFO(5,"B: GAM: OpenSavescreen finished") // 949,
+}
+
+void oCGame::OpenLoadscreen(bool gameStart, zSTRING worldName)
+{
+	if ( load_screen )
+		CloseLoadscreen();
+
+	zINFO(5,"B: GAME: OpenLoadscreen"); //    980,
+
+	if ( gameStart ) {
+		load_screen = new zCView(0, 0, 0x2000, 0x2000, 2);
+		screen->InsertItem(load_screen, 0);
+
+		auto dir = zoptions->GetDirString(DIR_TEX_DESKTOP);
+		load_screen->InsertBack((dir + "loading.tga").Lower());
+
+		progressBar = new zCViewProgressBar(4692, 1000, 7692, 1500, 2);
+		progressBar->wut = 3;
+	} else {
+		load_screen = new zCView(0, 0, 0x2000, 0x2000, 2);
+		screen->InsertItem(load_screen, 0);
+
+		auto fileName = zFILE_FILE(worldName).GetFilename();
+		auto dir = zoptions->GetDirString(DIR_TEX_DESKTOP);
+		auto texName = (dir + "loading_" + fileName + ".tga").Lower();
+
+		load_screen->InsertBack(texName);
+
+		progressBar = zCViewProgressBar(4692, 1000, 7692, 1500, 2);
+		progressBar->wut = 3;
+	}
+
+	if ( progressBar ) {
+		load_screen->InsertItem(progressBar, 0);
+		progressBar->Init();
+	}
+
+	screen->DrawItems();
+	zrenderer->Vid_Blit(0, 0, 0);
+
+	if ( GetWorld() )
+		GetWorld()->progressBar = progressBar;
+
+	zINFO(5,"B: GAME: OpenLoadscreen finished"); // 1028,
 }

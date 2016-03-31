@@ -427,3 +427,138 @@ int oCGame::CheckIfSavegameExists(zSTRING const& levelpath)
 
 	return ret;
 }
+
+int oCGame::CheckObjectConsistency(int checkItems)
+{
+	for (auto npc : GetGameWorld()->voblist_npcs ) {
+		auto name = npc->GetInstanceName();
+		zFAULT("U: GAME: There is an illegal NSC still in NpcList :" + name); // 1992
+	}
+
+	if ( checkItems ) {
+		for (auto item : GetGameWorld()->voblist_items ) {
+			auto name = item->GetInstanceName();
+			zFAULT("U: GAME: There is an illegal Item still in ItemList :" + name); // 2001
+		}
+	}
+
+	auto classDef = zCClassDef::GetClassDef("oCNpc");
+	auto nummax = !checkItems; // wtf?
+
+	if ( classDef->numLiving > nummax ) {
+		classDef->ReportLeaks();
+
+		zFAULT("U:NPC: Someone has an illegal Reference to an Npc ! AAArrrrggghhhh :"_s + classDef->numLiving); // 2016
+	}
+
+	if ( oCNews::GetRemainingNews() > 0 ) {
+		zFAULT("U: NEWS: Illegal News detected holding references to npcs !"); // 2023
+		oCNews::CheckRemainingNews();
+	}
+	return 1;
+}
+
+void oCGame::LoadWorld(int slotID, zSTRING const& levelpath)
+{
+	zINFO(9,"B: (oCGame::LoadWorld)"); // 2873,
+
+	if (levelpath.IsEmpty()) {
+		zINFO(9,"B: (oCGame::LoadWorld) fileName is empty"); // 2878,
+		return;
+	}
+
+	if ( progressBar )
+		progressBar->SetPercent(12, "");
+
+	if ( slotID == SAVEGAME_SLOT_NEW ) {
+		spawnman->ClearList();
+		GetGameWorld()->DisposeWorld();
+
+		if ( progressBar )
+			progressBar->SetRange(15, 97);
+
+		LoadWorldStartup(levelpath);
+
+		if ( progressBar )
+			progressBar->ResetRange();
+
+		if ( !GetWorld()->compiled )
+			GetWorld()->CompileWorld();
+	} else {
+		auto file = GetGameWorld()->worldFilename.data;
+		if (file != "") {
+			if ( progressBar )
+				progressBar->SetRange(15, 40);
+
+			LoadWorldStat(file);
+
+			if ( progressBar )
+				progressBar->ResetRange();
+		}
+
+		if ( progressBar )
+			progressBar->SetPercent(42, "");
+
+		if ( !GetWorld()->compiled )
+			GetWorld()->CompileWorld();
+
+		inLoadSaveGame = 1;
+		if ( progressBar )
+			progressBar->SetRange(44, 97);
+
+		LoadWorldDyn(levelpath);
+
+		if ( progressBar )
+			progressBar->ResetRange();
+
+		inLoadSaveGame = 0;
+	}
+
+	GetWorld()->wayNet->CorrectHeight();
+
+	auto skyCtrl = GetWorld()->GetActiveSkyControler();
+	auto skyCtrl_in = dynamic_cast<zCSkyControler_Indoor>(skyCtrl)
+	if (skyCtrl_in)
+		zsound->SetGlobalReverbPreset(8, 0.4);
+	else
+		zsound->SetGlobalReverbPreset(0, 0.0);
+
+	if ( progressBar )
+		progressBar->SetPercent(100, "");
+}
+
+void oCGame::LoadWorldDyn(zSTRING const& levelpath)
+{
+	auto fileName = zFILE_FILE(levelpath).GetFilename();
+	auto dir = savegameManager->GetSlotDirName(SAVEGAME_SLOT_CURRENT);
+	auto path = zoptions->GetDirString(DIR_SAVEGAMES);
+	auto savePath = path + dir + fileName + "." + SAVEGAME_EXT;
+
+	if ( progressBar )
+		progressBar->SetRange(0, 95);
+
+	zINFO(3,"U: GAM: Loading dynamic data: \"" + a3 + "\" ..."); // 3180
+
+	GetWorld()->LoadWorld(a3, 1);
+
+	zINFO(3,"U: GAM: Loading dynamic data \"" + a3 + "\" finished."); // 3182
+
+	if ( progressBar )
+		progressBar->ResetRange();
+	if ( progressBar )
+		progressBar->SetRange(95, 100);
+
+	zINFO(3,"U: GAM: Cleaning world..."); // 3187,
+
+	GetWorld()->RemoveHelperVobs(GetWorld()->globalVobTree.firstChild);
+
+	zINFO(3,"U: GAM: .. finished"); // 3189,
+
+	if ( progressBar )
+		progressBar->ResetRange();
+
+	PostSaveGameProcessing();
+
+	if ( !inLoadSaveGame )
+		CallScriptInit();
+}

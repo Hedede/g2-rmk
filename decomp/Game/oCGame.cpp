@@ -1330,10 +1330,8 @@ void oCGame::SetupPlayers(oCNpc*& playerVob, zSTRING const& startpoint)
 	if ( progressBar )
 		progressBar->SetPercent(0, "");
 
-	zMAT4 insertTrafo;
+	zMAT4 insertTrafo = Alg_Identity3D();
 
-	v4 = Alg_Identity3D(&v62);
-	zMAT4::operator=(&v60, v4);
 	if ( startpoint->Length() > 0 ) {
 		auto sp = GetGameWorld()->SearchVobByName(startpoint);
 		if ( sp ) {
@@ -1506,7 +1504,7 @@ void oCGame::SetAsPlayer(zSTRING const& name)
 			vob = SearchVobByInstance(index);
 		}
 	} else if ( vob ) {
-		vob->SetAsPlayer(v7);
+		vob->SetAsPlayer();
 		return;
 	}
 
@@ -1767,7 +1765,7 @@ void oCGame::OpenSavescreen(bool saveGame)
 
 		save_screen->InsertBack("saving.tga");
 	
-		progressBar = new zCViewProgressBar(v9, 2000, 5700, 6192, 6900, 2);
+		progressBar = new zCViewProgressBar( 2000, 5700, 6192, 6900, 2);
 	} else {
 		save_screen = 0;
 	}
@@ -1828,4 +1826,164 @@ void oCGame::OpenLoadscreen(bool gameStart, zSTRING worldName)
 		GetWorld()->progressBar = progressBar;
 
 	zINFO(5,"B: GAME: OpenLoadscreen finished"); // 1028,
+}
+
+void oCGame::SetObjectRoutineTimeChange(int hour1, int min1, int hour2, int min2)
+{
+	auto time1 = (min1 + 60 * hour1) % 1440;
+	auto time2 = (min2 + 60 * hour2) % 1440;
+
+	if ( time2 < time1 )
+		time2 += 1440;
+
+	if ( !currentObjectRoutine )
+		currentObjectRoutine = objRoutineList.next;
+
+	int hour = 0;
+	int numTrig = 0;
+	auto first = currentObjectRoutine;
+	while ( currentObjectRoutine ) {
+		auto rtn = currentObjectRoutine->Get();
+		auto time = rtn->min + 60 * (hour + rtn->hour);
+		if ( time1 > time || time > time2 )
+			break;
+
+		if (rtn->type == 0) {
+			numTrig += oCMobInter::SetAllMobsToState(GetGameWorld(), rtn->objectName, rtn->state);
+		} else if ( rtn->type == 1 ) {
+			auto vob = GetGameWorld()->SearchVobByName(rtn->objectName);
+			if ( vob ) {
+				auto mi = zDYNAMIC_CAST<oCMobInter>(vob);
+				if (state == 1) {
+					if ( mi ) {
+						mi->SetTempState(1);
+					} else {
+						vob->GetEM()->OnTrigger(0, 0);
+					}
+					++numTrig;
+				} else if (state == 0) {
+					if ( mi ) {
+						mi->SetTempState(0);
+					} else {
+						vob->GetEM()->OnUntrigger(0, 0);
+					}
+				}
+			}
+		}
+
+		currentObjectRoutine = currentObjectRoutine->next;
+
+		if ( !currentObjectRoutine ) {
+			currentObjectRoutine = objRoutineList.next;
+			hour += 24;
+		}
+
+		if ( currentObjectRoutine == first )
+			break;
+	}
+
+	oCMobInter::TriggerAllMobsToTmpState(GetGameWorld());
+	zINFO(4, "U:MOB: Mobsis triggered :"_s + numTrig); // 3367
+}
+
+void oCGame::UpdateScreenResolution()
+{
+	zoptions->ChangeDir(DIR_TEX_DESKTOP);
+	screen->SetFont(0);
+	auto fontY = screen->fontY();
+	auto anx = screen->anx(600);
+	auto any = screen->any(20);
+
+	game_text->SetPos((0x2000 - anx) / 2, 2 * fontY);
+	game_text->SetSize(anx, 6 * fontY + fonty / 4);
+
+	array_view[0]->SetPos(0, 0);
+	array_view[0]->SetSize(array_view[0], 0x2000, 0x2000);
+
+	array_view[1]->SetPos((0x2000 - anx) / 2, any);
+	array_view[1]->SetSize(anx, 6 * fontY);
+
+	array_view[2]->SetPos((0x2000 - anx) / 2, 0x2000 - 5 * fontY - any);
+	array_view[2]->SetSize(anx, 5 * fontY);
+
+	array_view[3]->SetPos((0x2000 - anx) / 2, (0x2000 - 4 * fontY - any + fontY * 0.5));
+	array_view[3]->SetSize(anx, 4 * fontY);
+
+	array_view[4]->SetPos((0x2000 - anx) / 2, fontY + any + 6 * fontY);
+	array_view[4]->SetSize(anx, 4 * fontY);
+
+	array_view[5]->SetPos((0x2000 - anx) / 2, 0x2000 - 10 * fontY - any);
+	array_view[5]->SetSize(anx, 4 * fontY);
+
+	screen->InsertItem(hpBar, 0);
+	screen->InsertItem(swimBar, 0);
+	screen->InsertItem(manaBar, 0);
+	screen->InsertItem(focusBar, 0);
+
+	hpBar->Init(screen->anx(10), 0x2000 - screen->any(30), 1.0);
+	manaBar->Init(0x2000 - screen->anx(190), 0x2000 - screen->any(30), 1.0);
+
+	int sizeX, sizeY;
+	swimBar->Init(0, 0, 1.0);
+	swimBar->GetSize(sizeX, sizeY);
+	swimBar->SetPos(((0x2000 - sizeX) * 0.5), 0x2000 - screen->any(30));
+
+	focusBar->Init(0, 0, 0.75);
+	focusBar->GetSize(sizeX, sizeY);
+	focusBar->SetPos(((0x2000 - 4 * fontY) * 0.5), screen->any(10));
+
+	screen->RemoveItem(hpBar);
+	screen->RemoveItem(swimBar);
+	screen->RemoveItem(manaBar);
+	screen->RemoveItem(focusBar);
+}
+
+void oCGame::ShowFreePoints()
+{
+	if (!showFreePoints || !GetCameraVob())
+		return;
+
+	auto camPos = GetCameraVob()->GetPositionWorld();
+
+	zTBBox3D bb;
+	bb.mins = camPos - 3000.0;
+	bb.maxs = camPos + 3000.0;
+
+	zCArray<zCVob> vobs;
+	GetWorld()->bspTree->CollectVobsInBBox3D(vobs, bb);
+
+	for (auto vob : vobs) {
+		auto spot = dynamic_cast<zCVobSpot>(vob);
+		if (!spot)
+			continue;
+
+		auto pos = spot->GetPositionWorld();
+		zTBBox3D bb2;
+		bb.mins = {pos - 50.0, pos - 100.0, pos - 50.0};
+		bb.maxs = {pos + 50.0, pos + 100.0, pos + 50.0};
+
+		zCOLOR color;
+		if ( spot->IsAvailable(oCNpc::player) )
+			color = GFX_YELLOW;
+		else
+			color = GFX_RED;
+
+		bb2.Draw(color);
+
+		auto cam = GetCamera();
+		auto proj = pos * cam->camMatrix;
+
+		float x,y;
+		if ( proj.Z() >= 0.0 ) {
+			auto invZ = 1.0 / proj.Z();
+
+			x =  proj.X() * cam->viewDistanceX * invZ + cam->xcenter;
+
+			y = -proj.Y() * cam->viewDistanceY * invZ + cam->ycenter;
+		}
+		if ( proj.Z() > 0.0 && proj.Z() < 1000.0 ) {
+			auto name = spot->GetObjectName();
+			screen->Print(screen->anx(x), screen->any(y), name);
+		}
+	}
 }

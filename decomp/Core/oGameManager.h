@@ -21,6 +21,12 @@ public:
 
 	void ShowIntro() { }
 	void ShowExtro() { }
+
+protected:
+	void InitScreen_Open();
+	void InitScreen_Menu();
+	void InitScreen_Close();
+
 private:
 	zTRnd_AlphaBlendFunc   oldAlphaBlendFunc;
 	zTSystemContextHandle  sysContextHandle;

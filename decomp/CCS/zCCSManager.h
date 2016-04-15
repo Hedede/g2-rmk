@@ -9,26 +9,55 @@ public:
 	virtual void CreateCutscenePlayer(zCWorld *);
 	virtual void CreateProperties();
 	virtual void RemoveCutscenePlayer(zCCSPlayer *);
-	virtual void LibIsLoaded();
+
+	virtual bool LibIsLoaded()
+	{
+		return csLib->IsLoaded();
+	}
 	virtual void LibGet(int);
 	virtual void LibGetFirst(int&);
 	virtual void LibGetFirst();
 	virtual void LibGetNext(int&);
 	virtual void LibGetNext();
-	virtual void LibAddOU(zCCSBlock	*);
+	virtual void LibAddOU(zCCSBlock* block);
+	{
+		LibCheckLoaded(3);
+		return csLib->Add(block);
+	}
 	virtual void LibDelOU(int);
-	virtual void LibNullOU(int);
+	virtual void LibNullOU(int id)
+	{
+		LibCheckLoaded();
+		csLib->RemoveFromLib(id, 0);
+	}
 	virtual void LibLoad(int);
 	virtual void LibStore(int);
-	virtual void LibValidateOU(zSTRING &);
-	virtual void LibValidateOU(int);
+	virtual int LibValidateOU(zSTRING& token)
+	{
+		LibCheckLoaded(3);
+		return csLib->ValidateToken(token);
+	}
+
+	virtual bool LibValidateOU(int ref)
+	{
+		LibCheckLoaded(3);
+		return csLib->blocks.num < ref && csLib->GetOU(ref);
+	}
+
 	virtual void LibGetSvmModuleName(int);
 	virtual void LibIsSvmModuleRunning(int);
 	virtual void LibSvmModuleStart(int);
 	virtual void LibSvmModuleStop(int);
+
 	virtual void InsertPlayerInList(zCCSPlayer *);
 	virtual void RemovePlayerFromList(zCCSPlayer *);
-	virtual void LibCheckLoaded(int);
+
+	virtual void LibCheckLoaded(int flags)
+	{
+		if ( !csLib->IsLoaded() )
+			LibLoad(flags);
+	}
+
 	virtual void PoolFindItem(zSTRING &);
 	virtual void PoolInsertItem(zCCSPoolItem *);
 };

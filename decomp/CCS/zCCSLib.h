@@ -1,10 +1,112 @@
 class zCCSLib : public zCObject {
 	Z_OBJECT(zCCSLib);
+
 public:
 	virtual void Archive(zCArchiver& arc);
 	virtual void Unarchive(zCArchiver& arc);
-	virtual ~zCCSLib();
+
+	zCCSBlock()
+	{
+		dummy = new zCCSBlock();
+		blocks.Compare = zCSLibCompare
+	}
+
+	virtual ~zCCSLib()
+	{
+		Release(dummy);
+		DeleteLib();
+	}
+
+	void DeleteLib()
+	{
+		for (auto block : blocks)
+			Release(block);
+
+		blocks.DeleteList();
+
+		loaded = 0;
+		wasChanged = 0;
+	}
+
+	int CompactLib();
+
+	void Add(zCCSBlock* block)
+	{
+		if (loaded) {
+			blocks.Insert(block);
+			// strange, should be InsertSort,
+			// but inlined code just inserts into the end
+			// (In Gothic1Demo there was zCArray, not zCArraySort
+			block->AddRef();
+			Change();
+
+			return blocks->GetNumInList();
+		}
+		return -1;
+	}
+
+	zCCSBlock* GetOU(int idx)
+	{
+		return blocks[idx];
+	}
+
+	void IsLoaded() const
+	{
+		return loaded;
+	}
+
+	void Change()
+	{
+		wasChanged = 1;
+	}
+
+	void WasChanged() const
+	{
+		return wasChanged;
+	}
+
+	int zCCSLib::NextFree()
+	{
+		return blocks.GetNumInList();
+	}
+
+	void RemoveFromLib(int index, int removeNow)
+	{
+		Release(blocks[index]);
+
+		if ( removeNow )
+			blocks.RemoveOrderIndex(index);
+	}
+
+	int zCCSLib::ValidateToken(zSTRING& tok)
+	{
+		dummy->SetRoleName(tok);
+
+		return blocks.Search(dummy);
+	}
+
+private:
+	zBOOL loaded;
+	zBOOL wasChanged;
+	zCArraySort<zCCSBlock*> blocks;
+	zCCSBlock *dummy;
 };
+
+int zCSLibCompare(void* a, void* b)
+{
+	auto block1 = static_cast<zCCSBlock*>(a);
+	auto block2 = static_cast<zCCSBlock*>(b);
+
+	if ( !block1 )
+		return 1;
+	if ( !block2 )
+		return -1;
+
+	auto name1 = block1->GetRoleName();
+	auto name2 = block2->GetRoleName();
+
+	return name1.Compare(name2);
+}
 
 void zCCSLib::Archive(zCArchiver& arc)
 {
@@ -50,4 +152,15 @@ void zCCSLib::Unarchive(zCArchiver& arc)
 	wasChanged = 0;
 
 	zINFO(3,"B: CSLib: finished loading library");
+}
+
+int zCCSLib::CompactLib(zCCSLib *this)
+{
+	for (int i = 0; i < blocks.GetNumInList(); ++i) {
+		if (blocks[i])
+			continue;
+
+		blocks.RemoveOrderIndex(i);
+	}
+	return blocks.GetNumInList();
 }

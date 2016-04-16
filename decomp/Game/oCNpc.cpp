@@ -1,3 +1,92 @@
+oCNpc::oCNpc()
+{
+	invSlots.InsertEnd(new TNpcSlot(NPC_MODE_RIGHTHAND));
+	invSlots.InsertEnd(new TNpcSlot(NPC_MODE_LEFTHAND));
+	invSlots.InsertEnd(new TNpcSlot(NPC_MODE_SWORD));
+	invSlots.InsertEnd(new TNpcSlot(NPC_MODE_LONGSWORD));
+	invSlots.InsertEnd(new TNpcSlot(NPC_MODE_BOW));
+	invSlots.InsertEnd(new TNpcSlot(NPC_MODE_CROSSBOW));
+	invSlots.InsertEnd(new TNpcSlot(NPC_MODE_HELMET));
+	invSlots.InsertEnd(new TNpcSlot(NPC_MODE_TORSO));
+
+	flags.csAllowedAsRole = 1;
+	flags.askroutine = 1;
+
+	InitDamage();
+
+	oCNpc::ai_disabled = 0;
+
+	attribute[ATR_REGENERATEHP]   = 600000;
+	CheckModelOverlays();
+	attribute[ATR_REGENERATEMANA] = 600000;
+	CheckModelOverlays();
+
+	percActiveDelta = 5000.0;
+	while (percActiveTime > percActiveDelta) {
+		percActiveTime -= percActiveDelta;
+	}
+
+	inventory.SetOwner(this);
+	statec.SetOwner(this);
+
+	RbtReset();
+
+	type = VOB_TYPE_NPC;
+
+	SetCollisionClass(oCCollObjectCharacter::s_oCollObjClass);
+	SetCollDetStat(1);
+	SetCollDetDyn(1);
+
+	magFrontier.SetNPC(this);
+
+	CreateTalentList();
+}
+
+~oCNpc::oCNpc()
+{
+	zINFO(5,"U: NPC: Deleting NPC" + GetInstanceName()); // 1533
+
+	CleanUp();
+
+	for (auto slot : invSlots) {
+		invSlots.Remove(slot);
+		delete slot;
+	}
+
+	for (auto& talent : talents) {
+		Release(talent);
+	}
+
+	s_activeInfoCache.Delete(this);
+	s_shrinkCache.Delete(this);
+
+	if (oCNpc::player == this)
+		player = nullptr;
+
+	zparser.ResetWithVarReferenceList(s_npcVarReferenceList); // my name
+
+	if (classDef.numLiving <= 1) {
+		// бредятина, в которой не хочу разбираться,
+		// код поход на заинлайненый zCCache::Clear,
+		// но при этом s_modelOverlayCache (я его так назвал,
+		// в ехешнике не было имени) представляет собой только
+		// zCSparseArray<TOverlayIndex, ModelWhatever*>, без приблуд
+		// zCCache.
+		s_modelOverlayCache.Clear();
+	}
+
+	for (auto& effect : effectList) {
+		// забавно, что он вызов Remove
+		// превращает очистку массива в O(n^2)
+		// т.к. Remove ищет указатель в массиве
+		effectList.Remove(effect);
+		effect->Kill();
+		effect->Release();
+	}
+
+	timedOverlays.DeleteListDatas();
+}
+
 void oCNpc::Archive(zCArchiver& arc)
 {
 	if ( oCNpc::dontArchiveThisNpc == this )

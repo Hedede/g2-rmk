@@ -84,9 +84,22 @@ public:
 		return slot && slot->object == nullptr;
 	}
 
-	virtual void Archive(zCArchiver &);
-	virtual void Unarchive(zCArchiver &);
+	static void ReleaseStatics()
+	{
+		oCNpc::ExitFightAI();
+	}
+
+	static void EnableDamageDebugOutput(zBOOL b)
+	{
+		oCNpc::isEnabledDamageDebug = b;
+	}
+
+	virtual void Archive(zCArchiver& arc);
+	virtual void Unarchive(zCArchiver& arc);
+
+	oCNpc();
 	virtual ~oCNpc();
+
 	virtual void OnTouch(zCVob *);
 	virtual void OnDamage(zCVob *,zCVob *,float,int,zVEC3 const &);
 	virtual void OnMessage(zCEventMessage *,zCVob *);
@@ -101,8 +114,17 @@ public:
 	virtual void ThisVobAddedToWorld(zCWorld *);
 	virtual void ThisVobRemovedFromWorld(zCWorld *);
 	virtual void ShowDebugInfo(zCCamera *);
-	virtual void GetInstance();
-	virtual void GetInstanceName();
+
+	virtual int GetInstance() const
+	{
+		return instanz;
+	}
+	virtual zSTRING GetInstanceName() const
+	{
+		int typ, ele;
+		return zparser.GetSymbolInfo(instanz, typ, ele);
+	}
+
 	virtual void GetSoundMaterial_AM(zCSoundManager::zTSndManMedium &,oTSndMaterial &,int);
 
 	virtual void SetWeaponMode(int);
@@ -146,7 +168,10 @@ public:
 	virtual void GetPlayerNumber();
 	virtual void IsAniMessageRunning();
 	virtual void ProcessNpc();
-	virtual void AllowDiscardingOfSubtree();
+	virtual int AllowDiscardingOfSubtree()
+	{
+		return 1;
+	}
 
 	// or DOCREATE?
 	zCEventManager* GetEM(bool dontCreate = false);
@@ -171,6 +196,11 @@ public:
 		return protection[idx];
 	}
 
+	float GetDamageMultiplier() const
+	{
+		return damageMul;
+	}
+
 	zSTRING GetName() const
 	{
 		return name[0];
@@ -181,7 +211,7 @@ public:
 		return guild;
 	}
 
-	zSTRING oCNpc::GetGuildName() const
+	zSTRING GetGuildName() const
 	{
 		return oCGuilds::GetGuildName(this->guild);
 	}
@@ -207,7 +237,7 @@ public:
 		return GetGuildAttitude(guild) == ATT_FRIENDLY;
 	}
 
-	int oCNpc::AssessFakeGuild_S()
+	int AssessFakeGuild_S()
 	{
 		if ( IsSelfPlayer() ) {
 			CreatePassivePerception(21, this, 0);
@@ -217,11 +247,26 @@ public:
 		return 0;
 	}
 
+	oCAIHuman* GetAnictrl()
+	{
+		return human_ai;
+	}
+
 	double GetTurnSpeed()
 	{
 		if (IsAPlayer())
 			return 0.1;
 		return speedTurn;
+	}
+
+	zCVob* GetSoundSource()
+	{
+		return soundVob;
+	}
+
+	oCMobInter* GetInteractMob()
+	{
+		return interactMob;
 	}
 
 	int GetPlayerNumber()
@@ -232,6 +277,36 @@ public:
 	oCItem* GetItem(int category, int slot)
 	{
 		return inventory2.GetItem(slot);
+	}
+
+	oCMag_Book* GetSpellBook()
+	{
+		return mag_book;
+	}
+
+	zCVob* GetFocusVob()
+	{
+		return focus_vob;
+	}
+
+	zCVob* GetCarryVob()
+	{
+		return carry_vob;
+	}
+
+	zCVob* GetRbtObstacleVob()
+	{
+		return rbt.obstVob;
+	}
+
+	oCNpc* GetTradeNpc()
+	{
+		return tradeNpc;
+	}
+
+	oCNpc* GetTalkingWith()
+	{
+		return talkOther;
 	}
 
 	// TODO: return type?
@@ -247,20 +322,42 @@ public:
 
 	oCItem* DetectItem(int flags, int);
 
-	void Follow()
-	{
-	}
 
 	int GetFightRange() const;
+
+	float GetJumpRange() const
+	{
+		return 300.0;
+	}
+
+	float GetClimbRange() const
+	{
+		return 500.0;
+	}
+
+	void GetFightRangeBase() const
+	{
+		return fightRangeBase;
+	}
 
 	void SetFightRangeBase(int range)
 	{
 		fightRangeBase = range;
 	}
 
+	int SetFightRangeFist() const
+	{
+		return fightRangeFist;
+	}
+
 	void SetFightRangeFist(int range)
 	{
 		fightRangeFist = range;
+	}
+
+	int GetFightRangeG() const
+	{
+		return fightRangeG;
 	}
 
 	void SetFightRangeG(int range)
@@ -274,40 +371,71 @@ public:
 
 		unsigned nr : 4;
 	};
+
+	int EV_AttackMagic(oCMsgAttack*)
+	{
+		return 0;
+	}
+
+	void Fleeing()
+	{
+		ThinkNextFleeAction();
+	}
+
+	void AI_ForceDetection()
+	{
+		vobcheck_time = 100000.0;
+	}
+
+	int IsAIState(int funcInst)
+	{
+		return states.IsInState(funcInst);
+	}
+
+
+	// useless
+	void AI_Follow(oCNpc*) {};
+	void AI_Flee(oCNpc*) {};
+	void Follow() { }
+	void SetToDrunk(float) {};
+	void HealFromDrunk() {}
+	int CanRecruitSC() { return 0; }
+
 private:
-	int    idx;
+	int     idx = 0;
 	zSTRING name[5];
 	zSTRING slot;
 	zSTRING effect;
-	int    npcType;
-	int    variousFlags;
-	int    attribute[NPC_ATR_MAX];
-	int    hitChance[NPC_HITCHANCE_MAX];
-	int    protection[oEDamageIndex_MAX];
-	int    damage[oEDamageIndex_MAX];
-	int    damagetype;
-	int    guild;
-	int    level;
-	void*   mission[NPC_MIS_MAX];
-	int    fighttactic;
-	int    fmode;
-	int    voice;
-	int    voicePitch;
-	int    mass;
-	void*   daily_routine;
-	void*   startAIState;
+	int     npcType = 0;
+	int     variousFlags = 0;
+	int     attribute[NPC_ATR_MAX] = {};
+	int     hitChance[NPC_HITCHANCE_MAX] = {};
+	int     protection[oEDamageIndex_MAX] = {};
+	int     damage[oEDamageIndex_MAX] = {};
+	int     damagetype = 0;
+	int     guild = GIL_NONE;
+	int     level = 0;
+	void*   mission[NPC_MIS_MAX] = {};
+	int     fighttactic = 0;
+	int     fmode = 0;
+	int     voice = 0;
+	int     voicePitch = 0;
+	int     mass = 0;
+	void*   daily_routine = 0;
+	void*   startAIState = 0;
 	zSTRING spawnPoint;
-	int    spawnDelay;
-	int    senses;
-	int    senses_range;
-	int    aiscriptvars[100];
+	int     spawnDelay = 0;
+	int     senses = 0;
+	int     senses_range = 0;
+	int     aiscriptvars[100] = {};
 	zSTRING wpname;
-	zUINT32    experience_points;
-	zUINT32    experience_points_next_level;
-	zUINT32    learn_points;
-	int     bodyStateInterruptableOverride;
-	zBOOL   noFocus;
+	zUINT32 experience_points = 0;
+	zUINT32 experience_points_next_level = 0;
+	zUINT32 learn_points = 0;
+	int     bodyStateInterruptableOverride = 0;
+	zBOOL   noFocus = 0;
 	int     parserEnd;
+
 	int     bloodEnabled;
 	int     bloodDistance;
 	int     bloodAmount;
@@ -350,9 +478,10 @@ private:
 		int    failurePossibility;
 	} rbt;
 
-	zCList<oCNpcTimedOverlay>   timedOverlays_data;
-	zCArray<oCNpcTalent*>    talents;
-	int    spellMana;
+	zCList<oCNpcTimedOverlay> timedOverlays;
+
+	zCArray<oCNpcTalent*>     talents;
+	int    spellMana = 0;
 
 	class oCMagFrontier {
 		SetNPC(oCNpc *npc)
@@ -367,121 +496,145 @@ private:
 
 	oCNpc_States states; // ok
 
-	oCNpcInventory inventory;
-	oCItemContainer*    trader;
-	oCNpc*    tradeNpc;
+	oCNpcInventory   inventory;
+	oCItemContainer* trader;
+	oCNpc*           tradeNpc = 0;
 
-	zREAL    rangeToPlayer;
+	zREAL rangeToPlayer = std::numeric_limits<float>::max();
+
 	zCArray<zTSoundHandle>  listOfVoiceHandles;
-	int    voiceIndex;
+	int    voiceIndex = 0;
 	zCArray<oCVisualFX*> effectList;
 
-	uint16_t showaidebug      : 1;
-	uint16_t showNews         : 1;
-	uint16_t csAllowedAsRole  : 1;
-	uint16_t isSummoned       : 1;
-	uint16_t respawnOn        : 1;
-	uint16_t movlock          : 1;
-	uint16_t drunk            : 1;
-	uint16_t mad              : 1;
-	uint16_t overlay_wounded  : 1;
-	uint16_t inOnDamage       : 1;
-	uint16_t autoremoveweapon : 1;
-	uint16_t openinventory    : 1;
-	uint16_t askroutine       : 1;
-	uint16_t spawnInRange     : 1;
+	struct {
+		uint16_t showaidebug      : 1;
+		uint16_t showNews         : 1;
+		uint16_t csAllowedAsRole  : 1;
+		uint16_t isSummoned       : 1;
+		uint16_t respawnOn        : 1;
+		uint16_t movlock          : 1;
+		uint16_t drunk            : 1;
+		uint16_t mad              : 1;
+		uint16_t overlay_wounded  : 1;
+		uint16_t inOnDamage       : 1;
+		uint16_t autoremoveweapon : 1;
+		uint16_t openinventory    : 1;
+		uint16_t askroutine       : 1;
+		uint16_t spawnInRange     : 1;
+	} flags;
 
-	uint16_t body_TexVarNr;
-	uint16_t body_TexColorNr;
-	uint16_t head_TexVarNr;
-	uint16_t teeth_TexVarNr;
+	uint16_t body_TexVarNr   = 0;
+	uint16_t body_TexColorNr = 0;
+	uint16_t head_TexVarNr   = 0;
+	uint16_t teeth_TexVarNr  = 0;
 
-	uint8_t guildTrue;
-	uint8_t drunk_heal;
-	uint8_t mad_heal;
-	uint8_t spells;
+	uint8_t guildTrue = GIL_NONE;
+	uint8_t drunk_heal = 0;
+	uint8_t mad_heal   = 0;
+	uint8_t spells     = 0;
 
 	uint32_t bodyState         : 19;
 	uint32_t aniMessageRunning : 1;
 
-	int    instanz;
+	int    instanz = -1;
+
 	zSTRING mds_name;
 	zSTRING body_visualName;
 	zSTRING head_visualName;
-	VEC3       model_scale;
-	zREAL      model_fatness;
-	int        namenr;
+
+	VEC3       model_scale{1.0, 1.0, 1.0};
+	zREAL      model_fatness = 0.0;
+	int        namenr = 0;
 	zREAL      hpHeal;
 	zREAL      manaHeal;
-	zREAL      swimtime;
-	zREAL      divetime;
-	zREAL      divectr;
-	zCVob*     fireVob;
-	int        fireDamage;
-	zREAL      fireDamageTimer;
-	int        attitude; //nok
-	int        tmp_attitude;
-	zREAL      attTimer;
-	int        knowsPlayer;
+
+	zREAL      swimtime = 0.0;
+	zREAL      divetime = 0.0;
+	zREAL      divectr  = 0.0;
+
+	zCVob*     fireVob         = 0;
+	int        fireDamage      = 0;
+	zREAL      fireDamageTimer = 0.0;
+
+	int attitude     = ATT_NEUTRAL; //nok
+	int tmp_attitude = ATT_NEUTRAL;
+	zREAL attTimer   = 0.0;
+
+	int   knowsPlayer = 0;
 
 	struct TNpcPerc {
 		int percID;
 		int percFunc;
 	}  percList[NPC_PERC_MAX];
 
-	int    percActive;
-	int    percActiveTime;
-	zREAL           percActiveDelta;
-	zBOOL           overrideFallDownHeight;
-	zREAL           fallDownHeight;
-	int             fallDownDamage;
-	oCMag_Book*     mag_book;
-	zCList<oCSpell>     activeSpells;
-	int    lastHitSpellID;
-	int    lastHitSpellCat;
+	int    percActive      = 0;
+	int    percActiveTime  = 0;
+	zREAL  percActiveDelta = 0.0;
+
+	zBOOL  overrideFallDownHeight = 0;
+	zREAL  fallDownHeight = 500.0;
+	int    fallDownDamage = 0;
+
+	oCMag_Book*     mag_book = 0;
+	zCList<oCSpell> activeSpells;
+
+	int    lastHitSpellID  = -1;
+	int    lastHitSpellCat = -1;
+
 	zCArray<zSTRING>    activeOverlays;
-	oCAskBox*      askbox;
-	int            askYes;
-	int            askNo;
-	zREAL          canTalk;
-	oCNpc*         talkOther;
-	oCInfo*        info;
-	oCNews*        news;
-	oCMission*     curMission;
+
+	oCAskBox*      askbox = 0;
+	int            askYes = 0;
+	int            askNo  = 0;
+
+	zREAL          canTalk = 1.0;
+	oCNpc*         talkOther = 0;
+	oCInfo*        info = 0;
+	oCNews*        news = 0;
+	oCMission*     curMission = 0;
 
 	oCNewsMemory knownNews;
 
 	zCVob*              carry_vob;
-	oCMobInter*         interactMob;
-	oCItem*             interactItem;
-	int                 interactItemCurrentState;
-	int                 interactItemTargetState;
-	int                 script_aiprio;
-	int                 old_script_state;
+	oCMobInter*         interactMob  = 0;
+	oCItem*             interactItem = 0;
+	int                 interactItemCurrentState = -1;
+	int                 interactItemTargetState  = 0;
+	int                 script_aiprio    = 0;
+	int                 old_script_state = 0;
+
 	oCAIHuman*          human_ai;
 	oCAniCtrl_Human*    anictrl;
 	zCRoute*            route;
-	zREAL               damageMul;
+
+	zREAL               damageMul = 1.0;
+
 	oCNpcMessage*       csg;
 	oCNpcMessage*       lastLookMsg;
 	oCNpcMessage*       lastPointMsg;
-	zCArray<zCVob*>    vobList_array;
-	zREAL     vobcheck_time;
-	zREAL     pickvobdelay;
-	zCVob*    focus_vob;
+
+	zCArray<zCVob*> vobList;
+	zREAL  vobcheck_time = 0.0;
+	zREAL  pickvobdelay  = 0.0;
+	zCVob*  focus_vob    = nullptr;
+
 	zCArray<TNpcSlot*>  invSlot;
 	zCArray<TNpcSlot*>  tmpSlotList;
-	zREAL              fadeAwayTime;
-	zREAL              respawnTime;
-	zREAL              selfDist;
-	int                fightRangeBase;
-	int                fightRangeFist;
-	int                fightRangeG;
-	zREAL              fight_waitTime;
-	zTModelAniID       fight_waitForAniEnd;
-	zREAL              fight_lastStrafeFrame;
-	int                soundType;
-	zCVob*             soundVob;
+
+	zREAL fadeAwayTime;
+	zREAL respawnTime;
+	zREAL selfDist = 0.0;
+
+	int                fightRangeBase = 0;
+	int                fightRangeFist = 0;
+	int                fightRangeG    = 0;
+	zREAL              fight_waitTime        = 0.0;
+	zTModelAniID       fight_waitForAniEnd   = -1;
+	zREAL              fight_lastStrafeFrame = 0;
+
+	int                soundType = 0;
+	zCVob*             soundVob  = 0;
 	zVEC3              soundPosition;
+
 	zCPlayerGroup*     playerGroup;
 };

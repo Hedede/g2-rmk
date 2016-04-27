@@ -168,7 +168,12 @@ public:
 	{
 		return IsAPlayer() ? 1 : 2;
 	}
-	virtual void SetVisual(zCVisual *);
+	virtual void SetVisual(zCVisual* vis)
+	{
+		zCVob::SetVisual(vis);
+		zCVob::SetCollisionClass(&oCCollObjectCharacter::s_oCollObjClass);
+	}
+	
 	virtual void GetScriptInstance(zSTRING * &,int &);
 	virtual void SetByScriptInstance(zSTRING const *,int);
 	virtual void GetCSStateFlags();
@@ -191,6 +196,13 @@ public:
 	virtual void SetWeaponMode(int);
 	virtual void SetWeaponMode2(int);
 	void SetWeaponMode2(zSTRING const& str);
+
+	int GetWeaponMode()
+	{
+		if (fmode < 0 || fmode >= 8)
+			fmode = 0;
+		return fmode;
+	}
 
 	virtual void DoDie(oCNpc *);
 	virtual void DoInsertMunition(zSTRING const &);
@@ -439,27 +451,18 @@ public:
 		percActive = 0;
 	}
 
-	int AssessTheft_S(oCNpc* other)
+	int PercFilterNpc(oCNpc* other)
 	{
-		CreatePassivePerception(PERC_ASSESSTHEFT, other, this);
 		return 1;
 	}
 
-	int AssessFakeGuild_S()
-	{
-		if ( IsSelfPlayer() ) {
-			CreatePassivePerception(PERC_ASSESSFAKEGUILD, this, 0);
-			return 1;
-		}
-
-		return 0;
-	}
-
-	int AssessCaster_S(oCSpell* spell)
-	{
-		CreatePassivePerception(PERC_ASSESSCASTER, this, 0);
-		return 1;
-	}
+	int AssessDefeat_S(zCVob* commiter);
+	int AssessMurder_S(zCVob* commiter);
+	int AssessRemoveWeapon_S(oCNpc* other);
+	int AssessTheft_S(oCNpc* other);
+	int AssessFakeGuild_S();
+	int AssessCaster_S(oCSpell* spell);
+	int AssessEnterRoom_S();
 
 	oCAIHuman* GetAnictrl()
 	{
@@ -474,6 +477,11 @@ public:
 	int GetFullBodyState() const
 	{
 		return bodyState & 0xFFFFC07F;
+	}
+
+	bool HasBodyStateModifier(int bsmod) const
+	{
+		return bodyState & bsmod;
 	}
 
 	int IsAniMessageRunning() const
@@ -541,6 +549,18 @@ public:
 			mag_book->Close(removeall)
 	}
 
+	bool HasSpell(int nr)
+	{
+		return spells & (1 << nr);
+	}
+
+	int GetNumberOfSpells()
+	{
+		if (mag_book)
+			return mag_book->GetNoOfSpells();
+		return 0;
+	}
+
 	zCVob* GetFocusVob()
 	{
 		return focus_vob;
@@ -549,11 +569,6 @@ public:
 	zCVob* GetCarryVob()
 	{
 		return carry_vob;
-	}
-
-	zCVob* GetRbtObstacleVob()
-	{
-		return rbt.obstVob;
 	}
 
 	void SetTradeNpc(oCNpc* npc)
@@ -591,20 +606,30 @@ public:
 		canTalk = timeSec * 1000.0;
 	}
 
+	bool CanTalk() const
+	{
+		return canTalk <= 0.0;
+	}
+
 	void SetShowNews(int b)
 	{
 		flags.showNews = b;
 	}
 
+	bool IsInInv(oCItem* item, int amount)
+	{
+		return inventory.IsIn(item, amount);
+	}
+
 	// TODO: return type?
 	oCItem* IsInInv(int inst, int amount)
 	{
-		return inventory2.IsIn(inst, amount);
+		return inventory.IsIn(inst, amount);
 	}
 
 	oCItem* IsInInv(zSTRING const& name, int amount)
 	{
-		return inventory2.IsIn(name, amount);
+		return inventory.IsIn(name, amount);
 	}
 
 	void CloseSteal() // static?
@@ -623,8 +648,6 @@ public:
 
 	oCItem* DetectItem(int flags, int);
 
-
-	int GetFightRange() const;
 
 	float GetJumpRange() const
 	{
@@ -666,6 +689,12 @@ public:
 		fightRangeG = range;
 	}
 
+	//! Weapon or fist range
+	int GetFightRangeDynamic() const;
+
+	//! Full fight range
+	int GetFightRange() const;
+
 	struct TActiveInfo {
 		TActiveInfo(oCNpc const*) = default;
 		~TActiveInfo() = default;
@@ -683,10 +712,10 @@ public:
 		return s_activeInfoCache[this];
 	}
 
-	int EV_AttackMagic(oCMsgAttack*)
-	{
-		return 0;
-	}
+	int EV_StopAim(oCMsgAttck*);
+	int EV_AttackMagic(oCMsgAttack*);
+	int EV_RemoveInteractItem(oCMsgManipulate*);
+
 
 	void Fleeing()
 	{
@@ -723,6 +752,11 @@ public:
 		return states.IsInState(ZS_Unconscious); // -4
 	}
 
+	bool IsFadingAway() const
+	{
+		return states.IsInState(-5);
+	}
+
 	bool IsDead() const
 	{
 		return attribute[ATR_HITPOINTS] <= 0;
@@ -734,6 +768,19 @@ public:
 	}
 
 
+	// Robust trace
+	RbtInit(zVEC3& tpos, zCVob* tvob)
+	{
+		RbtReset();
+		RbtUpdate(tpos, tvob);
+	}
+
+	zCVob* GetRbtObstacleVob()
+	{
+		return rbt.obstVob;
+	}
+
+
 	// useless
 	void AI_Follow(oCNpc*) {};
 	void AI_Flee(oCNpc*) {};
@@ -741,6 +788,11 @@ public:
 	void SetToDrunk(float) {};
 	void HealFromDrunk() {}
 	int CanRecruitSC() { return 0; }
+	void OpenScreen_Help() {}
+	void ExchangeTorch() {}
+	void DropInventory() {}
+	void Activate(int cat, int nr) {}
+	int GetCamp() { return 0; }
 
 private:
 	// ----------------

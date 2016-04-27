@@ -80,6 +80,7 @@ public:
 
 	void Identify() { }
 	void UseItem() { }
+
 private:
 	INT		id;				
 	zSTRING  name,nameID;

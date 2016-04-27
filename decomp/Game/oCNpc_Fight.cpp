@@ -62,12 +62,16 @@ struct oCNpc::oSFightAI {
 	oCNpc::oSActionBlock actions[19];
 };
 
+int oCNpc::GetFightRangeDynamic() const
+{
+	oCItem* weap = GetWeapon();
+	return weap ? weap->range : fightRangeFist;
+}
+
 int oCNpc::GetFightRange() const
 {
 	int baseRange = fightRangeBase;
-
-	oCItem* weap = GetWeapon();
-	int weapRange = weap ? weap->range : fightRangeFist;
+	int weapRange = GetFightRangeDynamic();
 
 	return baseRange + weapRange;
 }

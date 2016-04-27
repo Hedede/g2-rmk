@@ -1,3 +1,14 @@
+enum oEDamageType {
+	DAM_BARRIER = (1 << 0),
+	DAM_BLUNT   = (1 << 1),
+	DAM_EDGE    = (1 << 2),
+	DAM_FIRE    = (1 << 3),
+	DAM_FLY     = (1 << 4),
+	DAM_MAGIC   = (1 << 5),
+	DAM_POINT   = (1 << 6),
+	DAM_FALL    = (1 << 7),
+};
+
 enum oEIndexDamage
 {
 	DAM_INDEX_BARRIER = 0x0,

@@ -1,4 +1,18 @@
 template<typename Index, typename Data>
+struct zCCacheData {
+	zCCacheData();
+
+	Clear() {
+		if (data)
+			delete data;
+		data = nullptr;
+	}
+
+	Data* data;
+	int curFrame;
+};
+
+template<typename Index, typename Data>
 using zCCacheArray = zCSparseArray<Index, zCCacheData<Index, Data>>;
 
 template<typename Index, typename Data>
@@ -13,6 +27,12 @@ public:
 	
 	}
 };
+
+template<typename Index, typename Data>
+zCCacheData::zCCacheData()
+	data(nullptr), curFrame(zCCacheBase::s_currentFrame)
+{
+}
 
 template<typename Index, typename Data>
 class zCCacheAsk : public zCCache<Index, Data> {

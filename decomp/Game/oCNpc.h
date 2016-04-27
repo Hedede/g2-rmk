@@ -1,3 +1,5 @@
+#include <Gothic/Game/oGuilds.h>
+
 const int SENSE_SEE = 1;
 const int SENSE_HEAR = 2;
 const int SENSE_SMELL = 4;
@@ -35,6 +37,13 @@ enum NpcPercId {
 	PERC_ASSESSSURPRISE = 30,
 	PERC_ASSESSENTERROOM = 31,
 	PERC_ASSESSUSEMOB = 32,
+	PERC_MAX = 33;
+};
+
+enum Sense {
+	SENSE_SEE = 1,
+	SENSE_HEAR = 2,
+	SENSE_SMELL = 4,
 };
 
 class oCNpc_States {
@@ -118,6 +127,8 @@ enum ATR_INDEX {
 class oCNpc : public oCVob {
 	CLASSDEF_DEFINE;
 public:
+	static oCNpc* player;
+
 	static bool IsSlotFree(TNpcSlot* slot)
 	{
 		return slot && slot->object == nullptr;
@@ -131,6 +142,17 @@ public:
 	static void EnableDamageDebugOutput(zBOOL b)
 	{
 		oCNpc::isEnabledDamageDebug = b;
+	}
+
+	static bool HasFlag(unsigned flag, unsigned value)
+	{
+		return (flag & value);
+	}
+
+	static void SetPerceptionRange(int percId, float range)
+	{
+		if (percId < PERC_MAX)
+			percRange[percId] = range;
 	}
 
 	virtual void Archive(zCArchiver& arc);
@@ -173,7 +195,14 @@ public:
 	virtual void DoDie(oCNpc *);
 	virtual void DoInsertMunition(zSTRING const &);
 	virtual void DoRemoveMunition();
-	virtual void DoSetToFightMode(oCItem *);
+	virtual bool DoSetToFightMode(oCItem* item)
+	{
+		if (item) {
+			SetToFightMode(item, 0);
+			return 1;
+		}
+		return 0;
+	}
 	virtual void DoShootArrow(int);
 	virtual void OnDamage(oCNpc::oSDamageDescriptor &);
 	virtual void ResetPos(zVEC3 &);
@@ -183,27 +212,61 @@ public:
 	virtual void Enable(zVEC3 &);
 	virtual void InitHumanAI();
 	virtual void IsMoreImportant(zCVob *,zCVob *);
+
 	virtual void DoDoAniEvents();
 	virtual void DoModelSwapMesh(zSTRING const &,zSTRING const &);
 	virtual void DoTakeVob(zCVob *);
 	virtual void DoDropVob(zCVob *);
 	virtual void DoRemoveFromInventory(oCItem *);
-	virtual void DoPutInInventory(oCItem *);
+	virtual bool DoPutInInventory(oCItem* item)
+	{
+		if (item) {
+			PutInInv(item);
+			return 1;
+		}
+		return 0;
+	}
 	virtual void DoThrowVob(zCVob *,float);
 	virtual void DoExchangeTorch();
+
 	virtual void GetSoundMaterial_MA(zCSoundManager::zTSndManMedium &,oTSndMaterial &,zSTRING);
 	virtual void GetSoundMaterial_MH_HM(zCSoundManager::zTSndManMedium &,oTSndMaterial &);
-	virtual void IsAPlayer();
-	virtual bool IsSelfPlayer();
+	virtual bool IsAPlayer() const
+	{
+		return this == oCNpc::player;
+	}
+	virtual bool IsSelfPlayer() const
+	{
+		return IsAPlayer();
+	}
 	virtual void SetAsPlayer();
+
+
+
 	virtual void IsMonster();
-	virtual void IsHuman() const
+	virtual bool IsHuman() const
 	{
 		return guildTrue <= 16;
 	}
-	virtual void IsGoblin();
-	virtual void IsOrc();
-	virtual void IsSkeleton();
+	virtual void IsGoblin() const
+	{
+		return guildTrue == GIL_GOBBO ||
+		       guildTrue == GIL_GOBBO_SKELETON ||
+		       guildTrue == GIL_SUMMONED_GOBBO_SKELETON;
+
+	}
+	virtual void IsOrc() const
+	{
+		return guildTrue >= GIL_SEPARATOR_ORC;
+	}
+	virtual void IsSkeleton() const
+	{
+		// no GIL_SKELETON_MAGE, huh?
+		return guildTrue == GIL_SKELETON ||
+		       guildTrue == GIL_SUMMONED_SKELETON;
+	}
+
+
 	virtual void GetPlayerNumber();
 	virtual void IsAniMessageRunning();
 	virtual void ProcessNpc();
@@ -212,12 +275,74 @@ public:
 		return 1;
 	}
 
+	void HasFlag(int flag) const
+	{
+		return HasFlag(variousFlags, flag);
+	}
+
+	void SetSenses(int bf)
+	{
+		senses = bf;
+	}
+
+	bool HasSenseSee() const
+	{
+		return senses & SENSE_SEE;
+	}
+
+	bool HasSenseHear() const
+	{
+		return senses & SENSE_HEAR;
+	}
+
+	bool HasSenseSmell() const
+	{
+		return senses & SENSE_SMELL;
+	}
+
+	void SetKnowsPlayer()
+	{
+		knowsPlayer = true;
+	}
+
+	bool KnowsPlayer(int) const
+	{
+		return knowsPlayer;
+	}
+
+	bool KnowsPlayer(oCNpc*) const
+	{
+		return knowsPlayer;
+	}
+
 	// or DOCREATE?
 	zCEventManager* GetEM(bool dontCreate = false);
+
+	void SetAttribute(int atr, int val)
+	{
+		attribute[atr] = val;
+		CheckModelOverlays();
+	}
 
 	int GetAttribute(int atr) const
 	{
 		return attribute[atr];
+	}
+
+	void ComleteHeal()
+	{
+		attribute[ATR_HITPOINTS] = attribute[ATR_HITPOINTS_MAX];
+		attribute[ATR_MANA]      = attribute[ATR_MANA_MAX];
+	}
+
+	bool HasTalent(int nr, int skill) const
+	{
+		return GetTalentSkill(nr) >= skill;
+	}
+
+	void SetHitChance(int hc, int val)
+	{
+		hitChance[hc] = val;
 	}
 
 	int GetHitChance(size_t id) const
@@ -225,14 +350,46 @@ public:
 		return hitChance[id];
 	}
 
+	void SetDamages(int arr[DAM_INDEX_MAX])
+	{
+		if (arr)
+			memcpy(damage, arr, sizeof(damage));
+	}
+
 	int GetDamageByIndex(int idx) const
 	{
 		return damage[idx];
 	}
 
+	int GetFullDamage() const
+	{
+		int dmg = 0;
+		for (int v : damage)
+			dmg += v;
+		return dmg;
+	}
+
+	void SetProtectionByIndex(int idx, int val)
+	{
+		protection[idx] = val;
+	}
+
 	int GetProtectionByIndex(int idx) const
 	{
 		return protection[idx];
+	}
+
+	int GetFullProtection() const
+	{
+		int prot = 0;
+		for (int v : protection)
+			prot += v;
+		return prot;
+	}
+
+	void SetDamageMultiplier(float val)
+	{
+		damageMul = val;
 	}
 
 	float GetDamageMultiplier() const
@@ -276,14 +433,32 @@ public:
 		return GetGuildAttitude(guild) == ATT_FRIENDLY;
 	}
 
+	void ClearPerception()
+	{
+		memset(percList, 0, sizeof(percList));
+		percActive = 0;
+	}
+
+	int AssessTheft_S(oCNpc* other)
+	{
+		CreatePassivePerception(PERC_ASSESSTHEFT, other, this);
+		return 1;
+	}
+
 	int AssessFakeGuild_S()
 	{
 		if ( IsSelfPlayer() ) {
-			CreatePassivePerception(21, this, 0);
+			CreatePassivePerception(PERC_ASSESSFAKEGUILD, this, 0);
 			return 1;
 		}
 
 		return 0;
+	}
+
+	int AssessCaster_S(oCSpell* spell)
+	{
+		CreatePassivePerception(PERC_ASSESSCASTER, this, 0);
+		return 1;
 	}
 
 	oCAIHuman* GetAnictrl()
@@ -291,11 +466,48 @@ public:
 		return human_ai;
 	}
 
+	int GetBodyState() const
+	{
+		return bodyState & 0x7F;
+	}
+
+	int GetFullBodyState() const
+	{
+		return bodyState & 0xFFFFC07F;
+	}
+
+	int IsAniMessageRunning() const
+	{
+		return aniMessageRunning;
+	}
+
+	bool IsMovLock() const
+	{
+		return flags.movlock;
+	}
+
 	double GetTurnSpeed()
 	{
 		if (IsAPlayer())
 			return 0.1;
 		return speedTurn;
+	}
+
+	void SetFallDownHeight(float height)
+	{
+		fallDownHeight = height;
+	}
+
+	float GetFallDownHeight() const
+	{
+		if (overrideFallDownHeight)
+			return 0.0;
+		return fallDownHeight;
+	}
+
+	void SetFallDownDamage(int damage)
+	{
+		fallDownDamage = damage;
 	}
 
 	zCVob* GetSoundSource()
@@ -323,6 +535,12 @@ public:
 		return mag_book;
 	}
 
+	void CloseSpellBook(int removeall)
+	{
+		if (mag_book)
+			mag_book->Close(removeall)
+	}
+
 	zCVob* GetFocusVob()
 	{
 		return focus_vob;
@@ -338,14 +556,44 @@ public:
 		return rbt.obstVob;
 	}
 
+	void SetTradeNpc(oCNpc* npc)
+	{
+		tradeNpc = npc;
+	}
+
 	oCNpc* GetTradeNpc()
 	{
 		return tradeNpc;
 	}
 
+	void StartTalkingWith(oCNpc* other)
+	{
+		if (other) {
+			this->talkOther = other;
+			other->talkOther = this;
+		}
+	}
+
+	void StopTalkingWith()
+	{
+		if (talkOther)
+			talkOther->talkOther = nullptr;
+		talkOther = nullptr;
+	}
+
 	oCNpc* GetTalkingWith()
 	{
 		return talkOther;
+	}
+
+	void SetCanTalk(float timeSec)
+	{
+		canTalk = timeSec * 1000.0;
+	}
+
+	void SetShowNews(int b)
+	{
+		flags.showNews = b;
 	}
 
 	// TODO: return type?
@@ -357,6 +605,20 @@ public:
 	oCItem* IsInInv(zSTRING const& name, int amount)
 	{
 		return inventory2.IsIn(name, amount);
+	}
+
+	void CloseSteal() // static?
+	{
+		if (oCNpc::stealcontainer) {
+			oCNpc::stealcontainer->Close();
+			oCNpc::game_mode = 0;
+		}
+	}
+
+	void CloseInventory()
+	{
+		inventory.Close();
+		CloseTradeContainer();
 	}
 
 	oCItem* DetectItem(int flags, int);
@@ -411,6 +673,16 @@ public:
 		unsigned nr : 4;
 	};
 
+	TActiveInfo GetActiveInfo() const
+	{
+		return s_activeInfoCache[this];
+	}
+
+	TActiveInfo& GetActiveInfoWriteable()
+	{
+		return s_activeInfoCache[this];
+	}
+
 	int EV_AttackMagic(oCMsgAttack*)
 	{
 		return 0;
@@ -421,14 +693,44 @@ public:
 		ThinkNextFleeAction();
 	}
 
+	bool IsVoiceActive() const
+	{
+		return listOfVoiceHandles.GetNumInList() > 0;
+	}
+
 	void AI_ForceDetection()
 	{
 		vobcheck_time = 100000.0;
 	}
 
-	int IsAIState(int funcInst)
+	int GetAIState() const
+	{
+		return states.GetState();
+	}
+
+	int GetAIStateTime() const
+	{
+		return states.GetStateTime();
+	}
+
+	int IsAIState(int funcInst) const
 	{
 		return states.IsInState(funcInst);
+	}
+
+	bool IsUnconscious() const
+	{
+		return states.IsInState(ZS_Unconscious); // -4
+	}
+
+	bool IsDead() const
+	{
+		return attribute[ATR_HITPOINTS] <= 0;
+	}
+
+	bool IsDisguised() const
+	{
+		return guild != guildTrue;
 	}
 
 
@@ -441,6 +743,7 @@ public:
 	int CanRecruitSC() { return 0; }
 
 private:
+	// ----------------
 	int     idx = 0;
 	zSTRING name[5];
 	zSTRING slot;
@@ -449,8 +752,8 @@ private:
 	int     variousFlags = 0;
 	int     attribute[NPC_ATR_MAX] = {};
 	int     hitChance[NPC_HITCHANCE_MAX] = {};
-	int     protection[oEDamageIndex_MAX] = {};
-	int     damage[oEDamageIndex_MAX] = {};
+	int     protection[DAM_INDEX_MAX] = {};
+	int     damage[DAM_INDEX_MAX] = {};
 	int     damagetype = 0;
 	int     guild = GIL_NONE;
 	int     level = 0;
@@ -474,6 +777,7 @@ private:
 	int     bodyStateInterruptableOverride = 0;
 	zBOOL   noFocus = 0;
 	int     parserEnd;
+	// ----------------
 
 	int     bloodEnabled;
 	int     bloodDistance;
@@ -495,7 +799,10 @@ private:
 	zVEC3               vecFlee;
 	zVEC3               posFlee;
 	zCWaypoint*         waypointFlee;
+
 	class oTRobustTrace {
+		~oTRobustTrace() = default();
+
 		int    bitfield;    // 0x04C4 oCNpc_oTRobustTrace_bitfield_Xxx
 		zVEC3    targetPos;
 		zCVob*   targetVob;

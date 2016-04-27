@@ -128,6 +128,7 @@ public:
 	{
 		arc.ReadRaw("guildTable", attitudes, numGuilds * numGuilds);
 	}
+
 private:
 	int numGuilds = GIL_MAX;
 	uint8_t* attitudes;

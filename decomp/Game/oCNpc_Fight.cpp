@@ -56,24 +56,16 @@ zSTRING GetSituationStringFromConstant(int action)
 struct oCNpc::oSActionBlock {
 	int move[6];
 	int numMoves;
+
+	int GetOwnAction(int);
+	void InitBlock(zCParser* parser, int action_id, int fa_id);
 };
 
-struct oCNpc::oSFightAI {
-	oCNpc::oSActionBlock actions[19];
-};
-
-int oCNpc::GetFightRangeDynamic() const
+int oCNpc::oSActionBlock::GetOwnAction(int)
 {
-	oCItem* weap = GetWeapon();
-	return weap ? weap->range : fightRangeFist;
-}
-
-int oCNpc::GetFightRange() const
-{
-	int baseRange = fightRangeBase;
-	int weapRange = GetFightRangeDynamic();
-
-	return baseRange + weapRange;
+	if ( numMoves <= 0 )
+		return move[0];
+	return move[rand() % numMoves];
 }
 
 void oCNpc::oSActionBlock::InitBlock(zCParser* parser, int action_id, int fa_id)
@@ -101,16 +93,37 @@ void oCNpc::oSActionBlock::InitBlock(zCParser* parser, int action_id, int fa_id)
 	}
 }
 
-int oCNpc::oSActionBlock::GetOwnAction(int)
+struct oCNpc::oSFightAI {
+	oCNpc::oSActionBlock actions[19];
+
+	void Init(zCParser* parser, int fa_id)
+	{
+		size_t i = 0;
+		for (auto& action : actions) {
+			action.InitBlock(parser, i++, fa_id);
+		}
+	}
+
+	int GetOwnAction(int situation)
+	{
+		return actions[situation].GetOwnAction(situation);
+	}
+};
+
+
+
+int oCNpc::GetFightRangeDynamic() const
 {
-	if ( numMoves <= 0 )
-		return move[0];
-	return move[rand() % numMoves];
+	oCItem* weap = GetWeapon();
+	return weap ? weap->range : fightRangeFist;
 }
 
-int oCNpc::oSFightAI::GetOwnAction(int situation)
+int oCNpc::GetFightRange() const
 {
-	return actions[situation].GetOwnAction(situation);
+	int baseRange = fightRangeBase;
+	int weapRange = GetFightRangeDynamic();
+
+	return baseRange + weapRange;
 }
 
 int oCNpc::GetCurrentFightMove()

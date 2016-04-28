@@ -155,6 +155,24 @@ public:
 			percRange[percId] = range;
 	}
 
+	static int* CallScript(int funcIdx)
+	{
+		if ( funcIdx >= 0 )
+			result = zparser.CallFunc(funcIdx);
+		return 0;
+	}
+
+	static int* CallScript(zSTRING const& funcName)
+	{
+		auto idx = zparser.GetIndex(funcName);
+		return CallScript(idx);
+	}
+
+	static bool IsInPerceptionRange(int perc, float range)
+	{
+		return perc < 33 && range <= percRange[perc];
+	}
+
 	virtual void Archive(zCArchiver& arc);
 	virtual void Unarchive(zCArchiver& arc);
 
@@ -174,7 +192,13 @@ public:
 		zCVob::SetCollisionClass(&oCCollObjectCharacter::s_oCollObjClass);
 	}
 	
-	virtual void GetScriptInstance(zSTRING * &,int &);
+	// In debug info args are obnoxiously long: scriptInstanceName
+	virtual bool GetScriptInstance(zSTRING*& name, int& index)
+	{
+		name = GetSymbol(instanz)->name;
+		index = instanz;
+	}
+
 	virtual void SetByScriptInstance(zSTRING const *,int);
 	virtual void GetCSStateFlags();
 	virtual void ThisVobAddedToWorld(zCWorld *);
@@ -239,6 +263,7 @@ public:
 		return 0;
 	}
 	virtual void DoThrowVob(zCVob *,float);
+
 	virtual void DoExchangeTorch();
 
 	virtual void GetSoundMaterial_MA(zCSoundManager::zTSndManMedium &,oTSndMaterial &,zSTRING);
@@ -285,6 +310,11 @@ public:
 	virtual int AllowDiscardingOfSubtree()
 	{
 		return 1;
+	}
+
+	void SetFlag(int flag)
+	{
+		variousFlags &= flag;
 	}
 
 	void HasFlag(int flag) const
@@ -381,6 +411,16 @@ public:
 		return dmg;
 	}
 
+	int GetBluntDamage(oCItem* item)
+	{
+		if (item) {
+			int damage = item->GetDamageByIndex(DAM_INDEX_BLUNT);
+			return damage - protection[1];
+		}
+
+		return 0;
+	}
+
 	void SetProtectionByIndex(int idx, int val)
 	{
 		protection[idx] = val;
@@ -445,6 +485,9 @@ public:
 		return GetGuildAttitude(guild) == ATT_FRIENDLY;
 	}
 
+	int HasPerception(int percId) const;
+	int GetPerceptionFunc(int percId) const;
+
 	void ClearPerception()
 	{
 		memset(percList, 0, sizeof(percList));
@@ -456,6 +499,12 @@ public:
 		return 1;
 	}
 
+	int PercFilterItem(oCItem* item)
+	{
+		return !item->HasFlag(ITEM_NFOCUS);
+	}
+
+	int AssessWarn_S(zCVob* commiter);
 	int AssessDefeat_S(zCVob* commiter);
 	int AssessMurder_S(zCVob* commiter);
 	int AssessRemoveWeapon_S(oCNpc* other);
@@ -463,6 +512,12 @@ public:
 	int AssessFakeGuild_S();
 	int AssessCaster_S(oCSpell* spell);
 	int AssessEnterRoom_S();
+	int AssessOthersDamage_S(zCVob* commiter, zCVob* victim, int damage);
+
+	static void CreateSoundPerception(int percType, zCVob* source, zVEC3 const& position, zCVob* victimVob, int setVictim)
+	static int AssessQuietSound_S(zCVob* source, zVEC3 const& position);
+	static int AssessFightSound_S(zCVob* source, zVEC3 const& position, zCVob* victim);
+
 
 	oCAIHuman* GetAnictrl()
 	{
@@ -479,9 +534,39 @@ public:
 		return bodyState & 0xFFFFC07F;
 	}
 
+	void SetBodyStateModifier(int mod)
+	{
+		bodyState |= mod;
+	}
+
+	int ClrBodyStateModifier(int mod)
+	{
+		bodyState &= ~mod;
+		return result;
+	}
+
 	bool HasBodyStateModifier(int bsmod) const
 	{
 		return bodyState & bsmod;
+	}
+
+	// 0x3F80
+	static constexpr uint32_t bs_mods = BS_unknown1 |
+	        BS_MOD_TRANSFORMED|BS_MOD_CONTROLLED|BS_MOD_BURNING|
+	        BS_MOD_NUTS|BS_MOD_DRUNK|BS_MOD_HIDDEN;
+
+	bool HasBodyStateFreeHands() const
+	{
+		if (bodyState & bs_mods == 0 )
+			return bodyState & BS_FLAG_FREEHANDS;
+		return 0;
+	}
+
+	int IsBodyStateInterruptable(oCNpc *this)
+	{
+		if (bodyState & bs_mods == 0)
+			return bodyState & BS_FLAG_INTERRUPTABLE;
+		return 0;
 	}
 
 	int IsAniMessageRunning() const
@@ -489,9 +574,48 @@ public:
 		return aniMessageRunning;
 	}
 
+
+	void SetMovLock(int f);
 	bool IsMovLock() const
 	{
 		return flags.movlock;
+	}
+
+	void SetWalkStopChasm(bool b)
+	{
+		if (GetAnictrl()) {
+			GetAnictrl()->flags2.zMV_DO_DETECT_WALK_STOP_CHASM = b;
+		}
+	}
+
+	bool GetWalkStopChasm()
+	{
+		return GetAnictrl() &&
+		       GetAnictrl()->flags2.zMV_DO_DETECT_WALK_STOP_CHASM;
+	}
+
+	void oCNpc::SetSwimDiveTime(float swimSec, float diveSec)
+	{
+		swimtime = swimSec * 1000.0;
+		divetime = diveSec * 1000.0;;
+		divectr  = divetime;
+	}
+
+	void GetSwimDiveTime(float& swimTime, float& diveTime, float& diveCtr) const
+	{
+		swimTime = this->swimtime;
+		diveTime = this->divetime;
+		diveCtr  = this->divectr;
+	}
+
+	bool CanSwim() const
+	{
+		return swimTime > 0.0 || swimTime == -1000000.0;
+	}
+
+	bool CanDive() const
+	{
+		return diveTime > 0.0 || diveTime == -1000000.0;
 	}
 
 	double GetTurnSpeed()
@@ -549,9 +673,23 @@ public:
 			mag_book->Close(removeall)
 	}
 
+	void DestroySpellBook()
+	{
+		if (mag_book)
+			delete mag_book;
+		mag_book = 0;
+	}
+
 	bool HasSpell(int nr)
 	{
 		return spells & (1 << nr);
+	}
+
+	void DestroySpell(int nr)
+	{
+		if (HasSpell(nr)) {
+			spells -= (1 << nr);
+		}
 	}
 
 	int GetNumberOfSpells()
@@ -561,9 +699,24 @@ public:
 		return 0;
 	}
 
+	bool HasMagic()
+	{
+		return GetNumberOfSpells() > 0;
+	}
+
 	zCVob* GetFocusVob()
 	{
 		return focus_vob;
+	}
+
+	oCNpc* GetFocusNpc()
+	{
+		return zDYNAMIC_CAST<oCNpc>(focus_vob);
+	}
+
+	void ClearFocusVob()
+	{
+		Release(focus_vob);
 	}
 
 	zCVob* GetCarryVob()
@@ -596,6 +749,20 @@ public:
 		talkOther = nullptr;
 	}
 
+	void oCNpc::SetTalkingWith(oCNpc* other, int talking)
+	{
+		if ( !other ) {
+			talkOther = nullptr;
+			return;
+		}
+
+		if ( talking ) {
+			talkOther = other;
+		} else if ( talkOther == other ) {
+			talkOther = 0;
+		}
+	}
+
 	oCNpc* GetTalkingWith()
 	{
 		return talkOther;
@@ -614,6 +781,12 @@ public:
 	void SetShowNews(int b)
 	{
 		flags.showNews = b;
+	}
+
+	oCItem* PutInInv(zSTRING const& name, int anz)
+	{
+		auto idx = zparser.GetItem(name);
+		return PutInInv(idx, anz);
 	}
 
 	bool IsInInv(oCItem* item, int amount)
@@ -712,10 +885,14 @@ public:
 		return s_activeInfoCache[this];
 	}
 
+	int EV_Defent(oCMsgAttck* msg);
 	int EV_StopAim(oCMsgAttck*);
 	int EV_AttackMagic(oCMsgAttack*);
 	int EV_RemoveInteractItem(oCMsgManipulate*);
+	int EV_EquipBestWeapon(oCMsgWeapon* msg);
 
+	int EV_StartFX(oCMsgConversation* msg);
+	int EV_StopProcessInfos(oCMsgConversation* msg);
 
 	void Fleeing()
 	{
@@ -767,6 +944,20 @@ public:
 		return guild != guildTrue;
 	}
 
+	void SetCSEnabled(bool enabled)
+	{
+		csAllowedAsRole = enabled;
+	}
+
+
+	void SetRoute(zCRoute* rt)
+	{
+		// appears to be macro or inlined func,
+		// if (route) { delete route; route = rt} else {route = rt}
+		if (route)
+			delete route;
+		route = rt;
+	}
 
 	// Robust trace
 	RbtInit(zVEC3& tpos, zCVob* tvob)
@@ -778,6 +969,11 @@ public:
 	zCVob* GetRbtObstacleVob()
 	{
 		return rbt.obstVob;
+	}
+
+	float GetThrowSpeed(float dist, float angle)
+	{
+		return sqrt(dist * 981.0 / sin(angle * 0.017453292 + angle * 0.017453292)) * 0.8999999761581421;
 	}
 
 

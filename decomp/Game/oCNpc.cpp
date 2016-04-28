@@ -21,10 +21,7 @@ oCNpc::oCNpc()
 	attribute[ATR_REGENERATEMANA] = 600000;
 	CheckModelOverlays();
 
-	percActiveDelta = 5000.0;
-	while (percActiveTime > percActiveDelta) {
-		percActiveTime -= percActiveDelta;
-	}
+	SetPerceptionTime(5000.0);
 
 	inventory.SetOwner(this);
 	statec.SetOwner(this);
@@ -859,4 +856,14 @@ void oCNpc::AvoidShrink(int timeout)
 		shrinkHelperCache[this];
 		recursion = 0;
 	}
+}
+
+int oCNpc::IsInGlobalCutscene()
+{
+	if ( GetEM()->GetCutscene() ) { // zCCutscene*
+		auto props = GetEM()->GetCutscene()->properties;
+		if ( props )
+			return props->globalCutscene;
+	}
+	return 0;
 }

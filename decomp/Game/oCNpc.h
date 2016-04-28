@@ -221,6 +221,7 @@ public:
 	virtual void SetWeaponMode2(int);
 	void SetWeaponMode2(zSTRING const& str);
 
+	int IsInFightMode_S();
 	int GetWeaponMode()
 	{
 		if (fmode < 0 || fmode >= 8)
@@ -280,7 +281,16 @@ public:
 
 
 
-	virtual void IsMonster();
+	virtual bool IsMonster() const
+	{
+		if (!IsHuman() && !IsOrc()) {
+			if (guildTrue != GIL_DRAGON &&
+			    guildTrue != GIL_FIREGOLEM &&
+			    guildTrue != GIL_ICEGOLEM)
+				return 1;
+		}
+		return 0;
+	}
 	virtual bool IsHuman() const
 	{
 		return guildTrue <= 16;
@@ -310,6 +320,11 @@ public:
 	virtual int AllowDiscardingOfSubtree()
 	{
 		return 1;
+	}
+
+	void GetAngles(zCVob* to, float& azi, float& elev)
+	{
+		GetAngles(to->GetPositionWorld(), azi, elev);
 	}
 
 	void SetFlag(int flag)
@@ -488,6 +503,8 @@ public:
 	int HasPerception(int percId) const;
 	int GetPerceptionFunc(int percId) const;
 
+	void SetPerceptionTime(float time);
+
 	void ClearPerception()
 	{
 		memset(percList, 0, sizeof(percList));
@@ -513,6 +530,8 @@ public:
 	int AssessCaster_S(oCSpell* spell);
 	int AssessEnterRoom_S();
 	int AssessOthersDamage_S(zCVob* commiter, zCVob* victim, int damage);
+	int ObserveIntruder_S();
+
 
 	static void CreateSoundPerception(int percType, zCVob* source, zVEC3 const& position, zCVob* victimVob, int setVictim)
 	static int AssessQuietSound_S(zCVob* source, zVEC3 const& position);
@@ -574,6 +593,17 @@ public:
 		return aniMessageRunning;
 	}
 
+	struct oCNpcTimedOverlay {
+		zSTRING GetMdsName() const
+		{
+			return mdsName;
+		}
+
+		unk ...;
+		zSTRING mdsName;
+		float ...;
+	};
+
 
 	void SetMovLock(int f);
 	bool IsMovLock() const
@@ -594,7 +624,7 @@ public:
 		       GetAnictrl()->flags2.zMV_DO_DETECT_WALK_STOP_CHASM;
 	}
 
-	void oCNpc::SetSwimDiveTime(float swimSec, float diveSec)
+	void SetSwimDiveTime(float swimSec, float diveSec)
 	{
 		swimtime = swimSec * 1000.0;
 		divetime = diveSec * 1000.0;;
@@ -642,6 +672,20 @@ public:
 		fallDownDamage = damage;
 	}
 
+private:
+	void ForceRotation(float deg)
+	{
+		auto movmode = isInMovementMode;
+		if ( movmode )
+			EndMovement(1);
+
+		anictrl->TurnDegrees(deg, 1);
+
+		if ( movmode )
+			BeginMovement();
+	}
+
+public:
 	zCVob* GetSoundSource()
 	{
 		return soundVob;
@@ -691,6 +735,8 @@ public:
 			spells -= (1 << nr);
 		}
 	}
+
+	oCSpell* IsSpellActive(int spellId);
 
 	int GetNumberOfSpells()
 	{
@@ -805,6 +851,21 @@ public:
 		return inventory.IsIn(name, amount);
 	}
 
+	TNpcSlot* GetInvSlot(zCVob* vob)
+	{
+		for (auto& slot : invSlots) {
+			if (slot->object == vob)
+				return slot;
+		}
+		return nullptr;
+	}
+
+	void RemoveFromAllSlots(int dropIt)
+	{
+		for (auto& slot : invSlots)
+			RemoveFromSlot(slot, dropIt, 1);
+	}
+
 	void CloseSteal() // static?
 	{
 		if (oCNpc::stealcontainer) {
@@ -867,6 +928,22 @@ public:
 
 	//! Full fight range
 	int GetFightRange() const;
+
+	struct oCNpc::oSActionBlock {
+		int move[6];
+		int numMoves;
+
+		int GetOwnAction(int);
+		void InitBlock(zCParser* parser, int action_id, int fa_id);
+	};
+
+	int FindNextFightAction();
+	int GetCurrentFightMove();
+
+private:
+	int GetFightActionFromTable(int situationNr);
+
+public:
 
 	struct TActiveInfo {
 		TActiveInfo(oCNpc const*) = default;
@@ -976,6 +1053,8 @@ public:
 		return sqrt(dist * 981.0 / sin(angle * 0.017453292 + angle * 0.017453292)) * 0.8999999761581421;
 	}
 
+
+	int IsInGlobalCutscene();
 
 	// useless
 	void AI_Follow(oCNpc*) {};

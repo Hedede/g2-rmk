@@ -40,4 +40,9 @@ public:
 	{
 		return spellCat;
 	}
+
+	void SetSpellInfo(int infoValue)
+	{
+		spellInfo = infoValue;
+	}
 };

@@ -26,6 +26,14 @@ int oCNpc::IsInPerceptionRange(int percType, zCVob* self, zCVob* other)
 	return 0;
 }
 
+void oCNpc::SetPerceptionTime(float time)
+{
+	percActiveDelta = time;
+	while (percActiveTime > percActiveDelta) {
+		percActiveTime -= percActiveDelta;
+	}
+}
+
 void oCNpc::CreateSoundPerception(
 int percType, zCVob* source, zVEC3 const& position, zCVob* victimVob, int setVictim)
 {
@@ -165,5 +173,19 @@ int oCNpc::AssessQuietSound_S(zCVob* source, zVEC3 const& position)
 int oCNpc::AssessFightSound_S(zCVob* source, zVEC3 const& position, zCVob* victimVob)
 {
 	CreateSoundPerception(PERC_ASSESSFIGHTSOUND, source, position, victimVob, 1);
+	return 1;
+}
+
+int oCNpc::ObserveIntruder_S()
+{
+	int movmode = isInMovementMode & 3;
+	if (movmode)
+		EndMovement(1);
+
+	CreatePassivePerception(PERC_OBSERVEINTRUDER, this, 0);
+
+	if (movmode)
+		BeginMovement(this);
+
 	return 1;
 }

@@ -97,15 +97,6 @@ const int oCMagFrontier_bitfield_isShooting = ((1 << 1) - 1) << 1;
 
 
 
-const int oCNpc_oTRobustTrace_bitfield_stand                = ((1 << 1) - 1) << 0;
-const int oCNpc_oTRobustTrace_bitfield_dirChoosed           = ((1 << 1) - 1) << 1;
-const int oCNpc_oTRobustTrace_bitfield_exactPosition        = ((1 << 1) - 1) << 2;
-const int oCNpc_oTRobustTrace_bitfield_targetReached        = ((1 << 1) - 1) << 3;
-const int oCNpc_oTRobustTrace_bitfield_standIfTargetReached = ((1 << 1) - 1) << 4;
-const int oCNpc_oTRobustTrace_bitfield_waiting              = ((1 << 1) - 1) << 5;
-const int oCNpc_oTRobustTrace_bitfield_isObstVobSmall       = ((1 << 1) - 1) << 6;
-const int oCNpc_oTRobustTrace_bitfield_targetVisible        = ((1 << 1) - 1) << 7;
-const int oCNpc_oTRobustTrace_bitfield_useChasmChecks       = ((1 << 1) - 1) << 8;
 
 enum oEFightMode
 {
@@ -1163,7 +1154,18 @@ private:
 	class oTRobustTrace {
 		~oTRobustTrace() = default();
 
-		int    bitfield;    // 0x04C4 oCNpc_oTRobustTrace_bitfield_Xxx
+		struct {
+			unsigned stand                : 1;
+			unsigned dirChoosed           : 1;
+			unsigned exactPosition        : 1;
+			unsigned targetReached        : 1;
+			unsigned standIfTargetReached : 1;
+			unsigned waiting              : 1;
+			unsigned isObstVobSmall       : 1;
+			unsigned targetVisible        : 1;
+			unsigned useChasmChecks       : 1;
+		} flags;
+
 		zVEC3    targetPos;
 		zCVob*   targetVob;
 		zCVob*   obstVob;

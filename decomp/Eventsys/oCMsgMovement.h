@@ -31,8 +31,22 @@ public:
 	virtual void MD_GetVobRefName();
 	virtual void MD_SetVobRefName(zSTRING const&);
 	virtual void MD_SetVobParam(zCVob*);
-	virtual void MD_GetTimeBehavior();
-	virtual void MD_GetMinTime();
+
+	virtual int MD_GetTimeBehavior();
+	virtual float MD_GetMinTime()
+	{
+		return 3.0;
+	}
+
+private:
+	zSTRING targetName;
+	int unk1;
+	zCVob *targetVob;
+	zVEC3 targetPos;
+	float angle;
+	float progressPercent;
+	int targetMode;
+	int aniId;
 };
 
 zSTRING oCMsgMovement::MD_GetSubTypeString(int type)
@@ -57,6 +71,22 @@ zSTRING oCMsgMovement::MD_GetSubTypeString(int type)
 	case EV_BEAMTO:      return "EV_BEAMTO";
 	case EV_ALIGNTOFP:   return "EV_ALIGNTOFP";
 	default:             return "";
+	}
+}
+
+int oCMsgMovement::MD_GetTimeBehavior()
+{
+	switch ( subType ) {
+	case EV_GOTOPOS:
+	case EV_GOTOVOB:
+	case EV_GOROUTE:
+	case EV_JUMP:
+	case EV_WHIRLAROUND:
+	case EV_STANDUP:
+	case EV_GOTOFP:
+		return 2;
+	default:
+		return 0;
 	}
 }
 

@@ -26,15 +26,32 @@ public:
 	virtual void Unarchive(zCArchiver& arc);
 	virtual ~oCMsgManipulate();
 	virtual void IsNetRelevant();
-	virtual void MD_GetNumOfSubTypes();
+	virtual void MD_GetNumOfSubTypes()
+	{
+		return 18;
+	}
 	virtual void MD_GetSubTypeString(int);
 	virtual void MD_GetVobRefName();
 	virtual void MD_SetVobRefName(zSTRING const &);
-	virtual void MD_SetVobParam(zCVob *);
+	virtual void MD_SetVobParam(zCVob* vob)
+	{
+		paramVob = vob;
+	}
 	virtual void MD_GetTimeBehavior();
-	virtual void MD_GetMinTime();
+	virtual float MD_GetMinTime()
+	{
+		return 6.0;
+	}
 	virtual void Pack(zCBuffer &,zCEventManager *);
 	virtual void Unpack(zCBuffer &,zCEventManager *);
+
+private:
+	zSTRING schemeName;
+	zSTRING itemSlot;
+	zCVob *paramVob;
+	int inState; // unsure
+	float distance; // unsure
+	int targetState;
 };
 
 zSTRING oCMsgManipulate::MD_GetSubTypeString(int type)

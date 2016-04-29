@@ -41,6 +41,16 @@ public:
 	virtual void MD_GetSubTypeString(int);
 	virtual void Pack(zCBuffer &,zCEventManager*);
 	virtual void Unpack(zCBuffer &,zCEventManager *);
+
+private:
+	int unk1;
+	int level;
+	zBOOL removeSymbol;
+	int investMana;
+	int unk2;
+	zCVob *targetVob;
+	zVEC3 targetPos;
+	int spellId;
 };
 
 zSTRING oCMsgMagic::MD_GetSubTypeString(int type)

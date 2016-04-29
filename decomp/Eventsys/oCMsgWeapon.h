@@ -33,19 +33,35 @@ public:
 		if ( !arc.InProperties() ) {
 			uint32_t tmp;
 
-			arc.ReadBool("duringRun", tmp);
-			flags[0] = tmp;
-			arc.ReadBool("initDone",  tmp);
-			flags[1] = tmp;
-			arc.ReadBool("firstTime", tmp);
-			flags[2] = tmp;
+			flags.duringRun = arc.ReadBool("duringRun", tmp);
+			flags.initDone  = arc.ReadBool("initDone",  tmp);
+			flags.firstTime = arc.ReadBool("firstTime", tmp);
 		}
 	}
 	virtual ~oCMsgWeapon();
-	virtual void MD_GetNumOfSubTypes();
+	virtual int MD_GetNumOfSubTypes()
+	{
+		return 14;
+	}
 	virtual void MD_GetSubTypeString(int);
-	virtual void MD_GetTimeBehavior();
-	virtual void MD_GetMinTime();
+	virtual int MD_GetTimeBehavior()
+	{
+		return 0;
+	}
+	virtual float MD_GetMinTime()
+	{
+		return 0.0;
+	}
+
+private:
+	int targetMode;
+	struct {
+		unsigned duringRun  : 1;
+		unsigned initDone   : 1;
+		unsigned firstTime  : 1;
+		unsigned useFist    : 1;
+	} flags;
+	int aniId
 };
 
 zSTRING oCMsgWeapon::MD_GetSubTypeString(int type);

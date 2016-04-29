@@ -13,9 +13,15 @@ public:
 		item = arc.ReadObject("item", 0);
 	}
 	virtual ~oCMsgUseItem();
-	virtual void IsNetRelevant();
+	virtual bool IsNetRelevant()
+	{
+		return true;
+	}
 	virtual void Pack(zCBuffer&,zCEventManager*);
 	virtual void Unpack(zCBuffer&,zCEventManager *);
+
 private:
 	oCItem* item;
+	int aniId;
+	int status; // unsure, probably linked to .MDS
 };

@@ -11,3 +11,9 @@ void oCNpc::SetMovLock(int f)
 */
 	}
 }
+
+bool oCNpc::oCNpcTimedOverlay::Process()
+{
+	time -= ztimer.frameTimeFloat;
+	return time < 0.0;
+}

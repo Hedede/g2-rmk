@@ -173,6 +173,10 @@ public:
 		return perc < 33 && range <= percRange[perc];
 	}
 
+	static int IsMessageAIEnabled()
+	static int IsScriptStateAIEnabled();
+	static void SetNpcAIDisabled(int b);
+
 	virtual void Archive(zCArchiver& arc);
 	virtual void Unarchive(zCArchiver& arc);
 
@@ -191,15 +195,12 @@ public:
 		zCVob::SetVisual(vis);
 		zCVob::SetCollisionClass(&oCCollObjectCharacter::s_oCollObjClass);
 	}
-	
+
+
 	// In debug info args are obnoxiously long: scriptInstanceName
 	virtual bool GetScriptInstance(zSTRING*& name, int& index)
-	{
-		name = GetSymbol(instanz)->name;
-		index = instanz;
-	}
+	virtual bool SetByScriptInstance(zSTRING const* name, int index);
 
-	virtual void SetByScriptInstance(zSTRING const *,int);
 	virtual void GetCSStateFlags();
 	virtual void ThisVobAddedToWorld(zCWorld *);
 	virtual void ThisVobRemovedFromWorld(zCWorld *);
@@ -254,7 +255,10 @@ public:
 	virtual void DoModelSwapMesh(zSTRING const &,zSTRING const &);
 	virtual void DoTakeVob(zCVob *);
 	virtual void DoDropVob(zCVob *);
-	virtual void DoRemoveFromInventory(oCItem *);
+	virtual void DoRemoveFromInventory(oCItem* item)
+	{
+		return RemoveFromInv(item) != 0;
+	}
 	virtual bool DoPutInInventory(oCItem* item)
 	{
 		if (item) {
@@ -320,6 +324,21 @@ public:
 	virtual int AllowDiscardingOfSubtree()
 	{
 		return 1;
+	}
+
+	zSTRING GetVisualBody() const
+	{
+		return body_visualName;
+	}
+	
+	zSTRING GetVisualHead() const
+	{
+		return head_visualName;
+	}
+
+	zSTRING GetBloodTexture() const
+	{
+		return bloodTexture;
 	}
 
 	void GetAngles(zCVob* to, float& azi, float& elev)
@@ -426,15 +445,8 @@ public:
 		return dmg;
 	}
 
-	int GetBluntDamage(oCItem* item)
-	{
-		if (item) {
-			int damage = item->GetDamageByIndex(DAM_INDEX_BLUNT);
-			return damage - protection[1];
-		}
-
-		return 0;
-	}
+	int GetBluntDamage(oCItem* item);
+	int GetWeaponDamage(oCItem* item);
 
 	void SetProtectionByIndex(int idx, int val)
 	{
@@ -564,6 +576,13 @@ public:
 		return result;
 	}
 
+	int ModifyBodyState(int add, int remove)
+	{
+		bodyState |= add;
+		bodyState &= ~remove;
+		return bodyState & 0x7F;
+	}
+
 	bool HasBodyStateModifier(int bsmod) const
 	{
 		return bodyState & bsmod;
@@ -594,14 +613,16 @@ public:
 	}
 
 	struct oCNpcTimedOverlay {
+		~oCNpcTimedOverlay() = default;
 		zSTRING GetMdsName() const
 		{
 			return mdsName;
 		}
 
-		unk ...;
+		bool Process();
+
 		zSTRING mdsName;
-		float ...;
+		float time;
 	};
 
 
@@ -711,18 +732,8 @@ public:
 		return mag_book;
 	}
 
-	void CloseSpellBook(int removeall)
-	{
-		if (mag_book)
-			mag_book->Close(removeall)
-	}
-
-	void DestroySpellBook()
-	{
-		if (mag_book)
-			delete mag_book;
-		mag_book = 0;
-	}
+	void CloseSpellBook(int removeall);
+	void DestroySpellBook();
 
 	bool HasSpell(int nr)
 	{
@@ -737,6 +748,10 @@ public:
 	}
 
 	oCSpell* IsSpellActive(int spellId);
+	int GetActiveSpellLevel() const;
+	int GetActiveSpellCategory() const;
+	int GetActiveSpellNr() const;
+	int GetActiveSpellIsScroll() const;
 
 	int GetNumberOfSpells()
 	{
@@ -748,6 +763,11 @@ public:
 	bool HasMagic()
 	{
 		return GetNumberOfSpells() > 0;
+	}
+
+	void SetFocusVob(zCVob* vob)
+	{
+		Set(focus_vob, vob);
 	}
 
 	zCVob* GetFocusVob()
@@ -824,6 +844,8 @@ public:
 		return canTalk <= 0.0;
 	}
 
+	bool IsWaitingForAnswer();
+
 	void SetShowNews(int b)
 	{
 		flags.showNews = b;
@@ -850,6 +872,9 @@ public:
 	{
 		return inventory.IsIn(name, amount);
 	}
+
+	oCItem* RemoveFromInv(int inst, int amount);
+	oCItem* RemoveFromInv(oCItem* item, int amount);
 
 	TNpcSlot* GetInvSlot(zCVob* vob)
 	{
@@ -962,7 +987,7 @@ public:
 		return s_activeInfoCache[this];
 	}
 
-	int EV_Defent(oCMsgAttck* msg);
+	int EV_Defend(oCMsgAttck* msg);
 	int EV_StopAim(oCMsgAttck*);
 	int EV_AttackMagic(oCMsgAttack*);
 	int EV_RemoveInteractItem(oCMsgManipulate*);
@@ -970,6 +995,8 @@ public:
 
 	int EV_StartFX(oCMsgConversation* msg);
 	int EV_StopProcessInfos(oCMsgConversation* msg);
+	int EV_StopPointAt(oCMsgConversation* msg);
+	int EV_CanSeeNpc(oCMsgMovement* msg);
 
 	void Fleeing()
 	{
@@ -985,6 +1012,8 @@ public:
 	{
 		vobcheck_time = 100000.0;
 	}
+
+	void DeleteHumanAI();
 
 	int GetAIState() const
 	{

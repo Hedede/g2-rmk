@@ -734,13 +734,6 @@ void oCNpc::GetTalentInfo(oENpcTalent id, zSTRING& Name, zSTRING& Description, z
 		txt_talents_skills->GetValue(SkillEnum, id);
 }
 
-oCItem* oCNpc::RemoveFromInv(int inst, int amount)
-{
-	oCItem* removed = inventory.Remove(inst, amount);
-	if ( removed && removed->HasFlag(ITEM_ACTIVE) )
-		Equip(removed);
-	return removed;
-}
 
 // NOT IN ORIGINAL
 void oCNpc::GetWeaponModeFromString(zSTRING const& str)

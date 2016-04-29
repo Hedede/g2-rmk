@@ -189,3 +189,15 @@ int oCNpc::ObserveIntruder_S()
 
 	return 1;
 }
+
+int oCNpc::AssessUseMob_S(oCMobInter* useMob)
+{
+	if ( useMob ) {
+		if ( IsSelfPlayer() ) {
+			rbt.obstVob = useMob;
+			CreatePassivePerception(PERC_ASSESSUSEMOB, this, 0);
+			return 1;
+		}
+	}
+	return 0;
+}

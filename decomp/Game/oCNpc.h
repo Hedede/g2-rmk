@@ -4,6 +4,10 @@ const int SENSE_SEE = 1;
 const int SENSE_HEAR = 2;
 const int SENSE_SMELL = 4;
 
+const int NPC_FLAG_FRIEND = 1;
+const int NPC_FLAG_IMMORTAL = 2;
+const int NPC_FLAG_GHOST = 4;
+
 enum NpcPercId {
 	PERC_ASSESSPLAYER = 1,
 	PERC_ASSESSENEMY = 2,
@@ -330,7 +334,7 @@ public:
 	{
 		return body_visualName;
 	}
-	
+
 	zSTRING GetVisualHead() const
 	{
 		return head_visualName;

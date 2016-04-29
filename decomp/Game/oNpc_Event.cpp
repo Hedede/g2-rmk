@@ -175,7 +175,9 @@ int oCNpc::EV_RobustTrace(oCMsgMovement *msg)
 	if ( !msg->IsInUse() ) {
 		RbtReset();
 		RbtUpdate(msg->targetPos, msg->targetVob);
+
 		rbt.flags.standIfTargetReached = (msg->targetMode != 0);
+
 		msg->SetInUse(1);
 	}
 
@@ -196,15 +198,7 @@ int oCNpc::EV_GotoPos(oCMsgMovement* msg)
 	}
 
 	msg->targetMode = 1;
-
-	if ( !IsInUse(msg) ) {
-		RbtReset();
-		RbtUpdate(msg->targetPos, msg->targetVob);
-
-		rbt.flags.standIfTargetReached = (msg->targetMode != 0);
-		msg->SetInUse(1);
-	}
-	return oCNpc::RobustTrace(this);
+	return EV_RobustTrace(msg);
 }
 
 bool oCNpc::EV_Wait(oCMsgState *msg)

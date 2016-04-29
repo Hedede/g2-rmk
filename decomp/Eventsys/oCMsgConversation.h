@@ -36,6 +36,19 @@ public:
 	virtual void MD_SetVobParam(zCVob*);
 	virtual void MD_GetTimeBehavior();
 	virtual void MD_GetMinTime();
+
+private:
+	zSTRING text;
+	zSTRING name;
+	oCNpc *target;
+	zVEC3 positionWorld;
+	int aniId;
+	zCEventMessage *talkingWith;
+	zCActiveSnd *voiceHandle;
+	float timeSec;
+	int number;
+	int posX;
+	int posY;
 };
 
 void oCMsgConversation::Archive(zCArchiver& arc)

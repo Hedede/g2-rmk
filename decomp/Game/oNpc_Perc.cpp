@@ -34,6 +34,19 @@ void oCNpc::SetPerceptionTime(float time)
 	}
 }
 
+void oCNpc::DisablePerception(int percType)
+{
+	/* weird, might be broken?  */
+	for (unsigned i = 0; i < percActive; ++i) {
+		if ( percList[i].percID == percType ) {
+			percList[i].percID = 0;
+			percList[i].percFunc = -1;
+			if ( i == percActive - 1 )
+				--percActive;
+		}
+	}
+}
+
 void oCNpc::CreateSoundPerception(
 int percType, zCVob* source, zVEC3 const& position, zCVob* victimVob, int setVictim)
 {

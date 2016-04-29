@@ -537,17 +537,6 @@ void oCNpc::LearnSpell(int spell)
 	}
 }
 
-oCItem * oCNpc::GetTradeItem()
-{
-	if ( !trader )
-		return nullptr;
-
-	zCListSort<oCItem> contents = trader->GetContents()->next;
-
-	if (contents)
-		return contents->data;
-	return nullptr;
-}
 
 int oCNpc::HasVobDetected(zCVob *vob)
 {
@@ -582,6 +571,26 @@ int oCNpc::GetPermAttitude(oCNpc *other)
 	if (other->IsAIPlayer())
 		return attitude;
 	return GetGuildAttitude(other->guild);
+}
+
+void oCNpc::SetAttitude(int att)
+{
+	attitude = att;
+	flags.isAllowedCsRole = att != 0;
+	if ( att > 4 )
+		attitude = 4;
+	if ( att < 0 )
+		attitude = 0;
+}
+
+void oCNpc::SetTmpAttitude(int att)
+{
+	tmp_attitude = att;
+	flags.isAllowedCsRole = att != 0;
+	if ( att > 4 )
+		tmp_attitude = 4;
+	if ( att < 0 )
+		tmp_attitude = 0;
 }
 
 void oCNpc::ChangeAttribute(int attr, int value)
@@ -821,13 +830,6 @@ void oCNpc::DoSpellBook()
 	mag_book->DoPerFrame();
 }
 
-void oCNpc::InsertActiveSpell(oCSpell* spell)
-{
-	if (spell) {
-		spell->AddRef();
-		activeSpell.Insert(spell);
-	}
-}
 
 // Unused, 100% sure was called by Npc_SetToMad, but was cut out
 void oCNpc::SetToMad(float a3)
@@ -859,4 +861,44 @@ int oCNpc::IsInGlobalCutscene()
 			return props->globalCutscene;
 	}
 	return 0;
+}
+
+int oCNpc::GetCutsceneDistance()
+{
+	auto aicam = zCAICamera::GetCurrent();
+	if ( aicam && aicam->__csVob != 0 )
+		return GetDistanceToVobApprox(aicam->__csVob);
+
+	if ( oCGame::GetSelfPlayerVob() )
+		return GetDistanceToVobApprox( oCGame::GetSelfPlayerVob());
+
+	return 0;
+}
+
+void oCNpc::StopCutscenes()
+{
+	auto cutscene = zDYNAMIC_CAST<zCCSCutsceneContext>(GetEM()->GetCutscene());
+	if ( cutscene ) {
+		if ( !cutscene->IsOutputUnit() ) {
+			auto props = cutscene->properties;
+			if ( !props || !props->globalCutscene )
+				cutscene->Stop(cutscene);
+		}
+	}
+}
+
+zSTRING oCNpc::GetInstanceByID(int nr) const
+{
+	if ( nr < 0 || nr >= 6 )
+		nr = 0;
+	return player_name[nr];
+}
+
+int oCNpc::FreeLineOfSight(zCVob* vob)
+{
+	zVEC3 v3;
+	v3.x = (vob->bbox3D.maxs[0] + vob->bbox3D.mins[0]) * 0.5;
+	v3.y = (vob->bbox3D.maxs[1] + vob->bbox3D.mins[1]) * 0.5;
+	v3.z = (vob->bbox3D.maxs[2] + vob->bbox3D.mins[2]) * 0.5;
+	return FreeLineOfSight(v3, vob);
 }

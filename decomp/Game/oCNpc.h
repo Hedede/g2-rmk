@@ -165,7 +165,7 @@ public:
 
 	static bool IsInPerceptionRange(int perc, float range)
 	{
-		return perc < 33 && range <= percRange[perc];
+		return perc < NPC_PERC_MAX; && range <= percRange[perc];
 	}
 
 	static int IsMessageAIEnabled()
@@ -211,19 +211,14 @@ public:
 		return zparser.GetSymbolInfo(instanz, typ, ele);
 	}
 
+
+
 	virtual void GetSoundMaterial_AM(zCSoundManager::zTSndManMedium &,oTSndMaterial &,int);
 
 	virtual void SetWeaponMode(int);
 	virtual void SetWeaponMode2(int);
 	void SetWeaponMode2(zSTRING const& str);
 
-	int IsInFightMode_S();
-	int GetWeaponMode()
-	{
-		if (fmode < 0 || fmode >= 8)
-			fmode = 0;
-		return fmode;
-	}
 
 	virtual void DoDie(oCNpc *);
 	virtual void DoInsertMunition(zSTRING const &);
@@ -244,7 +239,7 @@ public:
 	virtual void Disable();
 	virtual void Enable(zVEC3 &);
 	virtual void InitHumanAI();
-	virtual void IsMoreImportant(zCVob *,zCVob *);
+	virtual bool IsMoreImportant(zCVob* vob1, zCVob* vob2);
 
 	virtual void DoDoAniEvents();
 	virtual void DoModelSwapMesh(zSTRING const &,zSTRING const &);
@@ -370,6 +365,9 @@ public:
 	{
 		return senses & SENSE_SMELL;
 	}
+
+	void SetAttitude(int att);
+	void SetTmpAttitude(int att);
 
 	void SetKnowsPlayer()
 	{
@@ -742,6 +740,7 @@ public:
 		}
 	}
 
+	void InsertActiveSpell(oCSpell* spell);
 	oCSpell* IsSpellActive(int spellId);
 	int GetActiveSpellLevel() const;
 	int GetActiveSpellCategory() const;
@@ -795,6 +794,8 @@ public:
 		return tradeNpc;
 	}
 
+	void CloseDeadNpc();
+
 	void StartTalkingWith(oCNpc* other)
 	{
 		if (other) {
@@ -846,11 +847,9 @@ public:
 		flags.showNews = b;
 	}
 
-	oCItem* PutInInv(zSTRING const& name, int anz)
-	{
-		auto idx = zparser.GetItem(name);
-		return PutInInv(idx, anz);
-	}
+	int HasMissionItem();
+	oCItem* GetTradeItem();
+	oCItem* PutInInv(zSTRING const& name, int anz);
 
 	bool IsInInv(oCItem* item, int amount)
 	{
@@ -870,6 +869,11 @@ public:
 
 	oCItem* RemoveFromInv(int inst, int amount);
 	oCItem* RemoveFromInv(oCItem* item, int amount);
+
+	oCItem* GetFromInv(int instance, int amount);
+
+	void EquipBestArmor();
+	void EquipBestWeapon(int mode);
 
 	TNpcSlot* GetInvSlot(zCVob* vob)
 	{
@@ -911,6 +915,15 @@ public:
 	float GetClimbRange() const
 	{
 		return 500.0;
+	}
+
+	void ExitFightAI();
+	int IsInFightMode_S();
+	int GetWeaponMode()
+	{
+		if (fmode < 0 || fmode >= 8)
+			fmode = 0;
+		return fmode;
 	}
 
 	void GetFightRangeBase() const
@@ -986,12 +999,24 @@ public:
 	int EV_StopAim(oCMsgAttck*);
 	int EV_AttackMagic(oCMsgAttack*);
 	int EV_RemoveInteractItem(oCMsgManipulate*);
+	int EV_EquipItem(oCMsgManipulate* msg);
+	int EV_TakeMob(oCMsgManipulate* msg);
+
 	int EV_EquipBestWeapon(oCMsgWeapon* msg);
+	int EV_EquipBestArmor(oCMsgWeapon* msg);
+	int EV_EquipArmor(oCMsgWeapon* msg);
+	int EV_UnequipArmor(oCMsgWeapon*);
 
 	int EV_StartFX(oCMsgConversation* msg);
-	int EV_StopProcessInfos(oCMsgConversation* msg);
 	int EV_StopPointAt(oCMsgConversation* msg);
+	int EV_StopProcessInfos(oCMsgConversation* msg);
+	int EV_Ask(oCMsgConversation* msg);
+	int EV_WaitTillEnd(oCMsgConversation* msg);
+
 	int EV_CanSeeNpc(oCMsgMovement* msg);
+	int EV_Jump(oCMsgMovement* msg);
+	int EV_RobustTrace(oCMsgMovement* msg);
+	int EV_GotoPos(oCMsgMovement* msg);
 
 	void Fleeing()
 	{
@@ -1079,6 +1104,10 @@ public:
 
 
 	int IsInGlobalCutscene();
+	int GetCutsceneDistance();
+
+	// остатки мультиплеера
+	zSTRING oCNpc::GetInstanceByID(int nr) const;
 
 	// useless
 	void AI_Follow(oCNpc*) {};

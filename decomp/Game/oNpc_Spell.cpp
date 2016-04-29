@@ -26,6 +26,14 @@ void oCNpc::DestroySpellBook();
 	mag_book = 0;
 }
 
+void oCNpc::InsertActiveSpell(oCSpell* spell)
+{
+	if (spell) {
+		spell->AddRef();
+		activeSpell.Insert(spell);
+	}
+}
+
 oCSpell* oCNpc::IsSpellActive(int spellId)
 {
 	for (auto& spell : activeSpells) {

@@ -399,3 +399,10 @@ int oCNpc::FindNextFightAction()
 	return myMove;
 }
 
+void oCNpc::ExitFightAI()
+{
+	for (auto ptr : fightAI)
+		delete ptr;
+
+	fightAI.DeleteList();
+}

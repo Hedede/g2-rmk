@@ -40,7 +40,14 @@ public:
 	virtual void MD_GetSubTypeString(int);
 	virtual void Pack(zCBuffer &,zCEventManager *);
 	virtual void Unpack(zCBuffer &,zCEventManager *);
+
 private:
+	zBOOL combo;
+	zCVob* paramVob;
+
+	int unk2,unk3;
+
+	int flags;
 };
 
 zSTRING oCMsgAttack::MD_GetSubTypeString(int type)

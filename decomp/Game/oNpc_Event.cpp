@@ -21,6 +21,34 @@ int oCNpc::EV_RemoveInteractItem(oCMsgManipulate*)
 	return 1;
 }
 
+int oCNpc::EV_AimAt(oCMsgAttack *msg)
+{
+	oCNpc* target = 0;
+	zBOOL drawn = 0;
+	zBOOL ammo = 0;
+
+	InitAim(msg, &target, &drawn, &ammo, 1);
+
+	if ( !target ) {
+		FinalizeAim(0, 1);
+		return 1;
+	}
+
+	if ( drawn ) {
+		if ( !ammo ) {
+			FinalizeAim(1, 1);
+			return 1;
+		}
+
+		if ( TransitionAim(human_ai->_s_walk, human_ai->_s_aim) ) {
+			if ( human_ai )
+				human_ai->StopTurnAnis();
+			InterpolateAim(target);
+		}
+	}
+	return 0;
+}
+
 int oCNpc::EV_StopAim(oCMsgAttack*)
 {
 	FinalizeAim(0, 1);
@@ -59,6 +87,25 @@ int oCNpc::EV_StartFX(oCMsgConversation *msg)
 	return 1;
 }
 
+int oCNpc::EV_ProcessInfos(oCMsgConversation *msg)
+{
+	auto infoman = oCInformationManager::GetInformationManager();
+	if ( msg->IsInUse() ) {
+		infoman.Update();
+		return infoman.HasFinished();
+	} else {
+		if (GetEM()->GetCutsceneMode())
+			return 1;
+
+		if (target && target->GetEM()->GetCutsceneMode())
+			return 1;
+
+		infoman.SetNpc(target);
+		msg->SetInUse(1);
+	}
+	return 0;
+}
+
 int oCNpc::EV_StopProcessInfos(oCMsgConversation *msg)
 {
 	auto infoMan = oCInformationManager::GetInformationManager();
@@ -74,6 +121,28 @@ int oCNpc::EV_StopPointAt(oCMsgConversation* msg)
 		lastPointMsg = 0;
 	}
 	anictrl->StopCombineAni(anictrl->s_point);
+	return 1;
+}
+
+int oCNpc::EV_StopLookAt(oCMsgConversation* msg)
+{
+	if ( GetEM()->IsRunning(lastLookMsg) ) {
+		lastLookMsg->Delete();
+		lastLookMsg = 0;
+	}
+
+	if ( GetEM()->GetNumMessages() > 0 ) {
+		for (unsigned i = 0; i < GetEM()->GetNumMessages(); ++i)
+			auto msg = GetEM()->GetEventMessage(i);
+			auto msgconv = 0;
+			if (msgconv = zDYNAMIC_CAST<oCMsgConversation>(msg)) {
+				if ( msgconv->subType == EV_LOOKAT )
+					msgconv->Delete();
+			}
+		}
+	}
+
+	anictrl->StopLookAtTarget();
 	return 1;
 }
 
@@ -144,15 +213,6 @@ int oCNpc::EV_CanSeeNpc(oCMsgMovement* msg)
 	return 1;
 }
 
-int oCNpc::EV_EquipArmor(oCMsgWeapon* msg)
-{
-	auto name = msg->GetObjectName();
-	auto item = inventory.IsIn1(name, 1);
-	if ( item && CanUse(item) && item->HasFlag(ITEM_KAT_ARMOR) )
-		EquipArmor(item);
-	return 1;
-}
-
 int oCNpc::EV_Jump(oCMsgMovement* msg)
 {
 	bool inUse = msg->IsInUse(msg);
@@ -168,6 +228,33 @@ int oCNpc::EV_Jump(oCMsgMovement* msg)
 	SetCollDetStat(1);
 	SetCollDetDyn(1);
 	return 1;
+}
+
+int oCNpc::EV_Turn(oCMsgMovement *msg)
+{
+	float turnSpeed = IsAPlayer() ? 0.1 : speedTurn;
+	float turnAngle = ztimer.frameTime * turnSpeed;
+
+	float angle = msg->angle;
+	if ( msg->angle >= 0.0 ) {
+		if ( msg->angle >= turnAngle ) {
+			angle = turnAngle;
+		}
+	} else {
+		if (msg->angle <= -turnAngle)
+			angle = -turnAngle;
+	}
+
+	msg->angle -= angle;
+
+	anictrl->TurnDegrees(angle, 1);
+
+	if ( msg->angle == 0.0 ) {
+		anictrl->StopTurnAnis(anictrl);
+		return 1;
+	}
+
+	return 0;
 }
 
 int oCNpc::EV_RobustTrace(oCMsgMovement *msg)
@@ -214,6 +301,14 @@ bool oCNpc::EV_Wait(oCMsgState *msg)
 }
 
 
+int oCNpc::EV_EquipArmor(oCMsgWeapon* msg)
+{
+	auto name = msg->GetObjectName();
+	auto item = inventory.IsIn1(name, 1);
+	if ( item && CanUse(item) && item->HasFlag(ITEM_KAT_ARMOR) )
+		EquipArmor(item);
+	return 1;
+}
 
 int oCNpc::EV_EquipItem(oCMsgManipulate *msg)
 {
@@ -240,3 +335,17 @@ int oCNpc::EV_TakeMob(oCMsgManipulate* msg)
 	}
 	return 1;
 }
+
+int oCNpc::EV_DropMob(oCMsgManipulate* msg)
+{
+	auto mi = zDYNAMIC_CAST<oCMobInter>(carry_vob);
+	if ( mi ) {
+		auto mm = new oCMsgManipulate(EV_DROPVOB, carry_vob);
+
+		mm->SetHighPriority(1);
+		GetEM()->OnMessage(msg, this);
+	}
+	return 1;
+}
+
+

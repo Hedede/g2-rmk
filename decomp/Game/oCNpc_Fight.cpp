@@ -406,3 +406,76 @@ void oCNpc::ExitFightAI()
 
 	fightAI.DeleteList();
 }
+
+int oCNpc::InitAim(oCMsgAttack* csg, oCNpc** enemy, int* drawn, int* ammo, int killFormerMsg)
+{
+	if ( enemy ) {
+		*enemy = zDYNAMIC_CAST<oCNpc>(csg->paramVob);
+
+		if (!*enemy) {
+			*enemy = this->enemy;
+		}
+
+		if ( (*enemy)->attribute[ATR_HITPOINTS] <= 0 )
+			*enemy = 0;
+	}
+
+	if ( drawn ) {
+		auto fm = GetWeaponMode();
+		*drawn = fm == FMODE_BOW || fm == FMODE_CBOW;
+	}
+
+	if ( ammo ) {
+		oCItem* item = nullptr;
+		if ( fmode > FMODE_FIST ) {
+			TNpcSlot* slot;
+			if ( fmode > FMODE_2H ) {
+				if ( fmode == FMODE_CBOW )
+					slot = GetInvSlot(NPC_NODE_RIGHTHAND);
+				else
+					slot = GetInvSlot(NPC_NODE_LEFTHAND);
+			} else {
+				slot = GetInvSlot(NPC_NODE_RIGHTHAND);
+			}
+
+			if ( slot )
+				item = zDYNAMIC_CAST<oCItem>(slot->object);
+		}
+
+		*ammo = IsMunitionAvailable(item);
+	}
+
+	if ( killFormerMsg ) {
+		for (unsigned i = 0; i < GetEM()->GetNumMessages(); ++i) {
+			auto msg = GetEM()->GetEventMessage(i);
+			auto msgatt = zDYNAMIC_CAST<oCMsgAttack>(msg);
+			if (msg != csg && csg->subType == msgatt->subType) {
+				msg->Delete();
+			}
+		}
+	}
+	return 1;
+}
+
+int oCNpc::FinalizeAim(int startMelee, int standUp)
+{
+	bool ret = 0;
+	for (unsigned i = 0; i < GetEM()->GetNumMessages(); ++i) {
+		auto msg = zDYNAMIC_CAST<oCMsgAttack>(GetEM()->GetEventMessage(i));
+		if (msg && msg->subType == EV_AIMAT) {
+			msg->Delete();
+			ret = 1;
+		}
+	}
+
+	if ( startMelee ) {
+		auto msg = new oCMsgWeapon(EV_REMOVEWEAPON, 0, 0);
+		msg->SetHighPriority(1);
+		GetEM()->OnMessage(msg, this);
+	}
+
+	if ( standUp )
+		StandUp(0, 1);
+
+	return ret;
+}

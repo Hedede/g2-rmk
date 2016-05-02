@@ -470,6 +470,16 @@ void oCNpc::Unarchive(zCArchiver& arc)
 }
 
 
+zCModel* oCNpc::GetModel()
+{
+	auto model = zDYNAMIC_CAST<zCModel>(visual);
+	if (!model) {
+		AvoidShrink(1000);
+		return zDYNAMIC_CAST<zCModel>(visual);
+	}
+	return model;
+}
+
 
 oCItem* oCNpc::DetectItem(int flags, int)
 {

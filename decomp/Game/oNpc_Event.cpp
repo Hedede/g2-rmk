@@ -89,10 +89,7 @@ int oCNpc::EV_StartFX(oCMsgConversation *msg)
 
 int oCNpc::EV_PlayAniSound(oCMsgConversation *msg)
 {
-	auto model = zDYNAMIC_CAST<zCModel>(visual);
-
-	if (model)
-		AvoidShrink(1000);
+	auto model = GetModel();
 
 	if (!msg->IsInUse())
 		msg->aniId = StartDialogAni();

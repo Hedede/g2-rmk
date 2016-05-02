@@ -929,10 +929,10 @@ void oCGame::UpdatePlayerStatus()
  
 	zVEC3 pos;
 
-	auto vfx = zDYNAMIC_CAST<oCVisualFX>(vob->visual);
-	if (vfx) {
+	auto model = zDYNAMIC_CAST<zCModel>(vob->visual);
+	if (model) {
 		pos = vob->trafoObjToWorld->GetTranslation();
-		pos[1] += vfx->nextOnTimer * 1.6;
+		pos[1] += model->__vec2.y * 1.6;
 		float max = focus->bbox3D.maxs[1] + 100.0;
 		if (pos[1] > max)
 			pos[1] = max;

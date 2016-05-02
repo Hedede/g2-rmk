@@ -12,7 +12,7 @@ void oCNpc::OnDamage(zCVob *source, zCVob *offender, float amount, int type, zVE
 
 	dam.npc = zDYNAMIC_CAST<oCNpc>(offender);
 	dam.weapon = zDYNAMIC_CAST<oCItem>(source);
-	oCVisualFX vfx = zDYNAMIC_CAST<oCVisualFX>(source);
+	oCVisualFX* vfx = zDYNAMIC_CAST<oCVisualFX>(source);
 	dam.SetFXHit(vfx);
 	if ( dam.fxHit ) {
 		dam.spellType  = dam.fxHit->GetSpellType();

@@ -87,6 +87,26 @@ int oCNpc::EV_StartFX(oCMsgConversation *msg)
 	return 1;
 }
 
+int oCNpc::EV_PlayAniSound(oCMsgConversation *msg)
+{
+	auto model = zDYNAMIC_CAST<zCModel>(visual);
+
+	if (model)
+		AvoidShrink(1000);
+
+	if (!msg->IsInUse())
+		msg->aniId = StartDialogAni();
+
+	if ( EV_PlaySound(msg) ) {
+		model->FadeOutAni(msg->aniId);
+		return 1;
+	}
+
+	if ( !msg->IsInUse() )
+		msg->SetInUse(1);
+	return 0;
+}
+
 int oCNpc::EV_ProcessInfos(oCMsgConversation *msg)
 {
 	auto infoman = oCInformationManager::GetInformationManager();

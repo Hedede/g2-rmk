@@ -1013,6 +1013,7 @@ public:
 	int EV_UnequipArmor(oCMsgWeapon*);
 
 	int EV_StartFX(oCMsgConversation* msg);
+	int EV_PlayAniSound(oCMsgConversation* msg);
 	int EV_StopPointAt(oCMsgConversation* msg);
 	int EV_StopLookAt(oCMsgConversation* msg);
 	int EV_ProcessInfos(oCMsgConversation* msg);
@@ -1020,8 +1021,13 @@ public:
 	int EV_Ask(oCMsgConversation* msg);
 	int EV_WaitTillEnd(oCMsgConversation* msg);
 
-	int EV_CanSeeNpc(oCMsgMovement* msg);
+	int EV_Turn(oCMsgMovement* msg);
+	int EV_TurnToPos(oCMsgMovement*);
+	int EV_TurnToVob(oCMsgMovement *);
+	int EV_TurnAway(oCMsgMovement *);
+	int EV_StandUp(oCMsgMovement *);
 	int EV_Jump(oCMsgMovement* msg);
+	int EV_CanSeeNpc(oCMsgMovement* msg);
 	int EV_RobustTrace(oCMsgMovement* msg);
 	int EV_GotoPos(oCMsgMovement* msg);
 
@@ -1060,7 +1066,6 @@ public:
 	int EV_PrintScreen(oCMsgConversation *);
 	int EV_CreateInteractItem(oCMsgManipulate *);
 	int EV_DrawWeapon1(oCMsgWeapon *);
-	int EV_TurnToVob(oCMsgMovement *);
 	int EV_QuickLook(oCMsgConversation *);
 	int EV_ThrowVob(oCMsgManipulate *);
 	int EV_AttackBow(oCMsgAttack *);
@@ -1076,7 +1081,6 @@ public:
 	int EV_DestroyInteractItem(oCMsgManipulate *);
 	int EV_SndPlay(oCMsgConversation *);
 	int EV_UnequipWeapons(oCMsgWeapon *);
-	int EV_TurnAway(oCMsgMovement *);
 	int EV_PointAt(oCMsgConversation *);
 	int EV_ExchangeInteractItem(oCMsgManipulate *);
 	int EV_ShootAt(oCMsgAttack *);
@@ -1086,10 +1090,6 @@ public:
 	int EV_StopFX(oCMsgConversation *);
 	int EV_PlaceInteractItem(oCMsgManipulate *);
 	int EV_PlayAniFace(oCMsgConversation *);
-	int EV_StandUp(oCMsgMovement *);
-	int EV_TurnToPos(oCMsgMovement *);
-	int EV_PlayAniSound(oCMsgConversation *);
-	int EV_Turn(oCMsgMovement *);
 
 	void Fleeing()
 	{

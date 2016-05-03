@@ -220,6 +220,20 @@ int oCNpc::EV_UseMobWithItem(oCMsgManipulate* msg)
 	return 1;
 }
 
+int oCNpc::EV_RobustTrace(oCMsgMovement *msg)
+{
+	if ( !msg->IsInUse() ) {
+		RbtReset();
+		RbtUpdate(msg->targetPos, msg->targetVob);
+
+		rbt.flags.standIfTargetReached = (msg->targetMode != 0);
+
+		msg->SetInUse(1);
+	}
+
+	return RobustTrace();
+}
+
 int oCNpc::EV_CanSeeNpc(oCMsgMovement* msg)
 {
 	if ( msg->targetMode >= 0 && CanSee(msg->targetVob, 0) ) {
@@ -274,19 +288,29 @@ int oCNpc::EV_Turn(oCMsgMovement *msg)
 	return 0;
 }
 
-int oCNpc::EV_RobustTrace(oCMsgMovement *msg)
+int oCNpc::EV_StandUp(oCMsgMovement *msg)
 {
 	if ( !msg->IsInUse() ) {
-		RbtReset();
-		RbtUpdate(msg->targetPos, msg->targetVob);
-
-		rbt.flags.standIfTargetReached = (msg->targetMode != 0);
-
+		StandUp(0, msg->targetMode != 0);
 		msg->SetInUse(1);
 	}
 
-	return RobustTrace();
+	if ( anictrl->actionMode == 5 )
+		return 1;
+
+	if ( anictrl->actionMode == 6 )
+		return 1;
+
+	if ( GetTrueGuild() == GIL_SKELETON_MAGE )
+		return 1;
+
+	auto model = GetModel();
+	// was inlined v
+	auto ani = model->GetAniFromAniID(anictrl->_s_walk);
+
+	return model->IsAniActive(ani);
 }
+
 
 int oCNpc::EV_GotoPos(oCMsgMovement* msg)
 {

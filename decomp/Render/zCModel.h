@@ -3,12 +3,19 @@ class zCModel : public zCVisualAnimate {
 public:
 	virtual ~zCModel();
 	virtual void Render(zTRenderContext&);
-	virtual void IsBBox3DLocal();
+	bool IsBBox3DLocal() override
+	{
+		return true;
+	}
 	virtual void GetBBox3D();
 	virtual void GetVisualName();
 	virtual void SetVisualUsedBy(zCVob *);
 	virtual void GetRenderSortKey();
-	virtual void CanTraceRay();
+
+	bool CanTraceRay() override
+	{
+		return true;
+	}
 	virtual void TraceRay(zVEC3 const &,zVEC3 const &,int,zTTraceRayReport &);
 	virtual void HostVobRemovedFromWorld(zCVob *,zCWorld *);
 	virtual void GetFileExtension(int);
@@ -29,4 +36,13 @@ public:
 		CalcNodeListBBoxWorld();
 		return node->trafoWorld->GetTranslation();
 	}
+
+	int GetAniIDFromAniName(zSTRING const& name)
+	{
+		auto ani = _prototypes[0]->SearchAni(name);
+		return ani ? ani->aniId : -1;
+	}
+
+private:
+	zTBBox3D bbox3d[3];
 };

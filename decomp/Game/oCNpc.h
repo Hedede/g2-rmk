@@ -1022,10 +1022,10 @@ public:
 	int EV_WaitTillEnd(oCMsgConversation* msg);
 
 	int EV_Turn(oCMsgMovement* msg);
-	int EV_TurnToPos(oCMsgMovement*);
+	int EV_TurnToPos(oCMsgMovement* msg);
 	int EV_TurnToVob(oCMsgMovement *);
 	int EV_TurnAway(oCMsgMovement *);
-	int EV_StandUp(oCMsgMovement *);
+	int EV_StandUp(oCMsgMovement* msg);
 	int EV_Jump(oCMsgMovement* msg);
 	int EV_CanSeeNpc(oCMsgMovement* msg);
 	int EV_RobustTrace(oCMsgMovement* msg);

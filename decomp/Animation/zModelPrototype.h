@@ -22,7 +22,9 @@ private:
 	zCArray<zCModelAniEvent*> aniEvents;
 	zCArray<zCModelNode*> nodes;
 
-	int unk1[4];
+	int unk1;
+
+	zCArray<zCMeshSoftSkin*> softSkins;
 
 	zSTRING unk2;
 

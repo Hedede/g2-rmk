@@ -1,5 +1,8 @@
-class zCModelAni {
+class zCModelAni : zCObject {
+	Z_OBJECT(zCModelAni);
 public:
+	virtual ~zCModelAni();
+
 	int GetAniID()
 	{
 		return aniId;
@@ -9,4 +12,7 @@ public:
 	{
 		return aniName;
 	}
+
+private:
+	zSTRING aniName;
 };

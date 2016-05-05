@@ -179,6 +179,57 @@ public:
 	virtual ~oCNpc();
 
 	virtual void OnTouch(zCVob *);
+
+	struct oSDamageDescriptor {
+		void SetFXHit(oCVisualFX* fx);
+		void SetVisualFX(oCVisualFX* fx);
+		void Release();
+
+		int __someflags;
+
+		zCVob *source_vob;
+		oCNpc* source_npc;
+		zCVob *alsosource;
+		oCVisualFX* fxHit;
+		oCItem* weapon;
+
+		int spellType;
+		int spellCat;
+		int spellLevel;
+
+		int type;
+		int mode;
+		float damages[8];
+		float damage;
+		float mult;
+
+		zVEC3 pos1;
+		zVEC3 pos2;
+
+		zSTRING __str;
+		float __timer1;
+		float __timer2;
+
+		float __damPerFrame;
+		int vv;
+
+		struct {
+			unsigned unk1 : 1;
+			unsigned unk2 : 2;
+		} flags;
+		int rest[2];
+
+		float currentTime;
+
+		int realDamage;
+		int effectiveDamage;
+		int effectiveDamages[8];
+
+		int whaaaad[2];
+
+		oCVisualFX *visualFx;
+	};
+
 	virtual void OnDamage(zCVob *,zCVob *,float,int,zVEC3 const &);
 	virtual void OnMessage(zCEventMessage *,zCVob *);
 	virtual int GetCharacterClass()
@@ -232,7 +283,8 @@ public:
 		return 0;
 	}
 	virtual void DoShootArrow(int);
-	virtual void OnDamage(oCNpc::oSDamageDescriptor &);
+	virtual void OnDamage(oCNpc::oSDamageDescriptor& dam_desc);
+
 	virtual void ResetPos(zVEC3 &);
 	virtual void EmergencyResetPos(zVEC3 &);
 	virtual void InitByScript(int,int);
@@ -984,10 +1036,13 @@ public:
 		return s_activeInfoCache[this];
 	}
 
+	int EV_DamagePerFrame(oCMsgDamage* msg);
+	int EV_DamageOnce(oCMsgDamage* msg);
+
 	int InitAim(oCMsgAttack* csg, oCNpc** enemy, int* drawn, int* ammo, int killFormerMsg); // csg typo in original code
 	int FinalizeAim(int startMelee, int standUp);
 
-	int EV_Defend(oCMsgAttck* msg);
+	int EV_Defend(oCMsgAttack* msg);
 	int EV_AimAt(oCMsgAttack* msg);
 	int EV_StopAim(oCMsgAttck*);
 	int EV_ShootAt(oCMsgAttack* msg);
@@ -1034,7 +1089,6 @@ public:
 	int EV_GotoVob(oCMsgMovement* msg);
 
 
-	int EV_DamagePerFrame(oCMsgDamage *);
 	int EV_Strafe(oCMsgMovement *);
 	int EV_AttackForward(oCMsgAttack *);
 	int EV_PlaySound(oCMsgConversation *);
@@ -1054,7 +1108,6 @@ public:
 	int EV_SetWalkMode(oCMsgMovement *);
 	int EV_TakeVob(oCMsgManipulate *);
 	int EV_Output(oCMsgConversation *);
-	int EV_DamageOnce(oCMsgDamage *);
 	int EV_Drink(oCMsgUseItem *);
 	int EV_AttackRun(oCMsgAttack *);
 	int EV_Exchange(oCMsgManipulate *);

@@ -10,6 +10,7 @@ public:
 
 	virtual void CanBeUsed(zCVob const *);
 	virtual void IsObjectOnWay(zCVob const *);
+
 private:
 	// Kürzeste Weg Suche durch das zCWaynet
 	// Diese Eigenschaften besser nicht nutzen,
@@ -35,6 +36,11 @@ public:
 
 	virtual void CanBeUsed(zCVob const *);
 	virtual void IsObjectOnWay(zCVob const *);
+
+	oCMobLadder* GetLadder() const
+	{
+		return ladder;
+	}
 
 private:
 	//Unterklasse von zCWay.

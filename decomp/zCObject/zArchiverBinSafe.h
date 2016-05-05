@@ -62,7 +62,10 @@ public:
 	virtual void SetStringEOL(zSTRING	const &);
 	virtual void GetStringEOL();
 	virtual void IsStringValid(char const *);
-	virtual void GetChecksumEnabled();
+	int GetChecksumEnabled() const override
+	{
+		return checksumEnabled;
+	}
 	virtual void SetChecksumEnabled(int);
 	virtual void SetNoReadSearchCycles(int);
 	virtual void InProperties();

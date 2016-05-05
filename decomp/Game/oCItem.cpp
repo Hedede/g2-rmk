@@ -26,31 +26,108 @@ const int ITM_TEXT_MAX = 6;
 
 class oCItem : public zCVob {
 	CLASSDEF_DEFINE;
+
+	static int lightingSwell;
 public:
+	static void SetLightingSwell(int swell)
+	{
+		lightingSwell = swell;
+	}
+
+	static int GetLightingSwell() const
+	{
+		return lightingSwell;
+	}
+
 	virtual ~oCItem();
-	virtual void Archive(zCArchiver &);
-	virtual void Unarchive(zCArchiver &);
+
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
+
 	virtual void Render(zTRenderContext &);
-	virtual void SetVisual(zCVisual *);
-	virtual void GetScriptInstance(zSTRING * &,int &);
+
+	void SetVisual(zCVisual* visual) override
+	{
+		zCVob::SetVisual(visual);
+		zCVob::SetCollisionClass(zCCollObjectPoint::s_oCollObjClass);
+	}
+
+	void GetScriptInstance(zSTRING*& name, int& idx) override
+	{
+		name = zparser.GetSymbol(instanz)->name;
+		idx = instanz;
+	}
+
 	virtual void SetByScriptInstance(zSTRING const *,int);
 	virtual void ThisVobAddedToWorld(zCWorld *);
 	virtual void ThisVobRemovedFromWorld(zCWorld *);
 	virtual void Init(void);
-	virtual void GetInstance(void);
-	virtual void GetInstanceName(void);
-	virtual void IsOwnedByGuild(int);
-	virtual void IsOwnedByNpc(int);
-	virtual void GetAIVobMove(void);
-	virtual void GetSoundMaterial_AM(zCSoundManager::zTSndManMedium &,oTSndMaterial &,int);
-	virtual void GetSoundMaterial(void);
+
+	int GetInstance() const override
+	{
+		return instanz;
+	}
+
+	virtual void GetInstanceName() const override
+	{
+		int typ, ele;
+		return zparser.GetSymbolInfo(instanz, typ, ele);
+	}
+
+	bool IsOwnedByGuild(int guild) const override
+	{
+		return guild > 0 && ownerGuild == guild;
+	}
+
+	void IsOwnedByNpc(int instance) const override
+	{
+		return instance > 0 && owner == instance;
+	}
+
+	void GetAIVobMove() override;
+
+	void GetSoundMaterial_AM(zCSoundManager::zTSndManMedium& med, oTSndMaterial& mat,int) override
+	{
+		med = 1;
+		mat = GetSoundMaterial(this);
+	}
+
+	int GetSoundMaterial() override
+	{
+		return material;
+	}
+
+	zSTRING& GetDescription()
+	{
+		return description;
+	}
+
+	bool HasFlag(int flag) const
+	{
+		return (flags & flag) == flag;
+	}
+	
+	void SetFlag(int flag)
+	{
+		flags |= flag;
+	}
 
 	void ClearFlag(int flag)
 	{
 		flags &= 0xFFFFFFFF - flag;
 	}
 
-	void GetDamages(uint32_t *damages)
+	bool TwoHanded() const
+	{
+		return HasFlag(ITEM_2HD_AXE) || HasFlag(ITEM_2HD_SWD);
+	}
+
+	bool IsOneHandWeapon() const
+	{
+		return HasFlag(ITEM_AXE) || HasFlag(ITEM_SWD);
+	}
+
+	void GetDamages(uint32_t* damages)
 	{
 		if ( damages )
 			memcpy(damages, this->damage, 0x20u);
@@ -66,6 +143,29 @@ public:
 		return damageType;
 	}
 
+	bool HasDamageType(int dam) const
+	{
+		return (dam & damageType) == dam;
+	}
+
+	int GetFullDamage() const
+	{
+		int total = 0;
+		for (auto dam : damage) {
+			total += dam;
+		}
+		return total;
+	}
+
+	int GetFullProtection() const
+	{
+		int total = 0;
+		for (auto prot : protection) {
+			total += prot;
+		}
+		return total;
+	}
+
 	bool IsDeadly() const
 	{
 		return damageType & (DAM_BLUNT | DAM_EDGE);
@@ -78,25 +178,57 @@ public:
 		return weight;
 	}
 
+	int GetCount(int idx) const
+	{
+		if ( idx < 0 || idx >= 6 )
+			return 0;
+		return count[idx];
+	}
+
+	int GetStateEffectFunc(int stateNr)
+	{
+		if ( stateNr < 0 || stateNr >= 4)
+			return -1;
+
+		int func = on_state[stateNr];
+
+		return func > 0 ? func : -1;
+	}
+
+	zSTRING GetVisualChange() const
+	{
+		zSTRING tmp = visual_change;
+		tmp.Upper();
+		int ext = tmp.Search(0, ".ASC", 1);
+		if ( ext > 0 )
+			tmp.Delete(ext, 4);
+		return tmp;
+	}
+
+	int GetDisguiseGuild() const
+	{
+		return disguiseGuild;
+	}
+
 	void Identify() { }
 	void UseItem() { }
 
 private:
-	INT		id;				
-	zSTRING  name,nameID;
-	INT		hp,hp_max;
+	int      id;
+	zSTRING  name, nameID;
+	int      hp, hp_max;
 
-	int mainflag,flags;		//	Hauptflag und weitere Flags
-	int weight,value;			
+	int mainflag, flags;    // Hauptflag und weitere Flags
+	int weight, value;
 
-	// Für Waffen								
-	int damageType;		//	Welche Schadensarten
+	// Für Waffen
+	int damageType;         // Welche Schadensarten
 	int damageTotal;
-	int damage			[DAM_INDEX_MAX];
+	int damage[DAM_INDEX_MAX];
 
 	// Für Rüstungen
 	int wear;
-	int protection		[PROT_INDEX_MAX];
+	int protection[PROT_INDEX_MAX];
 
 	// Für Nahrung
 	int nutrition;		//	HP-Steigerung bei Nahrung
@@ -129,13 +261,14 @@ private:
 
 	int visual_skin;
 
-	zSTRING 	scemeName;
-	int material;	
-	// zSTRING	pfx;		//	Magic Weapon PFX
-	int munition;		//	Instance of Munition
+	zSTRING scemeName;
 
-	int spell;			
-	int range;			
+	int material;
+	zSTRING pfx;            // Magic Weapon PFX
+	int munition;           // Instance of Munition
+
+	int spell;
+	int range;
 
 	int mag_circle;
 
@@ -221,4 +354,19 @@ void oCItem::Unarchive(zCArchiver& arc)
 		arc.ReadInt("amount", amount);
 		arc.ReadInt("flags", flags);
 	}
+}
+
+oCAIVobMove* oCItem::GetAIVobMove()
+{
+	if ( HasFlag(ITEM_TORCH)) {
+		auto movTorch = dynamic_cast<oCAIVobMoveTorch>(callback_ai);
+		if ( !movTorch ) {
+			auto movTorch = new oCAIVobMoveTorch();
+			SetAI(movTorch);
+			Release(movTorch);
+		}
+		return movTorch;
+	}
+
+	return oCVob::GetAIVobMove();
 }

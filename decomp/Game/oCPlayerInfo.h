@@ -23,4 +23,9 @@ public:
 	virtual void Unpack(zCBuffer &);
 	virtual void SetInstance(TPlayerInstance);
 	virtual void SetInstanceByName(zSTRING const &);
+
+	TPlayerInstance GetInstance() const
+	{
+		return playerInstance;
+	}
 };

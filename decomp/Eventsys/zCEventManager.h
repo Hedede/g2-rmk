@@ -1,6 +1,11 @@
 class zCEventManager : public zCObject {
 	Z_OBJECT(zCEventManager);
 public:
+	static int GetShowMessageCommunication()
+	{
+		return showMsgCommunication;
+	}
+
 	virtual void Archive(zCArchiver& arc)
 	{
 		arc.WriteBool("cleared", cleared);

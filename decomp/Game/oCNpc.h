@@ -316,20 +316,12 @@ public:
 		return 1;
 	}
 
-	zSTRING GetVisualBody() const
-	{
-		return body_visualName;
-	}
+	zCModel* GetModel();
+	void RemoveEffect(zSTRING const& fxname);
 
-	zSTRING GetVisualHead() const
-	{
-		return head_visualName;
-	}
-
-	zSTRING GetBloodTexture() const
-	{
-		return bloodTexture;
-	}
+	zSTRING GetVisualBody() const;
+	zSTRING GetVisualHead() const;
+	zSTRING GetBloodTexture() const;
 
 	void GetAngles(zCVob* to, float& azi, float& elev)
 	{
@@ -875,14 +867,11 @@ public:
 	void EquipBestArmor();
 	void EquipBestWeapon(int mode);
 
-	TNpcSlot* GetInvSlot(zCVob* vob)
-	{
-		for (auto& slot : invSlots) {
-			if (slot->object == vob)
-				return slot;
-		}
-		return nullptr;
-	}
+	TNpcSlot* GetInvSlot(zCVob* vob);
+	TNpcSlot* GetInvSlot(zSTRING const& slotName);
+	zCVob* GetSlotVob(zSTRING const& slotName);
+	zCNpc* GetSlotNpc(zSTRING const& slotName);
+	oCItem* GetSlotItem(zSTRING const& slotName);
 
 	void RemoveFromAllSlots(int dropIt)
 	{
@@ -1001,19 +990,31 @@ public:
 	int EV_Defend(oCMsgAttck* msg);
 	int EV_AimAt(oCMsgAttack* msg);
 	int EV_StopAim(oCMsgAttck*);
+	int EV_ShootAt(oCMsgAttack* msg);
 	int EV_AttackMagic(oCMsgAttack*);
+
+	int EV_UseMob(oCMsgManipulate *);
+	int EV_UseMobWithItem(oCMsgManipulate* msg);
 	int EV_RemoveInteractItem(oCMsgManipulate*);
-	int EV_EquipItem(oCMsgManipulate* msg);
+	int EV_PlaceInteractItem(oCMsgManipulate* msg);
+	int EV_ExchangeInteractItem(oCMsgManipulate *);
+	int EV_InsertInteractItem(oCMsgManipulate *);
 	int EV_TakeMob(oCMsgManipulate* msg);
 	int EV_DropMob(oCMsgManipulate* msg);
+	int EV_EquipItem(oCMsgManipulate* msg);
+	int EV_CallScript(oCMsgManipulate* msg);
 
 	int EV_EquipBestWeapon(oCMsgWeapon* msg);
 	int EV_EquipBestArmor(oCMsgWeapon* msg);
 	int EV_EquipArmor(oCMsgWeapon* msg);
 	int EV_UnequipArmor(oCMsgWeapon*);
+	int EV_RemoveWeapon1(oCMsgWeapon* msg);
+	int EV_RemoveWeapon2(oCMsgWeapon *);
 
 	int EV_StartFX(oCMsgConversation* msg);
+	int EV_StopFX(oCMsgConversation* msg);
 	int EV_PlayAniSound(oCMsgConversation* msg);
+	int EV_PlayAniFace(oCMsgConversation* msg);
 	int EV_StopPointAt(oCMsgConversation* msg);
 	int EV_StopLookAt(oCMsgConversation* msg);
 	int EV_ProcessInfos(oCMsgConversation* msg);
@@ -1030,6 +1031,7 @@ public:
 	int EV_CanSeeNpc(oCMsgMovement* msg);
 	int EV_RobustTrace(oCMsgMovement* msg);
 	int EV_GotoPos(oCMsgMovement* msg);
+	int EV_GotoVob(oCMsgMovement* msg);
 
 
 	int EV_DamagePerFrame(oCMsgDamage *);
@@ -1052,7 +1054,6 @@ public:
 	int EV_SetWalkMode(oCMsgMovement *);
 	int EV_TakeVob(oCMsgManipulate *);
 	int EV_Output(oCMsgConversation *);
-	int EV_RemoveWeapon2(oCMsgWeapon *);
 	int EV_DamageOnce(oCMsgDamage *);
 	int EV_Drink(oCMsgUseItem *);
 	int EV_AttackRun(oCMsgAttack *);
@@ -1074,22 +1075,12 @@ public:
 	int EV_Dodge(oCMsgMovement *);
 	int EV_PlayAni(oCMsgConversation *);
 	int EV_DoState(oCMsgState *);
-	int EV_InsertInteractItem(oCMsgManipulate *);
-	int EV_UseMob(oCMsgManipulate *);
 	int EV_Cutscene(oCMsgConversation *);
 	int EV_WaitForQuestion(oCMsgConversation *);
 	int EV_DestroyInteractItem(oCMsgManipulate *);
 	int EV_SndPlay(oCMsgConversation *);
 	int EV_UnequipWeapons(oCMsgWeapon *);
 	int EV_PointAt(oCMsgConversation *);
-	int EV_ExchangeInteractItem(oCMsgManipulate *);
-	int EV_ShootAt(oCMsgAttack *);
-	int EV_GotoVob(oCMsgMovement *);
-	int EV_RemoveWeapon1(oCMsgWeapon *);
-	int EV_CallScript(oCMsgManipulate *);
-	int EV_StopFX(oCMsgConversation *);
-	int EV_PlaceInteractItem(oCMsgManipulate *);
-	int EV_PlayAniFace(oCMsgConversation *);
 
 	void Fleeing()
 	{
@@ -1257,11 +1248,11 @@ private:
 		~oTRobustTrace() = default();
 
 		struct {
-			unsigned stand                : 1;
-			unsigned dirChoosed           : 1;
-			unsigned exactPosition        : 1;
-			unsigned targetReached        : 1;
-			unsigned standIfTargetReached : 1;
+			unsigned stand                : 1; // 1
+			unsigned dirChoosed           : 1; // 2
+			unsigned exactPosition        : 1; // 4
+			unsigned targetReached        : 1; // 8
+			unsigned standIfTargetReached : 1; // 0x10
 			unsigned waiting              : 1;
 			unsigned isObstVobSmall       : 1;
 			unsigned targetVisible        : 1;

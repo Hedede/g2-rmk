@@ -480,6 +480,39 @@ zCModel* oCNpc::GetModel()
 	return model;
 }
 
+zSTRING oCNpc::GetVisualBody() const
+{
+	return body_visualName;
+}
+
+zSTRING oCNpc::GetVisualHead() const
+{
+	return head_visualName;
+}
+
+zSTRING oCNpc::GetBloodTexture() const
+{
+	return bloodTexture;
+}
+
+void oCNpc::RemoveEffect(zSTRING const& fxname)
+{
+	if ( fxname.Length() > 0 ) {
+		oCVisualFX* fx = nullptr;
+		for (auto& effect : effectList) {
+			if (effect->name == fxname) {
+				fx = effect;
+				break;
+			}
+		}
+
+		if (fx) {
+			effectList->Remove(fx);
+			fx->Kill();
+			fx->Release();
+		}
+	}
+}
 
 oCItem* oCNpc::DetectItem(int flags, int)
 {
@@ -778,11 +811,20 @@ void oCNpc::SetWeaponMode2(zSTRING const& fmode_str)
 	SetWeaponMode2(fmode);
 }
 
+TNpcSlot* oCNpc::GetInvSlot(zCVob* vob)
+{
+	for (auto& slot : invSlots) {
+		if (slot->object == vob)
+			return slot;
+	}
+	return nullptr;
+}
+
 TNpcSlot* oCNpc::GetInvSlot(zSTRING const& slotName)
 {
-	for (int i = 0, num = invSlots.GetNumInList(); i < num; ++i) {
-		if (invSlots[i] == slotName)
-			return invSlots[i];
+	for (auto& slot : invSlots) {
+		if (slot->name == slotName)
+			return slot;
 	}
 
 	return nullptr;
@@ -791,7 +833,7 @@ TNpcSlot* oCNpc::GetInvSlot(zSTRING const& slotName)
 oCItem* oCNpc::GetSlotVob(zSTRING const& slotName)
 {
 	oCItem* vob = nullptr;
-	TNpcSlot* slot = GetInvSlot(NPC_MODE_SWORD);
+	TNpcSlot* slot = GetInvSlot(slotName);
 
 	if (slot)
 		vob = zDYMANIC_CAST<zCVob>(slot->object);
@@ -799,10 +841,21 @@ oCItem* oCNpc::GetSlotVob(zSTRING const& slotName)
 	return vob;
 }
 
+oCNpc* oCNpc::GetSlotNpc(zSTRING const& slotName)
+{
+	oCNpc* npc = nullptr;
+	TNpcSlot* slot = GetInvSlot(slotName);
+
+	if (slot)
+		npc = zDYMANIC_CAST<oCNpc>(slot->object);
+
+	return npc;
+}
+
 oCItem* oCNpc::GetSlotItem(zSTRING const& slotName)
 {
 	oCItem* item = nullptr;
-	TNpcSlot* slot = GetInvSlot(NPC_MODE_SWORD);
+	TNpcSlot* slot = GetInvSlot(slotName);
 
 	if (slot)
 		item = zDYMANIC_CAST<oCItem>(slot->object);

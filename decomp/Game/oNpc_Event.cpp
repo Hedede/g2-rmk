@@ -15,12 +15,6 @@ int oCNpc::EV_Defend(oCMsgAttack *msg)
 	return 0;
 }
 
-int oCNpc::EV_RemoveInteractItem(oCMsgManipulate*)
-{
-	SetInteractItem(nullptr);
-	return 1;
-}
-
 int oCNpc::EV_AimAt(oCMsgAttack *msg)
 {
 	oCNpc* target = 0;
@@ -55,6 +49,44 @@ int oCNpc::EV_StopAim(oCMsgAttack*)
 	return 1;
 }
 
+int oCNpc::EV_ShootAt(oCMsgAttack* msg)
+{
+	if ( !didShoot ) {
+		wasAiming = FinalizeAim(0, 0);
+
+		if ( !hasLockedEnemy ) {
+			EV_AimAt(msg);
+			return 0;
+		}
+
+		DoShootArrow(1);
+		didShoot = 1;
+	}
+
+	if ( !didHit )
+		didHit = TransitionAim(human_ai->_s_aim, human_ai->_s_hitf);
+
+	if ( !didShoot || !didHit )
+		return 0;
+
+	DoDoAniEvents();
+
+	if ( !TransitionAim(human_ai->_s_hitf, human_ai->_s_aim) )
+		return 0;
+
+	didShoot = 0;
+	didHit = 0;
+	if ( !wasAiming ) {
+		StandUp(0, 1);
+		return 1;
+	}
+
+	auto msg1 = new oCMsgAttack(EV_AIMAT, msg->paramVob, 0);
+	GetEM()->OnMessage(msg1, msg->paramVob);
+	wasAiming = 0;
+	return 1;
+}
+
 int oCNpc::EV_EquipBestWeapon(oCMsgWeapon* msg)
 {
 	EquipBestWeapon(msg->targetMode);
@@ -81,9 +113,39 @@ int oCNpc::EV_UnequipArmor(oCMsgWeapon*)
 	return 1;
 }
 
+int oCNpc::EV_RemoveWeapon1(oCMsgWeapon* msg)
+{
+	if ( IsMonster() )
+		return 1;
+
+	DoDoAniEvents();
+
+	anictrl->StopTurnAnis();
+
+	if (anictrl->RemoveWeapon1()) {
+		if (IsAPlayer() && zinput->KeyPressed(KEY_SPACE)
+		                && anictrl->wmode_selected >= FMODE_MAGIC )
+		{
+			auto msg1 = new oCMsgMagic(0, anictrl->wmode_selected, 0);
+			msg1->removeSymbol = 1;
+
+			GetEM()->OnMessage(msg1, this);
+		}
+		return 1;
+	}
+
+	return GetWeaponMode() == FMODE_NONE && anictrl->IsStanding();
+}
+
 int oCNpc::EV_StartFX(oCMsgConversation *msg)
 {
 	AddEffect(msg->name, msg->target);
+	return 1;
+}
+
+int oCNpc::EV_StopFX(oCMsgConversation* msg)
+{
+	RemoveEffect(msg->name);
 	return 1;
 }
 
@@ -102,6 +164,19 @@ int oCNpc::EV_PlayAniSound(oCMsgConversation *msg)
 	if ( !msg->IsInUse() )
 		msg->SetInUse(1);
 	return 0;
+}
+
+int oCNpc::EV_PlayAniFace(oCMsgConversation* msg)
+{
+	auto model = GetModel();
+	if ( model ) {
+		auto node = model->SearchNode(zMDL_NODE_NAME_HEAD);
+		auto head = zDYNAMIC_CAST<zCMorphMesh>(node);
+		if ( head )
+			head->StartAni(msg->name, 1.0, -2.0);
+	}
+
+	return 1;
 }
 
 int oCNpc::EV_ProcessInfos(oCMsgConversation *msg)
@@ -202,22 +277,12 @@ int oCNpc::EV_WaitTillEnd(oCMsgConversation *msg)
 
 bool oCNpc::IsWaitingForAnswer()
 {
-
 	auto msg = dynamic_cast<zCEventMessage*>(GetEM()->GetActiveMessage());
 	if (!msg)
 		return 0;
 
 	auto type = msg->subType;
 	return type == EV_ASK || type == EV_WAITFORQUESTION;
-}
-
-
-int oCNpc::EV_UseMobWithItem(oCMsgManipulate* msg)
-{
-	auto item = zDYNAMIC_CAST<oCItem>(msg->paramVob);
-
-	SetInteractItem(item);
-	return 1;
 }
 
 int oCNpc::EV_RobustTrace(oCMsgMovement *msg)
@@ -329,6 +394,21 @@ int oCNpc::EV_GotoPos(oCMsgMovement* msg)
 	return EV_RobustTrace(msg);
 }
 
+int oCNpc::EV_GotoVob(oCMsgMovement* msg)
+{
+	if ( msg->targetVob ) {
+		rbt.timer = 500.0
+		rbt.targetVob = msg->targetVob;
+		rbt.targetPos = msg->targetPos->GetPositionWorld();
+		rbt.flags.standIfTargetReached = true;
+		rbt.maxTargetDist = 40000.0;
+		return RbtGotoFollowPosition();
+	}
+
+	zWARNING("U: NPC: EV_GOTOVOB : targetVob not found.") // 2146, oNpc_Move.cpp
+	return 1;
+}
+
 bool oCNpc::EV_Wait(oCMsgState *msg)
 {
 	if ( human_ai ) {
@@ -366,6 +446,79 @@ int oCNpc::EV_EquipItem(oCMsgManipulate *msg)
 	return 1;
 }
 
+int oCNpc::EV_UseMobWithItem(oCMsgManipulate* msg)
+{
+	auto item = zDYNAMIC_CAST<oCItem>(msg->paramVob);
+
+	SetInteractItem(item);
+	return 1;
+}
+
+int oCNpc::EV_RemoveInteractItem(oCMsgManipulate*)
+{
+	SetInteractItem(nullptr);
+	return 1;
+}
+
+int oCNpc::EV_PlaceInteractItem(oCMsgManipulate* msg)
+{
+	auto inter = zDYNAMIC_CAST<oCMobItemSlot>(interactMob);
+	if (inter) {
+		if ( interactItem ) {
+			SetInteractItem(nullptr);
+			if (inventory.IsIn(interactItem, 1))
+				RemoveFromInv(interactItem);
+
+			inter->PlaceItem(interactItem);
+		} else {
+			auto item = inter->RemoveItem();
+			PutInInv(item);
+		}
+	} else {
+		if (interactItem) {
+			auto inst = interactItem->GetInstance();
+			SetInteractItem(nullptr);
+
+			auto item = RemoveFromInv(inst, 1);
+			if ( item && homeWorld )
+				homeWorld->RemoveVob(item);
+		}
+	}
+
+	return 1;
+}
+
+int oCNpc::EV_ExchangeInteractItem(oCMsgManipulate* msg)
+{
+	if ( interactItem ) {
+		TNpcSlot* interactSlot = nullptr;
+		//TNpcSlot* slot = GetInvSlot(interactItem);
+		for (auto& slot : invSlots) {
+			// ИЩЕТ ЭТОТ ЖЕ СЛОТ ЕЩЁ РАЗ,
+			// видимо разраб не знал что у них
+			// есть функция GetInvSlot(zCVob*)
+			auto item = GetSlotItem(slot->name);
+			if (item == interactItem)
+				break;
+		}
+
+		RemoveFromSlot(slot, 0, 1);
+		homeWorld->RemoveVob(interactItem);
+		Release(interactItem);
+	}
+
+	auto world = ogame->GetGameWorld();
+	auto item = world->CreateVob(VOB_TYPE_ITEM, msg->schemeName);
+	if ( item ) {
+		PutInInv(item);
+		auto inst = item->GetInstance();
+		SetInteractItem(RemoveFromInv(inst, 1));
+		EV_InsertInteractItem(msg);
+		Release(item);
+	}
+	return 1;
+}
+
 int oCNpc::EV_TakeMob(oCMsgManipulate* msg)
 {
 	auto mi = FindMobInter(msg->schemeName);
@@ -389,4 +542,16 @@ int oCNpc::EV_DropMob(oCMsgManipulate* msg)
 	return 1;
 }
 
+int oCNpc::EV_CallScript(oCMsgManipulate *msg)
+{
+	zparser.SetInstance("SELF", this);
+	zparser.SetInstance("OTHER", oCNpc::player);
 
+	if (msg->targetState < -1) {
+		if ( !msg->schemeName.IsEmpty() )
+			zparser.CallFunc(msg->schemeName);
+	} else {
+		zparser.CallFunc(msg->targetState);
+	}
+	return 1;
+}

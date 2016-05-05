@@ -379,16 +379,16 @@ int oCNpc::FindNextFightAction()
 			if (!debug)
 				return myMove;
 
-			zINFO(5, "C: FIGHT:                                 ");
+			zINFO(5, "C: FIGHT:                                 "); // 670
 			zINFO(5, "C: FIGHT: enemyMove:" +
-			      GetFightMoveStringFromConstant(enemyMove));
+			      GetFightMoveStringFromConstant(enemyMove)); // 673
 			zINFO(5, "C: FIGHT: curMove:" +
-			      GetFightMoveStringFromConstant(curMove));
+			      GetFightMoveStringFromConstant(curMove)); // 676
 			zINFO(5,"C: FIGHT: Fight-Instance selected: " +
-			      GetSituationStringFromConstant(action - 1));
+			      GetSituationStringFromConstant(action - 1)); // 679
 			zINFO(5,"C: FIGHT: myMove:" +
-			      GetFightMoveStringFromConstant(myMove));
-			zInfo(5,"C: FIGHT: tactic:" + zSTRING(fighttactic));
+			      GetFightMoveStringFromConstant(myMove)); // 682
+			zINFO(5,"C: FIGHT: tactic:" + zSTRING(fighttactic)); // 683
 
 			return myMove;
 		}

@@ -2,6 +2,11 @@ class zCParser {
 public:
 	typedef void (*MessageFunc) (zSTRING);
 
+	static uint8_t GetVersion()
+	{
+		return tree_version;
+	}
+
 	int SaveDat(zSTRING& fileName);
 	int LoadDat(zSTRING& fileName);
 
@@ -25,19 +30,21 @@ public:
 		stop_on_error = stop;
 	}
 
-	void zCParser::EnableTreeSave(zBOOL enable)
+	void EnableTreeSave(zBOOL enable)
 	{
 		this->treesave = enable;
 	}
 
-	void zCParser::EnableTreeLoad(zBOOL enable)
+	void EnableTreeLoad(zBOOL enable)
 	{
 		this->treeload = enable;
 	}
 
-	static uint8_t GetVersion()
+	int* CallFunc(int funcIndex, ...);
+	int* CallFunc(zSTRING const& func)
 	{
-		return tree_version;
+		auto index = symtab.GetIndex(func);
+		return CallFunc(index);
 	}
 
 private:

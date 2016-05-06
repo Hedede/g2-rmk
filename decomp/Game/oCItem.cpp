@@ -1,4 +1,4 @@
-enum oEDamageType {
+enum oEDamageType { // oETypeDamage
 	DAM_BARRIER = (1 << 0),
 	DAM_BLUNT   = (1 << 1),
 	DAM_EDGE    = (1 << 2),
@@ -24,8 +24,8 @@ enum oEIndexDamage
 
 const int ITM_TEXT_MAX = 6;
 
-class oCItem : public zCVob {
-	CLASSDEF_DEFINE;
+class oCItem : public oCVob {
+	Z_OBJECT(oCItem);
 
 	static int lightingSwell;
 public:
@@ -39,7 +39,29 @@ public:
 		return lightingSwell;
 	}
 
-	virtual ~oCItem();
+	oCItem()
+		: oCVob()
+	{
+		Init();
+	}
+
+	oCItem(int nr, int anz)
+		: oCVob()
+	{
+		Init();
+		InitByScript(nr, anz);
+	}
+
+	oCItem(zSTRING& inst, int anz)
+		: oCItem(zparser.GetIndex(inst), anz)
+	{
+	}
+
+	virtual ~oCItem()
+	{
+		RemoveEffect();
+		zparser.ResetWithVarReferenceList(s_itemVarReferenceList, this);
+	}
 
 	void Archive(zCArchiver& arc) override;
 	void Unarchive(zCArchiver& arc) override;
@@ -58,9 +80,18 @@ public:
 		idx = instanz;
 	}
 
-	virtual void SetByScriptInstance(zSTRING const *,int);
-	virtual void ThisVobAddedToWorld(zCWorld *);
-	virtual void ThisVobRemovedFromWorld(zCWorld *);
+	bool SetByScriptInstance(zSTRING const* name, int index) override
+	{
+		if (name)
+			index = zparser.GetIndex(name);
+
+		InitByScript(index, 1);
+		return 1;
+	}
+
+	void ThisVobAddedToWorld(zCWorld* world) override;
+	void ThisVobRemovedFromWorld(zCWorld* world) override;
+
 	virtual void Init(void);
 
 	int GetInstance() const override
@@ -68,7 +99,7 @@ public:
 		return instanz;
 	}
 
-	virtual void GetInstanceName() const override
+	void GetInstanceName() const override
 	{
 		int typ, ele;
 		return zparser.GetSymbolInfo(instanz, typ, ele);
@@ -79,9 +110,14 @@ public:
 		return guild > 0 && ownerGuild == guild;
 	}
 
-	void IsOwnedByNpc(int instance) const override
+	bool IsOwnedByNpc(int instance) const override
 	{
 		return instance > 0 && owner == instance;
+	}
+
+	bool IsOwned(int instance, int guild)
+	{
+		return IsOwnedByNpc(instance) || IsOwnedByGuild(guild);
 	}
 
 	void GetAIVobMove() override;
@@ -127,12 +163,21 @@ public:
 		return HasFlag(ITEM_AXE) || HasFlag(ITEM_SWD);
 	}
 
+	bool SplitSlot() const
+	{
+		if (HasFlag(ITEM_NSPLIT))
+			return 0;
+		return HasFlag(ITEM_KAT_NF) || HasFlag(ITEM_KAT_FF);
+	}
+
 	void GetDamages(uint32_t* damages)
 	{
 		if ( damages )
 			memcpy(damages, this->damage, 0x20u);
 	}
 
+	int GetDamageByMode(unsigned mode) const;
+	int GetDamageByType(oEDamageType type);
 	int GetDamageByIndex(oEIndexDamage index)
 	{
 		return damage[index];
@@ -166,9 +211,45 @@ public:
 		return total;
 	}
 
+	int GetProtectionByMode(unsigned mode) const;
+	int GetProtectionByType(oEDamageType type);
+	int GetProtectionByIndex(oEIndexDamage index)
+	{
+		return protection[index];
+	}
+
 	bool IsDeadly() const
 	{
 		return damageType & (DAM_BLUNT | DAM_EDGE);
+	}
+
+	void CopyDamage(oCItem* other) const
+	{
+		if ( other ) {
+			other->damageType  = damageType;
+			other->damageTotal = damageTotal;
+			memcpy(other->damage, this->damage, sizeof(other->damage));
+		}
+	}
+
+	oCItem* SplitItem(int removeAmount)
+	{
+		oCItem* result = nullptr;
+
+		if ( removeAmount < amount) {
+			auto world =  ogame->GetGameWorld();
+			auto inst = GetInstance();
+
+			result = world->CreateVob(VOB_TYPE_ITEM, inst);
+			if (result) {
+				result->amount = removeAmount;
+				this->amount -= removeAmount;
+			}
+		} else {
+			result = this;
+		}
+
+		return result;
 	}
 
 	int GetWeight() const
@@ -185,6 +266,27 @@ public:
 		return count[idx];
 	}
 
+	zSTRING& GetText(int index)
+	{
+		zSTRING empty = "";
+		if (index < 0 || index >= 6)
+			return empty;
+
+		return text[index];
+	}
+
+	int GetValue()
+	{
+		double val = (value + magic_value);
+		if ( hp_max > 0 )
+			// hp probably should be converted to double
+			// but it is int
+			val *= (hp / hp_max);
+		return ceil(val);
+	}
+
+	int GetHealMode(int& value) const;
+
 	int GetStateEffectFunc(int stateNr)
 	{
 		if ( stateNr < 0 || stateNr >= 4)
@@ -193,6 +295,12 @@ public:
 		int func = on_state[stateNr];
 
 		return func > 0 ? func : -1;
+	}
+
+
+	int GetDisguiseGuild() const
+	{
+		return disguiseGuild;
 	}
 
 	zSTRING GetVisualChange() const
@@ -205,11 +313,37 @@ public:
 		return tmp;
 	}
 
-	int GetDisguiseGuild() const
+	void RotateInInventory();
+	void CreateVisual()
 	{
-		return disguiseGuild;
+		if (!visual && (item_visual.Search(0, ".ZEN", 1) < 0))
+			zCVob::SetVisual(item_visual);
 	}
 
+	void RemoveEffect()
+	{
+		if ( effectVob ) {
+			effectVob->Kill();
+			Release(effectVob);
+		}
+	}
+
+	zSTRING GetEffectName() const
+	{
+		return effect;
+	}
+
+	zSTRING GetName(int identified) const
+	{
+		return name;
+	}
+
+	zSTRING GetSchemeName() const
+	{
+		return scemeName;
+	}
+
+	void AddManipulation();
 	void Identify() { }
 	void UseItem() { }
 
@@ -228,7 +362,7 @@ private:
 
 	// Für Rüstungen
 	int wear;
-	int protection[PROT_INDEX_MAX];
+	int protection[DAM_INDEX_MAX];
 
 	// Für Nahrung
 	int nutrition;		//	HP-Steigerung bei Nahrung
@@ -369,4 +503,241 @@ oCAIVobMove* oCItem::GetAIVobMove()
 	}
 
 	return oCVob::GetAIVobMove();
+}
+
+void oCItem::Init()
+{
+	memset(&this->id, 0, 0x20Cu);
+
+	instanz = -1;
+	mainflag = -1;
+	amount = 1;
+	c_manipulation = 0;
+	last_manipulation = 0;
+	magic_value = 0;
+	effectVob = 0;
+	next = 0;
+	description = "";
+	damageType = 0;
+	damageTotal = 0;
+	memset(damage, 0, sizeof(damage));
+
+	for (auto& val : count)
+		val = 0;
+	for (auto& str : text)
+		str = "";
+	disguiseGuild = 0;
+
+	type = VOB_TYPE_ITEM;
+
+	zCVob::SetCollisionClass(zCCollObjectPoint::s_oCollObjClass);
+	inv_zbias = 0;
+	inv_rotx = 0;
+	inv_roty = 0;
+	inv_rotz = 0;
+	inv_animate = 0;
+	zBias = 1;
+
+	static bool reflist = 0;
+	if ( !reflist ) {
+		zparser.CreateVarReferenceList("C_ITEM", s_itemVarReferenceList);
+		reflist = 1;
+	}
+}
+
+void oCItem::ThisVobAddedToWorld(zCWorld* world)
+{
+	struct zCRigidBody *v3; // eax@7
+
+	CreateVisual();
+
+	zCVob::ThisVobAddedToWorld(world);
+
+	SetCollDetDyn(1);
+	SetCollDetStat( 1);
+	SetSleeping(1);
+
+	flags1 &= 0xEFu;
+
+	SetPhysicsEnabled(0);
+
+	if ( !world->isInventoryWorld )
+		InsertEffect();
+
+	if ( GetRigidBody() ) {
+		GetRigidBody()->flags |= 1;
+	}
+}
+
+void oCItem::ThisVobRemovedFromWorld(zCWorld* world)
+{
+	if ( !world->isInventoryWorld )
+		RemoveEffect();
+
+	zCVob::ThisVobRemovedFromWorld(world);
+	zCVob::SetAI(0);
+}
+
+void oCItem::RotateInInventory()
+{
+	if ( inv_animate ) {
+		zVEC3 axis;
+		if ( visual && visual->GetOBBox3D() ) {
+			axis = visual->GetOBBox3D()->GetAxis();
+		} else {
+			unsigned index = 0;
+			float min = -1.0;
+			for (unsigned i = 0; i < 3; ++i) {
+				float diff = bbox3D.maxs[i] - bbox3D.mins[i];
+				if (diff > min) {
+					min = diff;
+					index = i;
+				}
+			}
+
+			axis[index] = 1.0;
+		}
+
+		RotateLocal(axis, ztimer.totalTimeFloat * 0.02);
+	}
+}
+
+int oCItem::GetDamageByType(oEDamageType type)
+{
+	if ( (type & DAM_BARRIER) == DAM_BARRIER )
+		return damage[DAM_INDEX_BARRIER];
+
+	if ( (type & DAM_BLUNT) == DAM_BLUNT )
+		return damage[DAM_INDEX_BLUNT];
+
+	if ( (type & DAM_EDGE) == DAM_EDGE )
+		return damage[DAM_INDEX_EDGE];
+
+	if ( (type & DAM_FIRE) == DAM_FIRE )
+		return damage[DAM_INDEX_FIRE];
+
+	if ( (type & DAM_FLY) == DAM_FLY )
+		return damage[DAM_INDEX_FLY];
+
+	if ( (type & DAM_MAGIC) == DAM_MAGIC )
+		return damage[DAM_INDEX_MAGIC];
+
+	if ( (type & DAM_POINT) == DAM_POINT )
+		return damage[DAM_INDEX_POINT];
+
+	if ( (type & DAM_FALL) == DAM_FALL )
+		return damage[DAM_INDEX_FALL];
+
+	return 0;
+}
+
+int oCItem::GetDamageByMode(unsigned mode) const
+{
+	int result = 0;
+	if ( (mode & DAM_BARRIER) == DAM_BARRIER )
+		result  = damage[DAM_INDEX_BARRIER];
+	if ( (mode & DAM_BLUNT) == DAM_BLUNT )
+		result += damage[DAM_INDEX_BLUNT];
+	if ( (mode & DAM_EDGE) == DAM_EDGE )
+		result += damage[DAM_INDEX_EDGE];
+	if ( (mode & DAM_FIRE) == DAM_FIRE )
+		result += damage[DAM_INDEX_FIRE];
+	if ( (mode & DAM_FLY) == DAM_FLY )
+		result += damage[DAM_INDEX_FLY];
+	if ( (mode & DAM_MAGIC) == DAM_MAGIC )
+		result += damage[DAM_INDEX_MAGIC];
+	if ( (mode & DAM_POINT) == DAM_POINT )
+		result += damage[DAM_INDEX_POINT];
+	if ( (mode & DAM_FALL) == DAM_FALL )
+		result += damage[DAM_INDEX_FALL];
+	return result;
+}
+
+int oCItem::GetProtectionByType(oEDamageType type)
+{
+	if ( (type & DAM_BARRIER) == DAM_BARRIER )
+		return protection[DAM_INDEX_BARRIER];
+
+	if ( (type & DAM_BLUNT) == DAM_BLUNT )
+		return protection[DAM_INDEX_BLUNT];
+
+	if ( (type & DAM_EDGE) == DAM_EDGE )
+		return protection[DAM_INDEX_EDGE];
+
+	if ( (type & DAM_FIRE) == DAM_FIRE )
+		return protection[DAM_INDEX_FIRE];
+
+	if ( (type & DAM_FLY) == DAM_FLY )
+		return protection[DAM_INDEX_FLY];
+
+	if ( (type & DAM_MAGIC) == DAM_MAGIC )
+		return protection[DAM_INDEX_MAGIC];
+
+	if ( (type & DAM_POINT) == DAM_POINT )
+		return protection[DAM_INDEX_POINT];
+
+	if ( (type & DAM_FALL) == DAM_FALL )
+		return protection[DAM_INDEX_FALL];
+
+	return 0;
+}
+
+int oCItem::GetProtectionByMode(unsigned mode) const
+{
+	int result = 0;
+	if ( (mode & DAM_BARRIER) == DAM_BARRIER )
+		result  = protection[DAM_INDEX_BARRIER];
+	if ( (mode & DAM_BLUNT) == DAM_BLUNT )
+		result += protection[DAM_INDEX_BLUNT];
+	if ( (mode & DAM_EDGE) == DAM_EDGE )
+		result += protection[DAM_INDEX_EDGE];
+	if ( (mode & DAM_FIRE) == DAM_FIRE )
+		result += protection[DAM_INDEX_FIRE];
+	if ( (mode & DAM_FLY) == DAM_FLY )
+		result += protection[DAM_INDEX_FLY];
+	if ( (mode & DAM_MAGIC) == DAM_MAGIC )
+		result += protection[DAM_INDEX_MAGIC];
+	if ( (mode & DAM_POINT) == DAM_POINT )
+		result += protection[DAM_INDEX_POINT];
+	if ( (mode & DAM_FALL) == DAM_FALL )
+		result += protection[DAM_INDEX_FALL];
+	return result;
+}
+
+int GetHealMode(int& value)
+{
+	if (!HasFlag(ITEM_KAT_FOOD))
+		return 10;
+
+	value = nutrition;
+	if ( nutrition <= 0 ) {
+		unsigned i = 0;
+		for (auto& atr : change_atr) {
+			// original code contained 3 duplicate if clauses
+			if (!(atr == ATR_HITPOINTS  ||
+			      atr == ATR_MANA       ||
+			      atr == ATR_STRENGTH   ||))
+			{
+				continue
+			}
+
+			value = change_value[i++];
+			if (value > 0)
+				return atr;
+		}
+	}
+	return 0;
+}
+
+void oCItem::AddManipulation()
+{
+	if ( c_manipulation > 0 ) {
+		auto timer = ogame->GetWorldTimer();
+		if ( timer->GetPassedTime(last_manipulation) > 60 )
+			c_manipulation = 0;
+	}
+
+	auto timer = ogame->GetWorldTimer();
+	last_manipulation = timer->GetFullTime();
+	++c_manipulation;
 }

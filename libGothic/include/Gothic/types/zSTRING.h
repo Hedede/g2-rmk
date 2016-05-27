@@ -6,8 +6,7 @@
 
 char const spaceChar = ' ';
 
-class zSTRING {
-public:
+struct zSTRING {
 	zSTRING() = default;
 	zSTRING(const char *str);
 	zSTRING(char c);
@@ -101,6 +100,7 @@ public:
 	int32_t ToInt() const;
 	float ToFloat() const;
 	char ToChar() const;
+
 private:
 	std::string data;
 };
@@ -144,4 +144,7 @@ zSTRING operator ""_s (const char* str)
 {
 	return str;
 }
+
+zSTRING Characters(char c, unsigned anzahl);
+zSTRING Spaces(unsigned num);
 #endif//G2_zSTRING_h

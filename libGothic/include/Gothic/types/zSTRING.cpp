@@ -140,9 +140,14 @@ zSTRING zSTRING::PickWord(size_t nr, zSTRING const& delim1, zSTRING const& delim
 	return ret;
 }
 
-zSTRING Characters(char c, unsigned int anzahl)
+zSTRING Characters(char c, unsigned anzahl)
 {
 	return std::string(c, anzahl).c_str();
+}
+
+zSTRING Spaces(unsigned num)
+{
+	return Characters(' ', num);
 }
 
 zSTRING& zSTRING::Lower()

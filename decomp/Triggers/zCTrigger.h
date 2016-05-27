@@ -5,8 +5,23 @@ public:
 
 	virtual void Archive(zCArchiver& arc);
 	virtual void Unarchive(zCArchiver& arc);
-	virtual void OnTrigger(zCVob *,zCVob *);
-	virtual void OnUntrigger(zCVob *,zCVob *);
+
+	void OnTrigger(zCVob* otherVob, zCVob* vobInstigator) override
+	{
+		if ( filterFlags.reactToOnTrigger )
+			ActivateTrigger(vobInstigator);
+	}
+
+	void OnUntrigger(zCVob* otherVob, zCVob* vobInstigator) override
+	{
+		if ( filterFlags.reactToOnTrigger ) {
+			if (!IsOnTimer()) {
+				if (flags.isEnabled && flags.sendUntrigger)
+					ShowDebugInfo(vobInstigator);
+			}
+		}
+	}
+
 	virtual void OnTouch(zCVob *);
 	virtual void OnUntouch(zCVob *);
 	virtual void OnDamage(zCVob *,zCVob *,float,int,zVEC3 const &);
@@ -15,6 +30,17 @@ public:
 	virtual void TriggerTarget(zCVob *);
 	virtual void UntriggerTarget(zCVob *);
 	virtual void CanBeActivatedNow(zCVob *);
+
+private:
+	void ClearStateInternals()
+	{
+		flags.isEnabled = 0; //? flags = flags ^ (flags ^ 2 * flags) & 2
+
+		nextTimeTriggerable = 0;
+
+		Release(savedOtherVob);
+	}
+
 private:
 	//Eigenschaften sollten weitgehend klar sein
 

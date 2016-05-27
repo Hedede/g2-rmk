@@ -11,7 +11,7 @@ public:
 	virtual void GetLargestBBox3DLocal(zTBBox3D &);
 
 private:
-	char unk1[68];
+	char unk1[64];
 	zMAT4 trafoObjToWorld;
 	zCVob *parent;
 	char flags;

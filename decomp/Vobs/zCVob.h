@@ -1,8 +1,3 @@
-//Offsets der X, Y, Z Positionen im trafoObjToWorld Array:
-const int zCVob_trafoObjToWorld_X =  3;
-const int zCVob_trafoObjToWorld_Y =  7;
-const int zCVob_trafoObjToWorld_Z = 11;
-
 class zCVob : public zCObject {
 	Z_OBJECT(zCObject);
 private:
@@ -80,22 +75,15 @@ public:
 	}
 
 	zVEC3 GetPositionWorld() const;
+	void GetPositionWorld(float& x, float& y, float& z) const;
 	zVEC3 GetAtVectorWorld() const;
 	zVEC3 GetUpVectorWorld() const;
 	zVEC3 GetRightVectorWorld() const;
 
-	zMAT4 GetNewTrafoObjToWorld() const
-	{
-		if (isInMovementMode)
-			return collisionObject->trafoObjToWorld;
-		return trafoObjToWorld;
-	}
 
-	void SetNewTrafoObjToWorld(zMAT4 const& newTrafo)
-	{
-		if (isInMovementMode)
-			collisionObject->trafoObjToWorld = newTrafo;
-	}
+	void RotateWorldX(float angle);
+	void RotateWorldY(float angle);
+	void RotateWorldZ(float angle);
 
 	virtual void GetScriptInstance(zSTRING*& outname, int& outidx)
 	{
@@ -126,7 +114,10 @@ public:
 	void RemoveVobSubtreeFromWorld();
 	void RemoveVobFromBspTree();
 
+	void DoneWithTrafoLocal();
+
 	bool HasParentVob() const;
+	zCMover* GetAutoLinkParent() const; // unused?
 
 	void AddVobToWorld_CorrectParentDependencies();
 
@@ -160,22 +151,52 @@ public:
 		flags.staticVob = b;
 	}
 
+	void SetPhysicsEnabled(zCVob *this, int enable)
+	{
+		if (!flags.staticVob) {
+			flags.physicsEnabled = enable;
+			if ( rigidBody )
+				StopTransRot(enable);
+		}
+	}
+
 	void SetCollDet(int b)
 	{
 		SetCollDetStat(b);
 		SetCollDetDyn(b);
 	}
 
+	void SetCollisionClass(zCCollisionObjectDef* collClass);
 	void CreateCollisionObject();
+	void DestroyCollisionObject();
+	void SetCollisionObject(zCCollisionObject* col);
 	zCCollisionObject* GetCollisionObject()
 	{
 		return collisionObject;
+	}
+
+	zMAT4 GetNewTrafoObjToWorld() const
+	{
+		if (isInMovementMode)
+			return collisionObject->trafoObjToWorld;
+		return trafoObjToWorld;
+	}
+
+	void SetNewTrafoObjToWorld(zMAT4 const& newTrafo)
+	{
+		if (isInMovementMode)
+			collisionObject->trafoObjToWorld = newTrafo;
 	}
 
 	void TouchMovement()
 	{
 		collisionObject->flags |= 1;
 	}
+
+	void ResetCollisionObjectState();
+	void ResetToOldMovementState();
+
+	void SetAI(zCAIBase* newai);
 
 	bool GetIsProjectile() const
 	{
@@ -194,7 +215,17 @@ public:
 		return homeWorld->bspTree.GetSectorNameVobIsIn(this);
 	}
 
-	/* Unused */
+	void SetVobName(zSTRING const& name);
+
+	void SetOnTimer(float deltaTime);
+private:
+	static void DeleteGroundShadowMesh();
+	void SetGroundShadowSize(zVEC2 const& dimensions);
+	zVEC2 GetGroundShadowSize();
+
+	void ProcessOnTimer();
+
+public:/* Unused */
 	static uint32_t GetNextFreeVobID()
 	{
 		return zCVob::s_nextFreeID;
@@ -223,6 +254,7 @@ public:
 			return zSTR_EMPTY;
 		return *vobPresetName;
 	}
+
 
 private:
 	zCTree<zCVob>* globalVobTreeNode;

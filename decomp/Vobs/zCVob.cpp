@@ -431,11 +431,32 @@ zVEC3 zCVob::GetRightVectorWorld() const
 	return {trafoObjToWorld[2][0], trafoObjToWorld[1][0], trafoObjToWorld[0][0]};
 }
 
-zCEventManager* zCVob::GetEM(int doNotCreate)
+void zCVob::GetPositionWorld(float& x, float& y, float& z)
+{
+	x = trafoObjToWorld.m[0][3];
+	y = trafoObjToWorld.m[1][3];
+	z = trafoObjToWorld.m[2][3];
+}
+
+void zCVob::RotateWorldX(float angle)
+{
+	RotateWorld({1,0,0}, angle);
+}
+
+void zCVob::RotateWorldY(float angle)
+{
+	RotateWorld({0,1,0}, angle);
+}
+
+void zCVob::RotateWorldZ(float angle)
+{
+	RotateWorld({0,0,1}, angle);
+}
+
+zCEventManager* zCVob::GetEM(int dontCreate)
 {
 	zCEventManager *result = eventManager;
-	if ( !result && !doNotCreate )
-	{
+	if ( !result && !doNotCreate ) {
 		result = (*zfactory)->CreateEventManager(this);
 		this->eventManager = result;
 	}
@@ -472,6 +493,27 @@ void zCVob::RemoveVobFromBspTree()
 		homeWorld->bspTree.RemoveVob(this);
 }
 
+void zCVob::SetVobName(zSTRING const& name)
+{
+	if ( homeWorld )
+		homeWorld->RemoveVobHashTable(this);
+
+	SetObjectName(name);
+
+	if ( homeWorld )
+		homeWorld->InsertVobHashTable(this);
+}
+
+void zCVob::DoneWithTrafoLocal(zCVob *this)
+{
+	if ( trafo ) {
+		if (!HasParent()) {
+			trafoObjToWorld = trafo;
+			Delete(trafo);
+		}
+	}
+}
+
 void zCVob::HasParentVob() const
 {
 	if ( globalVobTreeNode ) {
@@ -490,10 +532,117 @@ void zCVob::AddVobToWorld_CorrectParentDependencies()
 		CreateTrafoLocal();
 }
 
+
+void zCVob::SetCollisionClass(zCCollisionObjectDef* collClass)
+{
+	if (collClass != collisionObjectClass) {
+		if ( collisionObject && collClass )
+			SetCollisionObject(nullptr);
+	}
+	collisionObjectClass = collClass;
+}
+
+void zCVob::SetCollisionObject(zCCollisionObject* col)
+{
+	if ( collisionObject )
+		delete collisionObject;
+	collisionObject = col;
+}
+
 void zCVob::CreateCollisionObject()
 {
 	if ( !collisionObject ) {
 		collisionObject = collisionObjectClass->CreateNewInstance();
 		collisionObject->parent = this;
+	}
+}
+
+void zCVob::DestroyCollisionObject(int force)
+{
+	auto cc = collisionObjectClass;
+	if ( cc && (force || cc->isVolatile) )
+		Delete(collisionObject);
+}
+
+void zCVob::ResetCollisionObjectState()
+{
+	collisionObject->__unk_mat = trafoObjToWorld;
+	collisionObject->trafoObjToWorld = trafoObjToWorld;
+	collisionObject->flags &= 0xFCu;
+}
+
+void zCVob::ResetToOldMovementState();
+{
+	if ( isInMovementMode ) {
+		collisionObject->trafoObjToWorld = trafoObjToWorld;
+		collisionObject->flags &= 0xFCu;
+	}
+}
+
+zCOLOR zCVob::GetLightColorStatGroundPoly()
+{
+	zCOLOR unused;
+	if (flags1.visualAlphaEnabled)
+		 unused = GetLightColorStat();
+
+	return lightColorStat;
+}
+
+void zCVob::SetOnTimer(zCVob *this, float deltaTime)
+{
+	nextOnTimer = ztimer.totalTimeFloat + deltaTime;
+
+	if ( !flags2.sleepingMode )
+		SetSleepingMode(2);
+}
+
+void zCVob::ProcessOnTimer()
+{
+	if ( ztimer.totalTimeFloat >= nextOnTimer ) {
+		nextOnTimer = std::numeric_limits<float>::max();
+		OnTimer();
+	}
+}
+
+void zCVob::DeleteGroundShadowMesh()
+{
+	Release(zCVob::s_shadowMesh);
+}
+
+void zCVob::SetGroundShadowSize(zVEC2 const& dimensions)
+{
+	int x = dimensions->x * 8.0;
+	int y = dimensions->y * 8.0;
+	groundShadowSizePacked = x | (y << 16);
+	return groundShadowSizePacked;
+}
+
+zVEC2 zCVob::GetGroundShadowSize()
+{
+	auto x = groundShadowSizePacked & 0xFFFF;
+	auto y = (groundShadowSizePacked & 0xFFFF0000) >> 16;
+	return {x * 0.125, y * 0.125};
+}
+
+zCMover* zCVob::GetAutoLinkParent(zCVob* vob)
+{
+	if (!HasParent())
+		return nullptr;
+
+	auto tree = vob->globalVobTreeNode;
+	auto parent = dynamic_cast<zCMover>(tree->parent->data);
+
+	if (!parent->autoLinkEnabled)
+		return nullptr;
+
+	return parent;
+}
+
+void zCVob::SetAI(zCAIBase* newai)
+{
+	if ( callback_ai != newai ) {
+		Release(callback_ai);
+		callback_ai = newai;
+		AddRef(newai);
 	}
 }

@@ -1,5 +1,7 @@
-class oCTouchDamage {
- virtual void _GetClassDef();
- virtual void ~oCTouchDamage(uint);
- virtual void GetDamageTypeArcEnum(ulong);
+class oCTouchDamage : zCTouchDamage {
+	Z_OBJECT(oCTouchDamage);
+public:
+	virtual ~oCTouchDamage() = default;
+
+	virtual void GetDamageTypeArcEnum(ulong);
 };

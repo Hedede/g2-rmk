@@ -1,4 +1,19 @@
 struct zCVobLightData {
+	void SetRange(float r, int doBackup)
+	{
+		if (r < 0.0f)
+			r = 0.0f;
+
+		range = r;
+
+		if (range == 0.0f)
+			rangeInv = std::numeric_limits<float>::max();
+		rangeInv = 1.0 / r;
+
+		if ( doBackup )
+			rangeBackup = r;
+	}
+
 	zCArray<zVALUE>       rangeAniScaleList;
 	zCArray<zCOLOR>       colorAniList;
 	int                   lensFlareFXNo;
@@ -96,9 +111,31 @@ public:
 	virtual void EndMovement(int);
 	virtual void ThisVobAddedToWorld(zCWorld*);
 
+	void SetRange(float r, int doBackup);
+
 private:
 	zCVobLightData lightData;
 	// affected polys
 	zTRayTurboValMap<zCPolygon *, int> lightMap;
 	zSTRING lightPreset;
 };
+
+void zCVobLight::SetRange(float r, int doBackup)
+{
+	lightData.SetRange(r, doBackup);
+
+	zTBBox3D tmp;
+	tmp.mins[0] = -lightData.range;
+	tmp.mins[1] = -lightData.range;
+	tmp.mins[2] = -lightData.range;
+	tmp.maxs[0] = lightData.range;
+	tmp.maxs[1] = lightData.range;
+	tmp.maxs[2] = lightData.range;
+
+	SetBBox3DLocal(tmp);
+
+	if ( doBackup ) {
+		if ( homeWorld )
+			homeWorld->bspTree.AdjustVob(this);
+	}
+}

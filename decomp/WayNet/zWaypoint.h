@@ -23,7 +23,7 @@ public:
 
 	virtual void CanBeUsed(zCVob const *);
 
-	int zCWaypoint::GetNumberOfWays() const
+	int GetNumberOfWays() const
 	{
 		return wayList.GetNumInList();
 	}
@@ -47,6 +47,8 @@ public:
 
 		AddRef(wpvob);
 	}
+
+	void Draw() {}
 
 private:
 	// Kürzeste Weg Suche durch das zCWaynet

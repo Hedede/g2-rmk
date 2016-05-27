@@ -1,13 +1,16 @@
-/* address of the pointer that points to the current MusicZone.
-   poorly tested, was null most of the time, don't know why. */
-const int oCZoneMusic__s_musiczone_Address = 10111524; //0x9A4A24 //oCZoneMusic*
-
 class oCZoneMusic : public zCZoneMusic {
 	Z_OBJECT(oCZoneMusic);
+
+/* from Ikarus pack:
+ * pointer that points to the current MusicZone.
+   poorly tested, was null most of the time, don't know why. */
+	static oCZoneMusic* s_musiczone;
 public:
-	virtual void Archive(zCArchiver& arc);
-	virtual void Unarchive(zCArchiver& arc);
-	virtual void ~oCZoneMusic(uint);
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
+
+	virtual ~oCZoneMusic() = default;
+
 	virtual void ProcessZoneList(zCArraySort<zCZone *> const &,zCArraySort<zCZone *> const &,zCWorld *);
 	virtual void GetDefaultZoneClass();
 	virtual void GetDebugDescString();
@@ -35,7 +38,7 @@ private:
 class oCZoneMusicDefault : public oCZoneMusic {
 	Z_OBJECT(oCZoneMusicDefault);
 public:
-	virtual ~oCZoneMusicDefault();
+	virtual ~oCZoneMusicDefault() = default;
 };
 
 void oCZoneMusic::Archive(zCArchiver& arc)

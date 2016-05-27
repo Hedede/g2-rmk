@@ -1,0 +1,3 @@
+struct zCShader {
+	~zCShader() = default;
+};

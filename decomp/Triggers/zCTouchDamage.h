@@ -1,10 +1,11 @@
 class zCTouchDamage : public zCEffect {
 	Z_OBJECT(zCTouchDamage);
 public:
-	virtual void _GetClassDef();
-	virtual void Archive(zCArchiver& arc);
-	virtual void Unarchive(zCArchiver& arc);
-	virtual void ~zCTouchDamage(uint);
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
+
+	virtual ~zCTouchDamage() = default;
+
 	virtual void OnTouch(zCVob *);
 	virtual void OnUntouch(zCVob *);
 	virtual void OnTimer();
@@ -16,7 +17,6 @@ public:
 	}
 
 private:
-
 	float damage;
 	int damageType;
 	float damageRepeatDelaySec;

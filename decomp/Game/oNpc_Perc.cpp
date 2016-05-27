@@ -66,7 +66,7 @@ int percType, zCVob* source, zVEC3 const& position, zCVob* victimVob, int setVic
 	int movmode = 0;
 	if ( sourceNpc ) {
 		movmode = sourceNpc->isInMovementMode & 3
-		if (movmode != 0 )
+		if (movmode != 0)
 			sourceNpc->EndMovement(1);
 	}
 

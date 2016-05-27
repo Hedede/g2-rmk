@@ -74,16 +74,44 @@ public:
 		return visual;
 	}
 
-	zVEC3 GetPositionWorld() const;
+	void SetBBox3DWorld(zTBBox3D const& bbox);
+	void SetPositionWorld(zVEC3 const& pos);
+
+	void Move(float x, float y, float z);
+	void MoveWorld(float x, float y, float z);
 	void GetPositionWorld(float& x, float& y, float& z) const;
+
+	zVEC3 GetPositionWorld() const;
+	zVEC3 GetPositionLocal() const;
+
 	zVEC3 GetAtVectorWorld() const;
 	zVEC3 GetUpVectorWorld() const;
 	zVEC3 GetRightVectorWorld() const;
 
+	void SetRotationWorld(zCQuat const& quat);
 
 	void RotateWorldX(float angle);
 	void RotateWorldY(float angle);
 	void RotateWorldZ(float angle);
+
+	void RotateLocalX(float angle);
+	void RotateLocalY(float angle);
+	void RotateLocalZ(float angle);
+
+	float GetDistanceToVob(zCVob& vob)
+	{
+		return (GetPositionWorld() - vob.GetPositionWorld()).Length();
+	}
+
+	float GetDistanceToVob2(zCVob& vob)
+	{
+		return (GetPositionWorld() - vob.GetPositionWorld()).Length2();
+	}
+
+	float GetDistanceToVobApprox(zCVob& vob)
+	{
+		return (GetPositionWorld() - vob.GetPositionWorld()).LengthApprox();
+	}
 
 	virtual void GetScriptInstance(zSTRING*& outname, int& outidx)
 	{
@@ -113,6 +141,8 @@ public:
 	void RemoveVobFromWorld();
 	void RemoveVobSubtreeFromWorld();
 	void RemoveVobFromBspTree();
+
+	void ReleaseVobSubtree(zCTree<zCVob>* node = nullptr);
 
 	void DoneWithTrafoLocal();
 
@@ -174,6 +204,7 @@ public:
 	{
 		return collisionObject;
 	}
+	zCRigidBody* GetRigidBody();
 
 	zMAT4 GetNewTrafoObjToWorld() const
 	{
@@ -218,12 +249,27 @@ public:
 	void SetVobName(zSTRING const& name);
 
 	void SetOnTimer(float deltaTime);
+
+private:
+	struct zTCollisionContext {
+		~zTCollisionContext() = default;
+
+		zCArray<zCCollisionObject*> collObjects;
+		zCArray<zCVob*> vobList;
+	};
+
+	// const? бред
+	void CleanupCollisionContext(zTCollisionContext const& context);
+
 private:
 	static void DeleteGroundShadowMesh();
 	void SetGroundShadowSize(zVEC2 const& dimensions);
 	zVEC2 GetGroundShadowSize();
 
 	void ProcessOnTimer();
+
+	void SetInMovement(int inMovement);
+	void SetInMovementMode(zCVob::zTMovementMode mode);
 
 public:/* Unused */
 	static uint32_t GetNextFreeVobID()

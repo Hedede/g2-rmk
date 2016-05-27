@@ -77,8 +77,7 @@ enum GuildId {
 	GIL_MAX = 66,
 };
 
-class oCGuilds {
-public:
+struct oCGuilds {
 	static zSTRING GetGuildName(int guild)
 	{
 		zCPar_Symbol* txt_guilds = zparser->GetSymbol("TXT_GUILDS");
@@ -134,6 +133,42 @@ private:
 	uint8_t* attitudes;
 };
 
+struct oTGilValues {
+	oTGilValues() = default;
+	~oTGilValues() = default;
+
+	int water_depth_knee[GIL_MAX];
+	int water_depth_chest[GIL_MAX];
+	int jumpup_height[GIL_MAX];
+	int swim_time[GIL_MAX];
+	int dive_time[GIL_MAX];
+	int step_height[GIL_MAX];
+	int jumplow_height[GIL_MAX];
+	int jumpmid_height[GIL_MAX];
+	int slide_angle[GIL_MAX];
+	int slide_angle2[GIL_MAX];
+	int disable_autoroll[GIL_MAX];
+	int surface_align[GIL_MAX];
+	int climb_heading_angle[GIL_MAX];
+	int climb_horiz_angle[GIL_MAX];
+	int climb_ground_angle[GIL_MAX];
+	int fight_range_base[GIL_MAX];
+	int fight_range_fist[GIL_MAX];
+	int fight_range_g[GIL_MAX];
+	int fight_range_1hs[GIL_MAX];
+	int fight_range_1ha[GIL_MAX];
+	int fight_range_2hs[GIL_MAX];
+	int fight_range_2ha[GIL_MAX];
+	int falldown_height[GIL_MAX];
+	int falldown_damage[GIL_MAX];
+	int blood_disabled[GIL_MAX];
+	int blood_max_distance[GIL_MAX];
+	int blood_amount[GIL_MAX];
+	int blood_flow[GIL_MAX];
+	zSTRING blood_emitter[GIL_MAX];
+	zSTRING blood_texture[GIL_MAX];
+	int turn_speed[GIL_MAX];
+};
 
 void oCGuilds::InitGuildTable(zSTRING const& tableName)
 {

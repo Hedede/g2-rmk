@@ -92,6 +92,7 @@ public:
 	void ThisVobAddedToWorld(zCWorld* world) override;
 	void ThisVobRemovedFromWorld(zCWorld* world) override;
 
+	void InitByScript(int nr, int anz);
 	virtual void Init(void);
 
 	int GetInstance() const override
@@ -285,6 +286,8 @@ public:
 		return ceil(val);
 	}
 
+	zSTRING GetStatus() const;
+
 	int GetHealMode(int& value) const;
 
 	int GetStateEffectFunc(int stateNr)
@@ -327,6 +330,8 @@ public:
 			Release(effectVob);
 		}
 	}
+
+	void InsertEffect();
 
 	zSTRING GetEffectName() const
 	{
@@ -545,6 +550,64 @@ void oCItem::Init()
 	}
 }
 
+void oCItem::InitByScript(int nr, int anz)
+{
+	static class_index = -1;
+	if ( class_index < 0 ) {
+		class_index = zparser.GetIndex("C_ITEM");
+		zparser.CheckClassSize(class_index, 524);
+	}
+
+	instanz = nr;
+	zparser.CreateInstance(nr, this);
+
+	flags |= mainflag;
+	amount = anz;
+
+	if ( damage[0] ) {
+		zWARNING("R: ITEM: item \"" + name + "\" causes DAM_INDEX_BARRIER damage. Most likely it contains an assignment to DAMAGE instead of DAMAGETOTAL !!!"); // 412, Ulf
+	}
+
+	ApplyDamages(damageType, damage, damageTotal);
+
+	item_visual.Upper();
+
+	if ( !item_visual.IsEmpty()) {
+		if ( item_visual.Search(0, ".ZEN", 1u) > 0 && !s_LoadingGame ) {
+			SetVisual(0);
+			SetCollDetStat(0);
+			SetCollDetDyn(0);
+
+			zoptions.ChangeDir(DIR_WORLD);
+
+			ogame->GetGameWorld()->AddVob(this);
+			SetPositionWorld({0,0,0});
+
+			auto t = ogame->GetWorld()->MergeVobSubtree(&item_visual, 0, 0);
+			if ( t ) {
+				t->SetCollDetStat(0);
+				t->SetCollDetDyn(0);
+				t->SetPositionWorld({0,0,0});
+				SetTrafoObjToWorld(t->trafoObjToWorld);
+
+				t->AddRefVobSubtree(0, 1);
+
+				ogame->GetWorld()->RemoveVobSubtree(t);
+				ogame->GetWorld()->AddVobAsChild(t, this);
+				ogame->GetWorld()->RemoveVobSubtree(this);
+			} else {
+				zWARNING("C: oCItem::InitByScript(): could not merge subtree for item " + name + " possible cause: visual " + item_visual + " does not exist or is corrupt!"); // 445
+			}
+		}
+	}
+
+	type = VOB_TYPE_ITEM;
+	int a, b;
+	auto name = zparser.GetSymbolInfo(nr, a, b);
+
+	SetVobName(name);
+}
+
 void oCItem::ThisVobAddedToWorld(zCWorld* world)
 {
 	struct zCRigidBody *v3; // eax@7
@@ -729,6 +792,18 @@ int GetHealMode(int& value)
 	return 0;
 }
 
+zSTRING oCItem::GetStatus() const
+{
+	int hp_perc = 100 * hp / hp_max;
+	int status = 0;
+	if (hp_perc > 0)
+		 status = (hp_perc - 1) / 10;
+	if (status > 9)
+		status = 9;
+
+	return zparser.GetText(oCText::TXT_ATR_HP, status);
+}
+
 void oCItem::AddManipulation()
 {
 	if ( c_manipulation > 0 ) {
@@ -740,4 +815,71 @@ void oCItem::AddManipulation()
 	auto timer = ogame->GetWorldTimer();
 	last_manipulation = timer->GetFullTime();
 	++c_manipulation;
+}
+
+void oCItem::InsertEffect()
+{
+	if ( oCItem::s_bItemEffectEnabled && !effectVob && !effect.IsEmpty() ) {
+		effectVob = oCVisualFX::CreateAndPlay(effect, this, 0, 1, 0.0, 0, 0);
+		if ( effectVob ) {
+			if ( visual )
+				effectVob->SetPFXShapeVisual(visual, 0);
+		} else {
+			zWARNING("C: effect" + effect + " could not be started for item " + GetName()); // 850, oItem.cpp, Ulf
+		}
+	}
+}
+
+void oCItem::RenderItem(zCWorld* world, zCViewBase* viewItem, float addon)
+{
+	auto active = zCCamera::activeCam;
+	auto light  = playerLightInt;
+
+	zCCamera cam;
+	auto vob = new zCVob();
+
+	SetPositionWorld({0,0,0});
+
+	if ( addon == 0.0 )
+		RotateForInventory(1.0);
+	else
+		RotateInInventory();
+
+	groundPoly = 0;
+
+	world->AddVob(this);
+	world->AddVob(vob);
+
+	cam.connectedVob = vob;
+
+	playerLightInt = 5000;
+
+	RenderItemPlaceCamera(cam, addon);
+
+	cam.SetRenderTarget(viewItem);
+	cam.SetFarClipZ(FLT_MAX);
+
+	world->bspTree.drawVobBBox3D = 0;
+
+	lastTimeDrawn = -1;
+
+	bspTree.bspTreeMode = 0;
+
+	world->GetActiveSkyControler()->Render(0);
+
+	zCEventManager::disableEventManagers = 1;
+
+	int abf = 1;
+	zrenderer->SetAlphaBlendFunc(&abf);
+
+	world->Render(cam);
+
+	zCEventManager::disableEventManagers = 0;
+
+	world->RemoveVob(vob);
+	world->RemoveVobSubtree(this);
+
+	Release(vob);
+	zCCamera::activeCam = active;
+	playerLightInt = light;
 }

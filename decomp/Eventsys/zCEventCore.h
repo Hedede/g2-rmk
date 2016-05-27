@@ -10,17 +10,41 @@ public:
 		DAMAGE,
 	};
 
-	virtual void Archive(zCArchiver& arc);
-	virtual void Unarchive(zCArchiver& arc);
-	virtual ~zCEventCore();
-	virtual void IsNetRelevant();
-	virtual int MD_GetNumOfSubTypes()
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
+
+	~zCEventCore() override = default;
+
+	bool IsNetRelevant() override
+	{
+		return subType < TOUCH || subType > TOUCHLEVEL;
+	}
+	int MD_GetNumOfSubTypes() override
 	{
 		return 6;
 	}
-	virtual void MD_GetSubTypeString(int);
+	void MD_GetSubTypeString(int type) override;
+
 	virtual void Pack(zCBuffer &,zCEventManager *);
 	virtual void Unpack(zCBuffer &,zCEventManager *);
+
+	void Clear()
+	{
+		_vob1 = 0;
+		_vob2 = 0;
+		_vob3 = 0;
+		damage = 0;
+		damageType = 0;
+		hitLocation = {0,0,0};
+	}
+
+private:
+	zCVob *__vob1;
+	zCVob *__vob2;
+	float damage;
+	int damageType;
+	zCVob *__bov3;
+	zVEC3 hitLocation;
 };
 
 zSTRING zCEventCore::MD_GetSubTypeString(int type);

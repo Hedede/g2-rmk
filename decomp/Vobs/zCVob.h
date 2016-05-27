@@ -39,10 +39,15 @@ public:
 		zVEC3 center;
 	};
 
+	static void ResetIDCtr()
+	{
+		s_nextFreeID = 0;
+	}
+
 	virtual ~zCVob();
 
-	virtual void Archive(zCArchiver& arc);
-	virtual void Unarchive(zCArchiver& arc);
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
 
 	virtual void OnTrigger(zCVob *,zCVob *) { }
 	virtual void OnUntrigger(zCVob *,zCVob *) { }
@@ -74,32 +79,22 @@ public:
 		return visual;
 	}
 
-	zVEC3 GetPositionWorld() const
+	zVEC3 GetPositionWorld() const;
+	zVEC3 GetAtVectorWorld() const;
+	zVEC3 GetUpVectorWorld() const;
+	zVEC3 GetRightVectorWorld() const;
+
+	zMAT4 GetNewTrafoObjToWorld() const
 	{
-		return {trafoObjToWorld[2][3],
-		        trafoObjToWorld[1][3],
-		        trafoObjToWorld[0][3]};
+		if (isInMovementMode)
+			return collisionObject->trafoObjToWorld;
+		return trafoObjToWorld;
 	}
 
-	zVEC3 GetAtVectorWorld() const
+	void SetNewTrafoObjToWorld(zMAT4 const& newTrafo)
 	{
-		return {trafoObjToWorld[2][2],
-		        trafoObjToWorld[1][2],
-		        trafoObjToWorld[0][2]};
-	}
-
-	zVEC3 GetUpVectorWorld() const
-	{
-		return {trafoObjToWorld[2][1],
-		        trafoObjToWorld[1][1],
-		        trafoObjToWorld[0][1]};
-	}
-
-	zVEC3 GetRightVectorWorld() const
-	{
-		return {trafoObjToWorld[2][0],
-		        trafoObjToWorld[1][0],
-		        trafoObjToWorld[0][0]};
+		if (isInMovementMode)
+			collisionObject->trafoObjToWorld = newTrafo;
 	}
 
 	virtual void GetScriptInstance(zSTRING*& outname, int& outidx)
@@ -124,17 +119,27 @@ public:
 		return 0;
 	}
 
-	virtual void ThisVobAddedToWorld(zCWorld* world)
-	{
-		if ( visual )
-			visual->HostVobAddedToWorld(this, world);
-	}
+	virtual void ThisVobAddedToWorld(zCWorld* world);
+	virtual void ThisVobRemovedFromWorld(zCWorld* world);
 
-	virtual void ThisVobRemovedFromWorld(zCWorld *);
+	void RemoveVobFromWorld();
+	void RemoveVobSubtreeFromWorld();
+	void RemoveVobFromBspTree();
+
+	bool HasParentVob() const;
+
+	void AddVobToWorld_CorrectParentDependencies();
 
 	zCWorld* GetHomeWorld() const
 	{
 		return homeWorld;
+	}
+
+	void GetEM(int doNotCreate = 0);
+
+	bool IsOnTimer() const
+	{
+		return nextOnTimer < std::numeric_limits<float>::max();
 	}
 
 	void SetSleeping(int sleep)
@@ -145,15 +150,51 @@ public:
 			SetSleepingMode(1);
 	}
 
-	void GetEM(int doNotCreate = 0);
+	void SetDrawBBox3D(int b)
+	{
+		flags.drawBBox3D = b;
+	}
 
+	void SetStaticVob(int b)
+	{
+		flags.staticVob = b;
+	}
+
+	void SetCollDet(int b)
+	{
+		SetCollDetStat(b);
+		SetCollDetDyn(b);
+	}
+
+	void CreateCollisionObject();
 	zCCollisionObject* GetCollisionObject()
 	{
 		return collisionObject;
 	}
 
-	/* Unused */
+	void TouchMovement()
+	{
+		collisionObject->flags |= 1;
+	}
 
+	bool GetIsProjectile() const
+	{
+		if (callback_ai)
+			return callback_ai->GetIsProjectile();
+		return false;
+	}
+
+	int GetVobType() const
+	{
+		return type;
+	}
+
+	const zSTRING* GetSectorNameVobIsIn() const
+	{
+		return homeWorld->bspTree.GetSectorNameVobIsIn(this);
+	}
+
+	/* Unused */
 	static uint32_t GetNextFreeVobID()
 	{
 		return zCVob::s_nextFreeID;
@@ -227,12 +268,12 @@ private:
 	float nextOnTimer;
 
 	struct {
-		uint32_t showVisual                : 1;
-		uint32_t drawBBox3D                : 1;
-		uint32_t visualAlphaEnabled        : 1;
-		uint32_t physicsEnabled            : 1;
-		uint32_t staticVob                 : 1;
-		uint32_t ignoredByTraceRay         : 1;
+		uint32_t showVisual                : 1; // 1
+		uint32_t drawBBox3D                : 1; // 2
+		uint32_t visualAlphaEnabled        : 1; // 4
+		uint32_t physicsEnabled            : 1; // 8
+		uint32_t staticVob                 : 1; // 0x10
+		uint32_t ignoredByTraceRay         : 1; // 0x20
 		uint32_t collDetectionStatic       : 1;
 		uint32_t collDetectionDynamic      : 1;
 		uint32_t castDynShadow             : 2;
@@ -260,77 +301,3 @@ private:
 	zCCollisionObjectDef* collisionObjectClass;
 	zCCollisionObject*    collisionObject;
 };
-
-void zCVob::Archive(zCArchiver& arc)
-{
-	if ( arc.InSaveGame() || arc.InBinaryMode() )
-		ArchivePacked(arc);
-	else
-		ArchiveVerbose(arc);
-
-	if ( arc.InSaveGame() ) {
-		arc.WriteByte("sleepMode", flags.sleepingMode);
-
-		float nextOnTimer = this->nextOnTimer;
-		if ( nextOnTimer < std::numeric_limits<float>::max) // 3.4028235e38
-			nextOnTimer -= _unk_starttime;
-
-		arc.WriteFloat("nextOnTimer", nextOnTimer);
-
-		if ( flags.physicsEnabled )
-			GetRigidBody()->Archive(arc);
-	}
-}
-
-
-void zCVob::Unarchive(zCArchiver& arc)
-{
-	nextOnTimer = std::numeric_limits<float>::max;
-
-	int pack = 0;
-	arc.ReadInt("pack", pack);
-
-	if ( pack )
-		UnarchivePacked(arc);
-	else
-		UnarchiveVerbose(arc);
-
-	if ( arc.InSaveGame() ) {
-		int sleepMode = arc.ReadByte("sleepMode");
-		SetSleepingMode(sleepMode);
-
-		arc.ReadFloat("nextOnTimer", nextOnTimer);
-		if (nextOnTimer < std::numeric_limits<float>::max)
-			nextOnTimer += _unk_starttime;
-
-		if ( flags.physicsEnabled )
-			GetRigidBody()->Unarchive(arc);
-	}
-
-	if ( visual ) {
-		if ( !isInMovementMode )
-			BeginMovement();
-
-		if ( visual->IsBBox3DLocal() ) {
-			zTBBox3D trans;
-			visual->GetBBox3D()->Transform(trafoObjToWorld, trans)
-		} else {
-			bbox3D = visual->GetBBox3D();
-			TouchMovement();
-		}
-
-		if ( !isInMovementMode )
-			EndMovement(1);
-	}
-}
-
-zCEventManager* zCVob::GetEM(int doNotCreate)
-{
-	zCEventManager *result = eventManager;
-	if ( !result && !doNotCreate )
-	{
-		result = (*zfactory)->CreateEventManager(this);
-		this->eventManager = result;
-	}
-	return result;
-}

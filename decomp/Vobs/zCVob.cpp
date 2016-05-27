@@ -348,3 +348,152 @@ void zCVob::UnarchivePacked(zCArchiver& arc)
 		SetPhysicsEnabled((flags_pack2 >> 6) & 1);
 	}
 }
+
+void zCVob::Archive(zCArchiver& arc)
+{
+	if ( arc.InSaveGame() || arc.InBinaryMode() )
+		ArchivePacked(arc);
+	else
+		ArchiveVerbose(arc);
+
+	if ( arc.InSaveGame() ) {
+		arc.WriteByte("sleepMode", flags.sleepingMode);
+
+		float nextOnTimer = this->nextOnTimer;
+		if ( nextOnTimer < std::numeric_limits<float>::max) // 3.4028235e38
+			nextOnTimer -= _unk_starttime;
+
+		arc.WriteFloat("nextOnTimer", nextOnTimer);
+
+		if ( flags.physicsEnabled )
+			GetRigidBody()->Archive(arc);
+	}
+}
+
+void zCVob::Unarchive(zCArchiver& arc)
+{
+	nextOnTimer = std::numeric_limits<float>::max;
+
+	int pack = 0;
+	arc.ReadInt("pack", pack);
+
+	if ( pack )
+		UnarchivePacked(arc);
+	else
+		UnarchiveVerbose(arc);
+
+	if ( arc.InSaveGame() ) {
+		int sleepMode = arc.ReadByte("sleepMode");
+		SetSleepingMode(sleepMode);
+
+		arc.ReadFloat("nextOnTimer", nextOnTimer);
+		if (nextOnTimer < std::numeric_limits<float>::max)
+			nextOnTimer += _unk_starttime;
+
+		if ( flags.physicsEnabled )
+			GetRigidBody()->Unarchive(arc);
+	}
+
+	if ( visual ) {
+		if ( !isInMovementMode )
+			BeginMovement();
+
+		if ( visual->IsBBox3DLocal() ) {
+			zTBBox3D trans;
+			visual->GetBBox3D()->Transform(trafoObjToWorld, trans)
+		} else {
+			bbox3D = visual->GetBBox3D();
+			TouchMovement();
+		}
+
+		if ( !isInMovementMode )
+			EndMovement(1);
+	}
+}
+
+zVEC3 zCVob::GetPositionWorld() const
+{
+	return {trafoObjToWorld[2][3], trafoObjToWorld[1][3], trafoObjToWorld[0][3]};
+}
+
+zVEC3 zCVob::GetAtVectorWorld() const
+{
+	return {trafoObjToWorld[2][2], trafoObjToWorld[1][2], trafoObjToWorld[0][2]};
+}
+
+zVEC3 zCVob::GetUpVectorWorld() const
+{
+	return {trafoObjToWorld[2][1], trafoObjToWorld[1][1], trafoObjToWorld[0][1]};
+}
+
+zVEC3 zCVob::GetRightVectorWorld() const
+{
+	return {trafoObjToWorld[2][0], trafoObjToWorld[1][0], trafoObjToWorld[0][0]};
+}
+
+zCEventManager* zCVob::GetEM(int doNotCreate)
+{
+	zCEventManager *result = eventManager;
+	if ( !result && !doNotCreate )
+	{
+		result = (*zfactory)->CreateEventManager(this);
+		this->eventManager = result;
+	}
+	return result;
+}
+
+void zCVob::ThisVobAddedToWorld(zCWorld* world)
+{
+	if ( visual )
+		visual->HostVobAddedToWorld(this, world);
+}
+
+void zCVob::ThisVobRemovedFromWorld(zCWorld* world)
+{
+	if ( visual )
+		visual->HostVobRemovedFromWorld(this, world);
+}
+
+void zCVob::RemoveVobFromWorld()
+{
+	if ( homeWorld )
+		homeWorld->RemoveVob(this);
+}
+
+void zCVob::RemoveVobSubtreeFromWorld()
+{
+	if ( homeWorld )
+		homeWorld->RemoveVobSubtree(this);
+}
+
+void zCVob::RemoveVobFromBspTree()
+{
+	if ( homeWorld )
+		homeWorld->bspTree.RemoveVob(this);
+}
+
+void zCVob::HasParentVob() const
+{
+	if ( globalVobTreeNode ) {
+		auto parent = globalVobTreeNode->parent;
+		if ( parent ) {
+			if ( parent->data )
+				return true;
+		}
+	}
+	return false;
+}
+
+void zCVob::AddVobToWorld_CorrectParentDependencies()
+{
+	if (HasParentVob()) // was inlined
+		CreateTrafoLocal();
+}
+
+void zCVob::CreateCollisionObject()
+{
+	if ( !collisionObject ) {
+		collisionObject = collisionObjectClass->CreateNewInstance();
+		collisionObject->parent = this;
+	}
+}

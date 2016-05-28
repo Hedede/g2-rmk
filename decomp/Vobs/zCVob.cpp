@@ -411,6 +411,40 @@ void zCVob::Unarchive(zCArchiver& arc)
 	}
 }
 
+void zCVob::PackStateBinary(zCBuffer *buffer)
+{
+	buffer->SetMode(1);
+	auto pos = trafoObjToWorld.GetTranslation();
+	auto rot = trafoObjToWorld.GetEulerAngles();
+	buffer->WriteFloat(pos.x, 32);
+	buffer->WriteFloat(pos.y, 32);
+	buffer->WriteFloat(pos.z, 32);
+	buffer->WriteFloat(rot.x, 32);
+	buffer->WriteFloat(rot.y, 32);
+	buffer->WriteFloat(rot.z, 32);
+}
+
+void zCVob::UnpackStateBinary(zCBuffer *buffer)
+{
+	zCBuffer::SetMode(buffer, 0);
+
+	zVEC3 pos, rot;
+	pos.x = zCBuffer::ReadFloat(buffer, 32);
+	pos.y = zCBuffer::ReadFloat(buffer, 32);
+	pos.z = zCBuffer::ReadFloat(buffer, 32);
+	rot.x = zCBuffer::ReadFloat(buffer, 32);
+	rot.y = zCBuffer::ReadFloat(buffer, 32);
+	rot.z = zCBuffer::ReadFloat(buffer, 32);
+
+	BeginMovement();
+
+	SetPositionWorld(pos);
+	trafoObjToWorld.SetByEulerAngles(rot);
+	SetTrafoObjToWorld(trafoObjToWorld);
+
+	EndMovement(1);
+}
+
 void zCVob::SetBBox3DWorld(zTBBox3D const& bbox)
 {
 	if ( !visual ) {
@@ -419,6 +453,24 @@ void zCVob::SetBBox3DWorld(zTBBox3D const& bbox)
 			BeginMovement();
 
 		this->bbox3D = bbox;
+		collisionObject->flags |= 1u;
+
+		if (!movmode)
+			EndMovement(0);
+	}
+}
+
+void zCVob::SetBBox3DLocal(zTBBox3D const& bbox)
+{
+	if ( !visual ) {
+		int movmode = isInMovementMode;
+		if (!movmode)
+			BeginMovement();
+
+		bbox3D = bbox;
+		bbox3d.mins += GetPositionWorld();
+		bbox3d.maxs += GetPositionWorld();
+
 		collisionObject->flags |= 1u;
 
 		if (!movmode)
@@ -440,6 +492,27 @@ void zCVob::SetTrafoObjToWorld(zMAT4 const& intrafo)
 		EndMovement(1);
 }
 
+void zCVob::SetTrafo(zMAT4 const& newTrafo)
+{
+	int movmode = isInMovementMode;
+	if (!movmode)
+		BeginMovement();
+
+	auto parent = globalVobTreeNode->parent;
+	if (parent && parent->data) {
+		auto mat = parent->data->trafoObjToWorld * newTrafo;
+		collisionObject->trafoObjToWorld = mat;
+	} else {
+		collisionObject->trafoObjToWorld = newTrafo;
+	}
+
+	collisionObject->flags |= 1u;
+	collisionObject->flags |= 2u;
+
+	if (!movmode)
+		EndMovement(1);
+}
+
 void zCVob::SetPositionWorld(zVEC3 const& pos)
 {
 	int movmode = isInMovementMode;
@@ -447,6 +520,20 @@ void zCVob::SetPositionWorld(zVEC3 const& pos)
 		BeginMovement();
 
 	collisionObject->trafoObjToWorld.SetTranslation(pos);
+	collisionObject->flags |= 1u;
+
+	if (!movmode)
+		EndMovement(1);
+}
+
+void zCVob::SetPositionLocal(zVEC3 const& vec)
+{
+	int movmode = isInMovementMode;
+	if (!movmode)
+		BeginMovement();
+
+	auto inv = collisionObject->trafoObjToWorld.Inverse();
+	collisionObject->trafoObjToWorld.SetTranslation(vec * inv);
 	collisionObject->flags |= 1u;
 
 	if (!movmode)
@@ -585,6 +672,61 @@ void zCVob::RotateLocalZ(float angle)
 	}
 }
 
+void zCVob::RotateLocal(zVEC3 const& axis, float angle)
+{
+	if ( angle != 0.0 ) {
+		int movmode = isInMovementMode;
+		if (!movmode)
+			BeginMovement();
+
+		zMAT4 rot = Alg_Rotation3D(axis, angle)
+		zMAT4 mat = collisionObject->trafoObjToWorld * rot;
+
+		collisionObject->trafoObjToWorld = mat;
+		collisionObject->flags |= 2u;
+
+		if (!movmode)
+			EndMovement(1);
+	}
+}
+
+void zCVob::ResetRotationsWorld()
+{
+	auto movmode = isInMovementMode;
+	if ( !movmode )
+		BeginMovement();
+
+	auto pos = GetPositionWorld();
+	collisionObject->trafoObjToWorld = zMAT4::s_identity;
+	collisionObject->trafoObjToWorld.SetTranslation(pos); // didn't look up, was inlined
+
+	collisionObject->flags |= 2u;
+
+	if ( !movmode )
+		EndMovement(1);
+}
+
+void zCVob::UpdateVisualDependencies(int calcGround)
+{
+	if ( visual ) {
+		auto movmode = isInMovementMode;
+		if ( !movmode )
+			BeginMovement();
+
+		bool isLocal = visual->IsBBox3DLocal();
+		if ( isLocal ) {
+			auto bbox = visual->GetBBox3D();
+			bbox.Transform(this->trafoObjToWorld, this->bbox3D);
+		} else {
+			this->bbox3d = visual->GetBBox3D();
+			TouchMovement();
+		}
+
+		if ( !movmode )
+			EndMovement(1);
+	}
+}
+
 zCEventManager* zCVob::GetEM(int dontCreate)
 {
 	zCEventManager *result = eventManager;
@@ -637,6 +779,25 @@ void zCVob::ReleaseVobSubtree(zCTree<zCVob>* node)
 	}
 }
 
+void zCVob::AddRefVobSubtree(zCTree<zCVob>* node, int addTree)
+{
+	if (node || node = globalVobTreeNoe) {
+		auto data = node->data;
+		if ( data ) {
+			if ( addTree ) {
+				if (auto light = zDYNAMIC_CAST<zCVobLight>(data)) {
+					light->lightData.flags.isStatic = 1
+					// flags = flags & 0xFE ^ 1;
+				}
+			}
+			data->AddRef();
+		}
+
+		for (auto i = node->firstChild; i; i = i->next )
+			AddRefVobSubtree(i, 1);
+	}
+}
+
 void zCVob::SetVobName(zSTRING const& name)
 {
 	if ( homeWorld )
@@ -651,7 +812,7 @@ void zCVob::SetVobName(zSTRING const& name)
 void zCVob::DoneWithTrafoLocal(zCVob *this)
 {
 	if ( trafo ) {
-		if (!HasParent()) {
+		if (!HasParentVob()) {
 			trafoObjToWorld = trafo;
 			Delete(trafo);
 		}
@@ -676,12 +837,20 @@ void zCVob::AddVobToWorld_CorrectParentDependencies()
 		CreateTrafoLocal();
 }
 
+void zCVob::CreateTrafoLocal()
+{
+	if ( !trafo )
+		trafo = new zMAT4{};
+
+	CorrectTrafo(); // was inlined
+}
+
 void zCVob::CorrectTrafo()
 {
 	if ( trafo ) {
 		auto parent = globalVobTreeNode->parent;
 		if (parent && parent->data) {
-			auto ptrafo = parent->data->trafoObjToWorld;
+			auto& ptrafo = parent->data->trafoObjToWorld;
 			*trafo = ptrafo.InverseLinTrafo() * trafoObjToWorld
 		} else {
 			*trafo = trafoObjToWorld;
@@ -722,9 +891,26 @@ void zCVob::DestroyCollisionObject(int force)
 
 void zCVob::ResetCollisionObjectState()
 {
-	collisionObject->__unk_mat = trafoObjToWorld;
+	collisionObject->trafo = trafoObjToWorld;
 	collisionObject->trafoObjToWorld = trafoObjToWorld;
 	collisionObject->flags &= 0xFCu;
+}
+
+void zCVob::CollectCollisionContext(zTCollisionContext& context)
+{
+	zTBBox3D bbox1;
+	collisionObject->GetLargestBBox3DLocal(bbox1);
+
+	zTBBox3D bbox2;
+	bbox1.Transform(collisionObject->trafo, bbox2);
+	bbox1.Transform(collisionObject->trafoObjToWorld, bbox1);
+
+	bbox2.CalcGreaterBBox3D(bbox1);
+
+	context->collObjects.DeleteList(); // не помню имя метода
+
+	CollectCollisionContext_Vobs(bbox2, context);
+	CollectCollisionContext_Static(bbox2, context);
 }
 
 void zCVob::CleanupCollisionContext(zTCollisionContext const& context)
@@ -775,6 +961,24 @@ zCOLOR zCVob::GetLightColorStatGroundPoly()
 	return lightColorStat;
 }
 
+zCOLOR zCVob::CalcLightSampleAtOrigin()
+{
+	if ( homeWorld ) {
+		auto sta = GetLightColorStat();
+		auto dyn = GetLightColorDyn();
+
+		// dunno what's going on, some kind of
+		// optimization?
+		auto what = (dyn & 0xFEFEFF) + (sta & 0xFEFEFF);
+		auto what2 = what & 0x1010100;
+
+		return what | (what2 - (what2 >> 8));
+	}
+
+	// RGBA, лень смотреть как на самом деле
+	return {0,0,0,0xff};
+}
+
 void zCVob::SetOnTimer(zCVob *this, float deltaTime)
 {
 	nextOnTimer = ztimer.totalTimeFloat + deltaTime;
@@ -811,9 +1015,17 @@ zVEC2 zCVob::GetGroundShadowSize()
 	return {x * 0.125, y * 0.125};
 }
 
+zMAT4 zCVob::GetTrafoModelNodeToWorld(zCModelNodeInst* modelNode)
+{
+	if (auto model = zDYNAMIC_CAST<zCModel>(visual))
+		return trafoObjToWorld * model->GetTrafoNodeToModel(modelNode);
+
+	return trafoObjToWorld; // was weird loop
+}
+
 zCMover* zCVob::GetAutoLinkParent(zCVob* vob)
 {
-	if (!HasParent())
+	if (!HasParentVob())
 		return nullptr;
 
 	auto tree = vob->globalVobTreeNode;
@@ -832,4 +1044,25 @@ void zCVob::SetAI(zCAIBase* newai)
 		callback_ai = newai;
 		AddRef(newai);
 	}
+}
+
+// private
+void zCVob::AdoptCollObjResults()
+{
+	if ( collisionObject->flags & 3 ) {
+		trafoObjToWorld = collisionObject->trafoObjToWorld;
+		if (!flags2.mbHintTrafoLocalConst)
+			CorrectTrafo();
+	}
+
+	DestroyCollisionObject(0);
+}
+
+void zCVob::CleanupVobSystem()
+{
+	Release( zCVob::s_shadowMesh );
+
+	s_helperVisualMap.clear(); // don't know, bunch of nonsense
+
+	Delete( zCVob::s_poCollisionDetector );
 }

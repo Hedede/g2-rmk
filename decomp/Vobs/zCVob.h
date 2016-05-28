@@ -39,6 +39,8 @@ public:
 		s_nextFreeID = 0;
 	}
 
+	static void CleanupVobSystem();
+
 	virtual ~zCVob();
 
 	void Archive(zCArchiver& arc) override;
@@ -150,6 +152,8 @@ public:
 	zCMover* GetAutoLinkParent() const; // unused?
 
 	void AddVobToWorld_CorrectParentDependencies();
+	void CorrectTrafo();
+	void CreateTrafoLocal();
 
 	zCWorld* GetHomeWorld() const
 	{
@@ -260,6 +264,7 @@ private:
 
 	// const? бред
 	void CleanupCollisionContext(zTCollisionContext const& context);
+	void CollectCollisionContext(zTCollisionContext& context);
 
 private:
 	static void DeleteGroundShadowMesh();
@@ -363,8 +368,8 @@ private:
 
 	struct {
 		uint32_t sleepingMode              : 2;
-		uint32_t mbHintTrafoLocalConst     : 1;
-		uint32_t mbInsideEndMovementMethod : 1;
+		uint32_t mbHintTrafoLocalConst     : 1; // 4
+		uint32_t mbInsideEndMovementMethod : 1; // 8
 	} flags2;
 
 	uint8_t visualCamAlign;

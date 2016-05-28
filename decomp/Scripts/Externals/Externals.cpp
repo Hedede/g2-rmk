@@ -4540,7 +4540,7 @@ int AI_PlayFX()
 	auto parser = zCParser::GetParser();
 
 	auto inst = parser->GetInstance();
-	target = zDYNAMIC_CAST(inst);
+	target = zDYNAMIC_CAST<oCNpc>(inst);
 	npc = GetNpc("AI_PlayFX", 1);
 	if ( npc ) {
 		auto msg = new oCMsgConversation(22);

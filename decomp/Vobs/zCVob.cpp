@@ -478,6 +478,17 @@ void zCVob::SetBBox3DLocal(zTBBox3D const& bbox)
 	}
 }
 
+zTBBox3D zCVob::GetBBox3DLocal()
+{
+	if (visual && visual->IsBBox3DLocal())
+		return visual->GetBBox3D();
+
+	auto bb = bbox;
+	bb.mins -= trafoObjToWorld.GetTranslation();
+	bb.maxs -= trafoObjToWorld.GetTranslation();
+	return bb;
+}
+
 void zCVob::SetTrafoObjToWorld(zMAT4 const& intrafo)
 {
 	int movmode = isInMovementMode;
@@ -570,7 +581,7 @@ void zCVob::SetHeadingLocal(zVEC3 const& vec)
 	}
 }
 
-void zCVob::SetHeadingLocal(zVEC3 const& targetPos)
+void zCVob::SetHeadingYLocal(zVEC3 const& targetPos)
 {
 	int movmode = isInMovementMode;
 	if (!movmode)
@@ -585,28 +596,6 @@ void zCVob::SetHeadingLocal(zVEC3 const& targetPos)
 	}
 
 	ResetXZRotationsLocal();
-}
-
-void zCVob::Move(float x, float y, float z)
-{
-	MoveWorld(x,y,z);
-}
-
-void zCVob::MoveWorld(float x, float y, float z)
-{
-	int movmode = isInMovementMode;
-	if (!movmode)
-		BeginMovement();
-
-	auto& trafo = collisionObject->trafoObjToWorld;
-	trafo[0][2] += x;
-	trafo[1][2] += y;
-	trafo[2][2] += z;
-
-	collisionObject->flags |= 1u;
-
-	if (!movmode)
-		EndMovement(1);
 }
 
 zVEC3 zCVob::GetPositionWorld() const
@@ -659,83 +648,6 @@ void zCVob::SetRotationWorld(zCQuat const& quat)
 		EndMovement(1);
 }
 
-void zCVob::RotateWorldX(float angle)
-{
-	RotateWorld({1,0,0}, angle);
-}
-
-void zCVob::RotateWorldY(float angle)
-{
-	RotateWorld({0,1,0}, angle);
-}
-
-void zCVob::RotateWorldZ(float angle)
-{
-	RotateWorld({0,0,1}, angle);
-}
-
-void zCVob::RotateLocalX(float angle)
-{
-	if ( angle != 0.0 ) {
-		int movmode = isInMovementMode;
-		if (!movmode)
-			BeginMovement();
-
-		collisionObject->trafoObjToWorld.PostRotateX(angle);
-		collisionObject->flags |= 2u;
-
-		if (!movmode)
-			EndMovement(1);
-	}
-}
-
-void zCVob::RotateLocalY(float angle)
-{
-	if ( angle != 0.0 ) {
-		int movmode = isInMovementMode;
-		if (!movmode)
-			BeginMovement();
-
-		collisionObject->trafoObjToWorld.PostRotateY(angle);
-		collisionObject->flags |= 2u;
-
-		if (!movmode)
-			EndMovement(1);
-	}
-}
-
-void zCVob::RotateLocalZ(float angle)
-{
-	if ( angle != 0.0 ) {
-		int movmode = isInMovementMode;
-		if (!movmode)
-			BeginMovement();
-
-		collisionObject->trafoObjToWorld.PostRotateZ(angle);
-		collisionObject->flags |= 2u;
-
-		if (!movmode)
-			EndMovement(1);
-	}
-}
-
-void zCVob::RotateLocal(zVEC3 const& axis, float angle)
-{
-	if ( angle != 0.0 ) {
-		int movmode = isInMovementMode;
-		if (!movmode)
-			BeginMovement();
-
-		zMAT4 rot = Alg_Rotation3D(axis, angle)
-		zMAT4 mat = collisionObject->trafoObjToWorld * rot;
-
-		collisionObject->trafoObjToWorld = mat;
-		collisionObject->flags |= 2u;
-
-		if (!movmode)
-			EndMovement(1);
-	}
-}
 
 void zCVob::ResetRotationsWorld()
 {
@@ -843,6 +755,34 @@ void zCVob::AddRefVobSubtree(zCTree<zCVob>* node, int addTree)
 		for (auto i = node->firstChild; i; i = i->next )
 			AddRefVobSubtree(i, 1);
 	}
+}
+
+void zCVob::RemoveVobFromGlobalVobTree()
+{
+	if (!globalVobTreeNode)
+		return;
+
+	auto node = globalVobTreeNode->firstChild;
+	for (; node; node = node->firstChild)
+		// I reordered to make code look neater
+		// // I reordered to make code look neater
+		auto parent = globalVobTreeNode->parent;
+
+		node->data->DoneWithTrafoLocal();
+		node->RemoveSubtree();
+
+		if (parent)
+			parent->AddChild(node);
+		else
+			node->parent = 0;
+
+		globalVobTreeNode->parent;
+	}
+
+	if (globalVobTreeNode)
+		delete globalVobTreeNode;
+
+	globalVobTreeNode = 0;
 }
 
 void zCVob::SetVobName(zSTRING const& name)
@@ -1153,6 +1093,17 @@ zMAT4 zCVob::GetTrafoModelNodeToWorld(zCModelNodeInst* modelNode)
 		return trafoObjToWorld * model->GetTrafoNodeToModel(modelNode);
 
 	return trafoObjToWorld; // was weird loop
+}
+
+zMAT4 zCVob::GetTrafoNodeToModel(zSTRING const& modelNodeName)
+{
+	if (auto model = zDYNAMIC_CAST<zCModel>(visual)) {
+		auto node = model->SearchNode(modelNodeName);
+		if (node)
+			return GetTrafoNodeToModel(node);
+	}
+
+	return trafoObjToWorld;
 }
 
 zCMover* zCVob::GetAutoLinkParent(zCVob* vob)

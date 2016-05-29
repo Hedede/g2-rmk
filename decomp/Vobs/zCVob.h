@@ -78,6 +78,11 @@ public:
 
 	void SetBBox3DWorld(zTBBox3D const& bbox);
 	void SetPositionWorld(zVEC3 const& pos);
+	void SetHeadingWorld(zVEC3 const& targetPos);
+	void SetHeadingWorld(zCVob* targetVob)
+	{
+		SetHeadingWorld(targetVob->GetPositionWorld());
+	}
 
 	void Move(float x, float y, float z);
 	void MoveWorld(float x, float y, float z);
@@ -375,8 +380,8 @@ private:
 	uint8_t visualCamAlign;
 
 	struct {
-		uint32_t collButNoMove            : 4;
-		uint32_t dontWriteIntoArchive     : 1;
+		uint32_t collButNoMove            : 4; // 8 4 2 1
+		uint32_t dontWriteIntoArchive     : 1; // 0x10
 		uint32_t isInWater                : 1;
 		uint32_t isAmbientVob             : 1;
 	} flags3;

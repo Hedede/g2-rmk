@@ -540,6 +540,53 @@ void zCVob::SetPositionLocal(zVEC3 const& vec)
 		EndMovement(1);
 }
 
+void zCVob::SetHeadingWorld(zVEC3 const& vec)
+{
+	int movmode = isInMovementMode;
+	if (!movmode)
+		BeginMovement();
+
+	auto pos = collisionObject.trafoObjToWorld.GetTranslation();
+	auto diff = pos - vec;
+	if (diff.Length() > 0.0 ) {
+		SetHeadingAtWorld(diff.Normalized()); // didn't care to look up
+		if (!movmode)
+			EndMovement(1);
+	}
+}
+
+void zCVob::SetHeadingLocal(zVEC3 const& vec)
+{
+	int movmode = isInMovementMode;
+	if (!movmode)
+		BeginMovement();
+
+	auto pos = collisionObject->trafoObjToWorld.GetTranslation();
+	auto diff = pos - vec;
+	if (diff.Length() > 0.0 ) {
+		SetHeadingAtLocal(diff.Normalized()); // didn't care to look up
+		if (!movmode)
+			EndMovement(1);
+	}
+}
+
+void zCVob::SetHeadingLocal(zVEC3 const& targetPos)
+{
+	int movmode = isInMovementMode;
+	if (!movmode)
+		BeginMovement();
+
+	auto pos = collisionObject->trafoObjToWorld.GetTranslation();
+	auto diff = pos - vec;
+	if (diff.Length() > 0.0 ) {
+		SetHeadingAtLocal(diff.Normalized()); // didn't care to look up
+		if (!movmode)
+			EndMovement(1);
+	}
+
+	ResetXZRotationsLocal();
+}
+
 void zCVob::Move(float x, float y, float z)
 {
 	MoveWorld(x,y,z);
@@ -922,12 +969,97 @@ void zCVob::CleanupCollisionContext(zTCollisionContext const& context)
 	}
 }
 
+void zCVob::CalcWaterVob()
+{
+	if ( !GetCharacterClass() && !flags3.dontWriteIntoArchive) {
+		zVEC3 start{
+			(bbox3D.maxs[0] + bbox3D.mins[0]) * 0.5,
+			 bbox3D.maxs[1]
+			(bbox3D.maxs[2] + bbox3D.mins[2]) * 0.5
+		};
+		zVEC3 ray{0, 20000.0, 0};
+
+		homeWorld->TraceRayNearestHit(start, ray, 0, 0x222);
+
+		flags3.isInWater = !!homeWorld->foundPoly;
+	}
+}
+
 zCRigidBody* zCVob::GetRigidBody()
 {
 	if ( !rigidBody )
 		rigidBody = new zCRigidBody();
 	return rigidBody;
 }
+
+// private
+void zCVob::NotifyCollisionPair(zCCollisionReport *report, zCArray<zCCollisionReport*> const& collReportList, int simulateFurtherDummy)
+{
+	auto col1 = report->col1;
+	auto col2 = report->col2;
+	auto vob1 = col1->parent;
+	auto vob2 = col2->parent;
+
+	if ( col1->GetCollObjClass() == &zCCollObjectLevelPolys::s_oCollObjClass ) {
+		vob1->GetEM()->OnTouchLevel();
+	}
+
+	if ( vob1 && vob2 ) {
+		zCVob* vob = vob1;
+		if ( vob1 == this )
+			vob = vob2;
+
+		int dummy;
+		vob->collisionObject->CollisionResponse(collReportList, dummy);
+
+		if ( !simulateFurtherDummy ) {
+			vob1->GetEM()->OnTouch(vob2);
+			vob2->GetEM()->OnTouch(vob1);
+			vob2->GetEM()->OnUntouch(vob1);
+			vob1->GetEM()->OnUntouch(vob2);
+		}
+	}
+
+	if ( vob1 && vob1->callback_ai )
+		vob1->callback_ai->ReportCollisionToAI(report);
+
+	if ( vob2 && vob2->callback_ai )
+		vob2->callback_ai->ReportCollisionToAI(report);
+}
+
+// private
+void zCVob::ExecuteCollisionResponse(zCArray<zCCollisionReport*> const& collReportList, int& simulateFurther)
+{
+	int sf = simulateFurther;
+	simulateFurther = 0;
+
+	collReportList[0]->col1->CollisionResponse(collReportList, sf);
+
+	response.field_0 = simulateFurther;
+	std::string::_Tidy(&response, 0);
+	std::string::assign(&response, "response", strlen("response"));
+	std::string::_Tidy(&response, 1);
+	v7 = 0;
+	simulateFurther = 0;
+
+	for (auto& rep : collReportList) {
+		auto vob1 = rep->col1->parent;
+		auto vob2 = rep->col2->parent;
+		if ( vob1 && vob2 ) {
+			if ( vob1 != this )
+				vob2 = vob1;
+
+			vob2->collisionObject->CollisionResponse(collReportList, simulateFurther);
+		}
+
+		NotifyCollisionPair(rep, collReportList, 0);
+	}
+
+	flags2.mbHintTrafoLocalConst = true;
+}
+/* Orphan comments:
+011
+*/
 
 void zCVob::SetInMovement(int inMovement)
 {

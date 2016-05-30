@@ -1,13 +1,16 @@
 class zCVisual : zCObject {
+	Z_OBEJCT(zCVisual);
 public:
-	virtual zCClassDef* GetClassDef();
 	virtual ~zCVisual() = default;
-	virtual void unk() = 0;
-	virtual void IsBBox3DLocal(void);
-	virtual void unk() = 0;
-	virtual void GetOBBox3D(void);
-	virtual void unk() = 0;
-	virtual void GetVisualDied(void);
+
+	virtual void Render(zTRenderContext&) = 0;
+
+	virtual bool IsBBox3DLocal();
+	virtual zTBBox3D  GetBBox3D() = 0;
+	virtual zCOBBox3D GetOBBox3D();
+
+	virtual void GetVisualName() = 0;
+	virtual void GetVisualDied();
 	virtual void SetVisualUsedBy(zCVob *);
 	virtual void DynLightVisual(zCArray<zCVobLight *> const &,zMAT4 *);
 	virtual void GetRenderSortKey(void);
@@ -20,6 +23,7 @@ public:
 	virtual void GetAlphaTestingEnabled(void);
 	virtual void SetAlphaTestingEnabled(int);
 	virtual void LoadVisualVirtual(zSTRING const &);
+
 private:
 	zCVisual*   nextLODVisual;
 	zCVisual*   prevLODVisual;

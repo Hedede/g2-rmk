@@ -40,8 +40,11 @@ public:
 	virtual void SetPolySortMode(zTRnd_PolySortMode const &);
 	virtual void GetZBufferWriteEnabled();
 	virtual void SetZBufferWriteEnabled(int);
-	virtual void SetZBias(int);
-	virtual void GetZBias();
+	void SetZBias(int) override
+	int GetZBias() override
+	{
+		return zBias;
+	}
 	virtual void GetZBufferCompare();
 	virtual void SetZBufferCompare(zTRnd_ZBufferCmp const &);
 	virtual void GetPixelWriteEnabled();
@@ -59,18 +62,30 @@ public:
 	virtual void GetAlphaLimitReached();
 	virtual void AddAlphaPoly(zCPolygon const *);
 	virtual void FlushAlphaPolys();
-	virtual void SetRenderMode(zTRnd_RenderMode);
-	virtual void GetRenderMode();
+	void SetRenderMode(zTRnd_RenderMode);
+	zTRnd_RenderMode GetRenderMode() override
+	{
+		return renderMode;
+	}
 	virtual void HasCapability(zTRnd_Capability);
 	virtual void GetGuardBandBorders(float &,float &,float &,float &);
-	virtual void ResetZTest();
-	virtual void HasPassedZTest();
+	void ResetZTest() override {}
+	bool HasPassedZTest() override
+	{
+		return false;
+	}
 	virtual void CreateTexture();
 	virtual void CreateTextureConvert();
-	virtual void GetTotalTextureMem();
+	int GetTotalTextureMem() override
+	{
+		return totalTextureMem;
+	}
 	virtual void SupportsTextureFormat(zTRnd_TextureFormat);
 	virtual void SupportsTextureFormatHardware(zTRnd_TextureFormat);
-	virtual void GetMaxTextureSize();
+	int GetMaxTextureSize() override
+	{
+		return maxTexSize;
+	}
 	virtual void GetStatistics(zTRnd_Stats &);
 	virtual void ResetStatistics();
 	virtual void Vid_Blit(int,tagRECT *,tagRECT *);
@@ -79,22 +94,37 @@ public:
 	virtual void Vid_Unlock();
 	virtual void Vid_IsLocked();
 	virtual void Vid_GetFrontBufferCopy(zCTextureConvert &);
-	virtual void Vid_GetNumDevices();
-	virtual void Vid_GetActiveDeviceNr();
+	int Vid_GetNumDevices() override
+	{
+		return numDevices;
+	}
+	int Vid_GetActiveDeviceNr() override
+	{
+		return deviceNr;
+	}
 	virtual void Vid_SetDevice(int);
 	virtual void Vid_GetDeviceInfo(zTRnd_DeviceInfo &,int);
 	virtual void Vid_GetNumModes();
 	virtual void Vid_GetModeInfo(zTRnd_VidModeInfo &,int);
-	virtual void Vid_GetActiveModeNr();
+	int Vid_GetActiveModeNr() override
+	{
+		return modeNr;
+	}
 	virtual void Vid_SetMode(int,HWND__ * *);
 	virtual void Vid_SetScreenMode(zTRnd_ScreenMode);
-	virtual void Vid_GetScreenMode();
+	zTRnd_ScreenMode Vid_GetScreenMode() override
+	{
+		return screenMode;
+	}
 	virtual void Vid_SetGammaCorrection(float,float,float);
-	virtual void Vid_GetGammaCorrection();
+	float Vid_GetGammaCorrection() override
+	{
+		return gammaCorrection;
+	}
 	virtual void Vid_BeginLfbAccess();
-	virtual void Vid_EndLfbAccess();
-	virtual void Vid_SetLfbAlpha(int);
-	virtual void Vid_SetLfbAlphaFunc(zTRnd_AlphaBlendFunc const &);
+	virtual void Vid_EndLfbAccess() {}
+	void Vid_SetLfbAlpha(int) override {}
+	void Vid_SetLfbAlphaFunc(zTRnd_AlphaBlendFunc const &) override {}
 	virtual void SetTransform(zTRnd_TrafoType,zMAT4 const &);
 	virtual void SetViewport(int,int,int,int);
 	virtual void SetLight(ulong,zCRenderLight *);

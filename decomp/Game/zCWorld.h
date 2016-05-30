@@ -54,11 +54,35 @@ class zCBspTree {
 
 class zCWorld : zCObject {
 	Z_OBJECT(zCWorld);
+private:
+
+	zBOOL showTextureStats;
+	zBOOL s_bWaveAnisEnabled;
 public:
+	static void SetShowTextureStats(int b)
+	{
+		zCWorld::showTextureStats = b;
+	}
+
+	static zBOOL GetShowTextureStats()
+	{
+		return showTextureStats;
+	}
+
+	static void SetWaveAnisEnabled(int b)
+	{
+		zCWorld::s_bWaveAnisEnabled = b;
+	}
+
+	static zBOOL GetWaveAnisEnabled()
+	{
+		return s_bWaveAnisEnabled;
+	}
+
 	virtual ~zCWorld();
 
-	virtual void Archive(zCArchiver& arc);
-	virtual void Unarchive(zCArchiver& arc);
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
 
 	virtual void LoadWorld(zSTRING const &,zCWorld::zTWorldLoadMode);
 	virtual void SaveWorld(zSTRING const &,zCWorld::zTWorldSaveMode,int,int);
@@ -104,17 +128,39 @@ public:
 		zWLD_LOAD_MERGE_REPLACE_ROOT_VISUAL
 	};
 
+	zCBspTree& GetBspTree()
+	{
+		return bspTree;
+	}
+
+	zCViewProgressBar* GetProgressBar()
+	{
+		return progressBar;
+	}
+
 
 	void SetOwnerSession(zCSession* owner);
+	zCSession* GetOwnerSession()
+	{
+		return ownerSession;
+	}
+
+	zCPlayerGroup* GetPlayerGroup()
+	{
+		return nullptr;
+	}
+
+	void UpdateZone(zCZone* zone)
+	{
+		zoneBoxSorter.Update(zone);
+	}
 
 private:
 	//Jedes (?) Vob in der Welt ist hier drin.
 	zCTree<zCVob>     globalVobTree;
 
 
-
 	zTTraceRayReport  traceRayReport;
-
 
 	enum zTStaticWorldLightMode {
 		zWLD_LIGHT_VERTLIGHT_ONLY,

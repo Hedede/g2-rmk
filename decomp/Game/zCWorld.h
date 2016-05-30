@@ -3,41 +3,15 @@ const int zCWorld_DIMENSION = 3; //achwas
 const int zCWorld_VobHashTable_Offset = 600; //0x0258
 const int VOB_HASHTABLE_SIZE = 2048;
 
-class zCTree {
-	zCTree<T>* parent;
-	zCTree<T>* firstChild;
-	zCTree<T>* next;
-	zCTree<T>* prev;
-	T*         data;
-};
-
 class zTTraceRayReport  {
-	zBOOL      foundHit;               //
-	zCVob*     foundVob;               //
-	zCPolygon* foundPoly;              //
-	zVEC3      foundIntersection;   //
-	zVEC3      foundPolyNormal;     //
-	zCVertex*  foundVertex;            //
+	zBOOL      foundHit;
+	zCVob*     foundVob;
+	zCPolygon* foundPoly;
+	zVEC3      foundIntersection;
+	zVEC3      foundPolyNormal;
+	zCVertex*  foundVertex;
 };
 
-
-class zCVobBBox3DSorter<zCZone> {
-public:
-	virtual ~zCVobBBox3DSorter();
-	class zTBoxSortHandle  {
-		void *vtbl;                  //Pointer to Method table
-		zCBBox3DSorterBase* zoneActiveHandle_mySorter;              //
-		zTBBox3D bbox3D;
-
-		int zoneActiveHandle_indexBegin [zCWorld_DIMENSION]; //int
-		int zoneActiveHandle_indexEnd   [zCWorld_DIMENSION]; //int
-
-		zCArray<VOB*> activeList;
-	};
-	zCArray<zTBoxSortHandle *>        handles;
-	zCArraySort<zTNode*> nodeList[zCWorld_DIMENSION];
-	zBOOL zoneBoxSorter_sorted;                       //zBOOL
-};
 
 class zCBspTree {
 	zCBspNode* actNodePtr;           ////nur beim Aufbau interessant

@@ -7,12 +7,30 @@ struct zCBBox3DSorterBase {
 			list.compare = zCBBox3DSorterBase::ArrayCompare;
 	}
 
-	virtual ~zCBBox3DSorterBase();
-	virtual zTBbox3D GetBBox(zTNode const*);
+	virtual ~zCBBox3DSorterBase()
+	{
+		if (s_currentSorter == this)
+			s_currentSorter = nullptr;
+		Clear();
+	}
 
 	void RemoveHandle(zTBoxSortHandle* handle)
 	{
 		handles.Remove(handle);
+	}
+
+	void Remove(void* data)
+	{
+		for (auto& list : nodeList)
+			list.Remove(data);
+		for (auto& handle : handles)
+			handle->DelActive(data);
+	}
+
+	void InsertHandle(zTBoxSortHandle& handle)
+	{
+		handles.Insert(&handle);
+		GetActiveList(handle.bbox, handle);
 	}
 
 	void Sort() {
@@ -23,6 +41,24 @@ struct zCBBox3DSorterBase {
 			s_currentDimension = i;
 			nodeList[i].QSort();
 		}
+	}
+
+	void Clear()
+	{
+		for (auto& list : nodeList) {
+			for (auto node : list)
+				delete node;
+			list.DeleteList();
+		}
+
+		for (auto& handle : handles)
+			handle->ClearActive();
+	}
+
+	void AllocAbs(int space)
+	{
+		for (auto& list : nodeList)
+			list.AllocAbs(space);
 	}
 
 	struct zTNode {
@@ -53,6 +89,10 @@ struct zCBBox3DSorterBase {
 	zCArraySort<zTNode*> nodeList[zCWorld_DIMENSION];
 
 	zBOOL sorted;
+
+private:
+	virtual zTBbox3D GetBBox(zTNode const*) = 0;
+
 };
 
 template<typename T>
@@ -79,4 +119,10 @@ struct zCVobBBox3DSorter : zCBBox3DSorterBase {
 
 		zCArray<T*> activeList;
 	};
+
+private:
+	virtual zTBbox3D GetBBox(zTNode const*)
+	{
+		return handles[0]->bbox3D;
+	}
 };

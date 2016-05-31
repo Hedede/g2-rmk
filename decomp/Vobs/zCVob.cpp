@@ -1149,3 +1149,37 @@ void zCVob::CleanupVobSystem()
 
 	Delete( zCVob::s_poCollisionDetector );
 }
+
+// private static
+void zCVob::LoadGroundShadowMesh()
+{
+	zCVob::s_shadowMesh = zCMesh::Load("_intern\\groundShadow.3ds", 0);
+	if ( zCVob::s_shadowMesh ) {
+		zCVob::s_shadowMesh->polyList[0]->material->alphaFunc = 5;
+		zCVob::s_shadowMesh->SetStaticLight({-1,-1,-1});
+		zCVob::s_shadowMesh->ResetLightDynToLightStat();
+	}
+}
+
+zVEC3 zCVob::GetVelocity()
+{
+	if ( flags1.physicsEnabled)
+		return GetRigidBody()->vel;
+
+	if (auto model = zDYNAMIC_CAST<zCModel>(visual)) {
+		auto vel = model->GetVelocityRing();
+
+		return vel * trafoObjToWorld;
+	}
+
+	return {0.0f, 0.0f, 0.0f};
+}
+
+// static
+void zCVob::InitVobSystem()
+{
+	LoadGroundShadowMesh();
+
+	zCVob::s_poCollisionDetector = new zCCollisionDetector();
+	zCCollObjectBase::S_RegisterCollisionTestFuncs(s_poCollisionDetector);
+}

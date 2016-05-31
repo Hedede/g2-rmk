@@ -1,8 +1,9 @@
-class zCEngine {
-public:
+struct zCEngine {
 	zCEngine() = default;
 	virtual ~zCEngine() = default;
-	int Init(HWND* wnd);
+
+	static int Init(HWND* wnd);
+	static int ShutDown();
 };
 
 int zCEngine::Init(HWND* wnd)
@@ -58,5 +59,32 @@ int zCEngine::Init(HWND* wnd)
 
 	zfpuControler->RestoreDefaultControlWord()
 	zfpuControler->SaveCurrentControlWord();
+	return 1;
+}
+
+int zCEngine::Shutdown()
+{
+	zerr.Separator("");
+	zINFO(0,"D: *** zEngine-ShutDown ...")// 189, _dieter\\zEngine.cpp
+
+	zCarsten_ShutDown();
+	zDieter_ShutDown();
+	zUlfi_ShutDown();
+	zBert_ShutDown();
+
+	zerr.Separator("");
+
+	zresMan->EndThread();
+	Delete(zresMan);
+
+	zDeinitOptions();
+
+	Release(zfactory);
+
+	zFILE_VDFS::DeinitFileSystem();
+	zCMallocGeneric::Shutdown();
+
+	zINFO(0,"D: *** zEngine-ShutDown ... Done!"); //218, _dieter
+
 	return 1;
 }

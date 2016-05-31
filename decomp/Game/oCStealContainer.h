@@ -1,7 +1,24 @@
-class oCStealContainer {
- virtual void HandleEvent(int);
- virtual void ~oCStealContainer(uint);
- virtual void SetOwner(oCNpc *);
+class oCStealContainer : public oCItemContainer {
+	oCStealContainer() = default;
+	virtual ~oCStealContainer();
+
+	void HandleEvent(int) override;
+
+	virtual void SetOwner(oCNpc *);
 	virtual void GetOwner();
- virtual void CreateList();
+	virtual void CreateList();
+
+	void SetOwner(oCNpc* npc)
+	{
+		owner = npc;
+		CreateList();
+	}
+
+	oCNpc* GetOwner()
+	{
+		return owner;
+	}
+
+private:
+	oCNpc* owner = nullptr;
 };

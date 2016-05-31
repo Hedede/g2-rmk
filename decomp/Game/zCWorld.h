@@ -55,9 +55,9 @@ class zCBspTree {
 class zCWorld : zCObject {
 	Z_OBJECT(zCWorld);
 private:
-
 	zBOOL showTextureStats;
 	zBOOL s_bWaveAnisEnabled;
+
 public:
 	static void SetShowTextureStats(int b)
 	{

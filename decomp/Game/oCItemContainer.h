@@ -12,14 +12,47 @@ public:
 	}
 	static int GetInvSplitScreen()
 	{
-		static int invSplitScreen = -2;
-		if ( invSplitScreen == -2 )
-			invSplitScreen =  zoptions->ReadBool(zOPT_SEC_GAME, "invSplitScreen", 1);
+		static int invSplitScreen = zoptions->ReadBool(zOPT_SEC_GAME, "invSplitScreen", 1);
 		return invSplitScreen;
+	}
+
+	static int GetInvMaxRows()
+	{
+		static int invMaxRows = -1;
+		if (invMaxRows <= 0)
+			invMaxRows = zoptions->ReadInt(zOPT_SEC_GAME, "invMaxRows", 0);
+
+		if (invMaxRows <= 0)
+			return 1024;
+		
+		return invMaxRows;
+	}
+
+	static int GetInvMaxColumns()
+	{
+		static int invMaxRows = -1;
+		if (invMaxRows <= 0)
+			invMaxRows = zoptions->ReadInt(zOPT_SEC_GAME, "invMaxRows", 0);
+
+		if (invMaxRows <= 0)
+			return 1024;
+		
+		return invMaxRows;
 	}
 
 	static oCItemContainer* GetNextContainerLeft(oCItemContainer* self);
 	static oCItemContainer* GetNextContainerRight(oCItemContainer* self);
+
+	static int GetCurrencyInstance()
+	{
+		static int currencyInstance = -1;
+		if (currencyInstance == -1) {
+			auto name = GetCurrencyInstanceName();
+			currencyInstance = zparser.GetIndex(name);
+		}
+	}
+
+	static oCItem* CreateCurrencyItem(int amount);
 
 	static int TransferCountToAmount(int count)
 	{
@@ -111,7 +144,7 @@ public:
 	{
 		return contents;
 	}
-	virtual oCItem* Insert(oCItem*);
+	virtual oCItem* Insert(oCItem* item);
 	virtual oCItem* Remove(oCItem* item, int amount);
 	virtual void Remove(oCItem* item);
 
@@ -291,6 +324,86 @@ void oCItemContainer::Unarchive(zCArchiver& arc)
 	}
 }
 
+int oCItemContainer::HandleEvent(int key)
+{
+	if (!IsActive() )
+		return 0;
+
+	if ( zinput->IsBindedToggled(GAMEKEY_ACTION, key) ||
+			key == MOUSE_BUTTONLEFT && zinput->KeyToggled(MOUSE_BUTTONLEFT) )
+		SetTransferCount(0);
+
+	auto count = GetTransferCount();
+	auto amount = TransferCountToAmount(count);
+	if (zinput->IsBinded(GAMEKEY_SMOVE, key) ) {
+		SetTransferCount(0);
+		if (auto item = GetSelectedItem()) {
+			if (amount < item->amount)
+				amount = item->amount;
+		}
+	}
+
+	auto left = GetNextContainerLeft();
+	if (!left)
+		left = GetNextContainerRight();
+
+	if ( zinput->IsBindedToggled(14, key) || zinput->IsBindedToggled(15, key) && (!left || IsSplitScreen()) || key == 525 && (zinput->vtable->KeyToggled)(525) ) {
+		Close();
+		oCNpc::player->CloseInventory();
+		if (auto mob = dynamic_cast<oCMobInter>(oCNpc::player->GetInteractMob())) {
+			auto msg = new oCMobMsg(1, oCNpc::player);
+
+			msg->state = mob->GetState();
+			msg->flags ^= msg->flags ^ (msg->state - 1) & 0x7FFFFFFF;
+			mob->GetEM()->OnMessage(msg, oCNpc::player);
+		}
+	} else if (zinput->IsBinded(5u, key) || zinput->IsBinded(0xBu, key) || key == 524 ) {
+		auto item = GetSelectedItem();
+		if ( item && oCNpc::player->CanCarry(item) ) {
+			int num = amount;
+			if (amount < item->amount) {
+				IncTransferCount(amount);
+			} else {
+				num = item->amount;
+				SetTransferCount(0);
+			}
+
+			oCNpc::player->PutInInv(RemoveByPtr(item, num));
+			IsEmpty();
+		}
+	} else {
+		if ( zinput->IsBindedToggled(15, key) && left && !IsSplitScreen()) {
+			auto right = GetNextContainerRight(this);
+			if (right) {
+				right->Activate();
+				return 0;
+			}
+
+			auto left = GetNextContainerLeft(this);
+			if (left) {
+				left->Activate();
+				return 0;
+			}
+
+			return 0;
+		}
+
+		if ( zinput->IsBinded(1u, key) || zinput->IsBinded(0x12u, key) ) {
+			PrevItem();
+		} else if ( zinput->IsBinded(3u, key) || key == 522 ) {
+			PrevItemLine();
+		} else if ( zinput->IsBinded(4u, key) || key == 523 ) {
+			NextItemLine();
+		} else if ( zinput->IsBinded(2u, key) || zinput->IsBinded(0x13u, key) ) {
+			NextItem();
+		} else {
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
 oCItemContainer* oCItemContainer::GetNextContainerLeft(oCItemContainer *self)
 {
 	oCItemContainer* left = nullptr;
@@ -393,82 +506,47 @@ int oCItemContainer::IsSplitScreen()
 	return GetInvSplitScreen();
 }
 
-int oCItemContainer::HandleEvent(int key)
+oCItem* oCItemContainer::Insert(oCItem *item)
 {
-	if (!IsActive() )
+	if ( !item )
 		return 0;
 
-	if ( zinput->IsBindedToggled(GAMEKEY_ACTION, key) ||
-			key == MOUSE_BUTTONLEFT && zinput->KeyToggled(MOUSE_BUTTONLEFT) )
-		SetTransferCount(0);
+	if ( !contents )
+		return item;
 
-	auto count = GetTransferCount();
-	auto amount = TransferCountToAmount(count);
-	if (zinput->IsBinded(GAMEKEY_SMOVE, key) ) {
-		SetTransferCount(0);
-		if (auto item = GetSelectedItem()) {
-			if (amount < item->amount)
-				amount = item->amount;
+	if (item->MultiSlot()) {
+		for (auto i = contents->next; i; i = i->next) {
+			auto item2 = i->Get();
+			if ( item2->MultiSlot() ) {
+				auto inst = item2->GetInstance()
+				if ( inst == item->GetInstance() ) {
+					item2->amount += item->amount;
+					ogame->GetGameWorld()->RemoveVob(item);
+					return item2;
+				}
+			}
 		}
 	}
 
-	auto left = GetNextContainerLeft();
-	if (!left)
-		left = GetNextContainerRight();
+	contents->InsertSort(item);
 
-	if ( zinput->IsBindedToggled(14, key) || zinput->IsBindedToggled(15, key) && (!left || IsSplitScreen()) || key == 525 && (zinput->vtable->KeyToggled)(525) ) {
-		Close();
-		oCNpc::player->CloseInventory();
-		if (auto mob = dynamic_cast<oCMobInter>(oCNpc::player->GetInteractMob())) {
-			auto msg = new oCMobMsg(1, oCNpc::player);
+	CheckSelectedItem();
 
-			msg->state = mob->GetState();
-			msg->flags ^= msg->flags ^ (msg->state - 1) & 0x7FFFFFFF;
-			mob->GetEM()->OnMessage(msg, oCNpc::player);
-		}
-	} else if (zinput->IsBinded(5u, key) || zinput->IsBinded(0xBu, key) || key == 524 ) {
-		auto item = GetSelectedItem();
-		if ( item && oCNpc::player->CanCarry(item) ) {
-			int num = amount;
-			if (amount < item->amount) {
-				IncTransferCount(amount);
-			} else {
-				num = item->amount;
-				SetTransferCount(0);
-			}
+	item->AddRef();
+	ogame->GetGameWorld()->RemoveVob(item);
 
-			oCNpc::player->PutInInv(RemoveByPtr(item, num));
-			IsEmpty();
-		}
-	} else {
-		if ( zinput->IsBindedToggled(15, key) && left && !IsSplitScreen()) {
-			auto right = GetNextContainerRight(this);
-			if (right) {
-				right->Activate();
-				return 0;
-			}
-
-			auto left = GetNextContainerLeft();
-			if (left) {
-				left->Activate();
-				return 0;
-			}
-
-			return 0;
-		}
-
-		if ( zinput->IsBinded(1u, key) || zinput->IsBinded(0x12u, key) ) {
-			PrevItem();
-		} else if ( zinput->IsBinded(3u, key) || key == 522 ) {
-			PrevItemLine();
-		} else if ( zinput->IsBinded(4u, key) || key == 523 ) {
-			NextItemLine();
-		} else if ( zinput->IsBinded(2u, key) || zinput->IsBinded(0x13u, key) )
-			NextItem();
-		} else {
-			return 0;
-		}
-	}
-
-	return 1;
+	return item;
 }
+
+oCItem* oCItemContainer::CreateCurrencyItem(int amount)
+{
+	if ( ogame && ogame->GetWorld() ) {
+		zSTRING inst = GetCurrencyInstanceName();
+		auto vob = ogame->GetGameWorld()->CreateVob(VOB_TYPE_ITEM, inst);
+		auto item = static_cast<oCItem*>(vob);
+		if ( item )
+			item->amount = amount;
+	}
+	return item;
+}
+

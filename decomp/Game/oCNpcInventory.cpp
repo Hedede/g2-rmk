@@ -36,10 +36,16 @@ public:
 
 	virtual void IsEmpty(int,int);
 
+	void SetOwner(oCNpc* npc)
+	{
+		owner = npc;
+	}
+
 	oCNpc* GetOwner()
 	{
 		return owner;
 	}
+
 private:
 	oCNpc*    owner;
 	zBOOL     packAbility;
@@ -139,8 +145,7 @@ oCItem* oCNpcInventory::CreateFromPackString(zSTRING const& packstr)
 	if ( GetPackedItemInfo(packstr, 1, amount, unk2) ) {
 		auto world = ogame->GetGameWorld();
 		auto item_vob = (oCItem *)world->CreateVob(VOB_TYPE_ITEM, packstr);
-		if ( item_vob )
-		{
+		if ( item_vob ) {
 			item_vob->amount = amount;
 			result = Insert(item_vob);
 			item_vob.Release();
@@ -153,15 +158,13 @@ oCItem* oCNpcInventory::CreateFromPackString(zSTRING const& packstr)
 oCItem* oCNpcInventory::IsIn(int inst, int amount)
 {
 	oCItem *res = nullptr;
-	for (auto i = inventory.next; i; i = i->next )
-	{
+	for (auto i = inventory.next; i; i = i->next ) {
 		res = i->data;
 		if ( res->GetInstance() == inst && res->amount >= amount )
 			return res;
 	}
 
-	if ( packAbility )
-	{
+	if ( packAbility ) {
 		auto* sym = zparser->GetSymbol(inst);
 		if ( sym )
 		{

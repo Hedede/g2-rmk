@@ -1036,9 +1036,6 @@ void zCVob::ExecuteCollisionResponse(zCArray<zCCollisionReport*> const& collRepo
 
 	flags2.mbHintTrafoLocalConst = true;
 }
-/* Orphan comments:
-011
-*/
 
 void zCVob::SetInMovement(int inMovement)
 {

@@ -1,3 +1,42 @@
+zCVob* zCVob::zCVob()
+	// vobLeafList — preallcoate 16
+	: vobLeafList(16),
+{
+	trafoObjToWorld = Alg_Identity3D();
+
+	flags1.showVisual = 1;
+	flags1.drawBBox3D = 1;
+	flags1.visualAlphaEnabled = 1;
+
+	SetCollDetStat(0);
+	SetCollDetDyn(0);
+	SetPhysicsEnabled(0);
+
+	bsphere3D.radius = std::numeric_limits<float>::max();
+}
+
+void zCVob::~zCVob()
+{
+	if ( refCtr > 0 )
+		zFAULT("D: tried to delete zCVob with refCtr>0 !"); // 402
+
+	if ( homeWorld )
+		homeWorld->RemoveVob(this);
+
+	if ( globalVobTreeNode ) {
+		// maybe just Delete(globalVobTreeNode);
+		globalVobTreeNode->RemoveSubtree();
+		Delete(globalVobTreeNode);
+	}
+
+	Release(visual);
+	Release(callback_ai);
+	Release(eventManager);
+	Delete(vobPresetName);
+	Delete(rigidBody);
+	Delete(collisionObject);
+}
+
 void zCVob::ArchiveVerbose(zCArchiver& arc)
 {
 	arc.WriteGroupBegin("Internals");
@@ -1118,6 +1157,36 @@ zCMover* zCVob::GetAutoLinkParent(zCVob* vob)
 		return nullptr;
 
 	return parent;
+}
+
+// static
+int zCVob::CanAutoLinkWith(zCVob *childVob, zCVob *parentVob)
+{
+	bool b = childVob->GetCharacterClass() && !(childVob->flags1.physicsEnabled) ||
+	        !childVob->GetCharacterClass() &&   childVob->flags1.physicsEnabled;
+	if (!b)
+		return 0;
+	if (!childVob->HasParentVob())
+		return 0;
+
+	if (childVob->flags1.staticVob)
+		return 0;
+
+	zVEC3 start = childVob->GetPositionWorld();
+	start.y = childVob->bbox3D.maxs[1];
+
+	zVEC3 ray{0, -100000.0, 0};
+	if ( parentVob ) {
+		zTTraceRayReport report;
+		int hit = parentVob->TraceRay(start, ray, 0, report);
+		return hit && report.result; // TODO: actual name
+	}
+
+	childVob->homeWorld->TraceRayNearestHit(start, ray, childVob, 17);
+	if (auto mover = dynamic_cast<zCMover*>(childVob->homeWorld->foundVob))
+		return mover->autoLinkEnabled;
+
+	return 0;
 }
 
 void zCVob::SetAI(zCAIBase* newai)

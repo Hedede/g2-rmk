@@ -147,3 +147,41 @@ void zCVob::SetCollDetDyn(int val)
 		zFAULT("D: zVob(zCVob::SetCollDetDyn): cannot modify collision-flags while in movement-phase"); // 1013
 	flags1.collDetectionDynamic = val;
 }
+
+void zCVob::ResetXZRotationsWorld()
+{
+	int movmode = isInMovementMode;
+	if (!movmode)
+		BeginMovement();
+
+	auto mat = collisionObject->trafoObjToWorld;
+	auto x = mat[0][2] * 1000.0 + mat[0][3];
+	auto y = mat[1][3];
+	auto z = mat[2][2] * 1000.0 + mat[2][3];
+
+	SetHeadingWorld({x,y,z});
+
+	if (!movmode)
+		EndMovement(1);
+}
+
+void zCVob::ResetRotationsLocal()
+{
+	int movmode = isInMovementMode;
+	if (!movmode)
+		BeginMovement();
+
+	if ( HasParentVob() ) {
+		auto parent = globalVobTreeNode->parent->Get();
+
+		auto pos = collisionObject->trafoObjToWorld.GetTranslation();
+		collisionObject->trafoObjToWorld = parent->trafoObjToWorld;
+		collisionObject->trafoObjToWorld->SetTranslation(pos);
+		collisionObject->flags |= 2u;
+	} else {
+		ResetRotationsWorld();
+	}
+
+	if (!movmode)
+		EndMovement(1);
+}

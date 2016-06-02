@@ -313,10 +313,10 @@ public:/* Unused */
 
 
 private:
-	zCTree<zCVob>* globalVobTreeNode;
+	zCTree<zCVob>* globalVobTreeNode = nullptr;
 
-	zTFrameCtr lastTimeDrawn;
-	int        lastTimeCollected;
+	zTFrameCtr lastTimeDrawn     = -1;
+	int        lastTimeCollected = 0;
 
 	zCArray<zCBspLeaf*> vobLeafList;
 
@@ -328,32 +328,32 @@ private:
 	zCArray<zCVob*> touchVobList;
 
 	int type;
-	int groundShadowSizePacked;
+	int groundShadowSizePacked = 0;
 
-	zCWorld*   homeWorld;
-	zCPolygon* groundPoly;
+	zCWorld*   homeWorld  = nullptr;
+	zCPolygon* groundPoly = nullptr;
 
-	zCAIBase* callback_ai;
-	zMAT4*    trafo;
-	zCVisual* visual;
-	float     visualAlpha;
-	float     vobFarClipZScale;
+	zCAIBase* callback_ai = nullptr;
+	zMAT4*    trafo  = nullptr;
+	zCVisual* visual = nullptr;
+	float     visualAlpha = 1.0f;
+	float     vobFarClipZScale = 1.0f;
 
-	int       aniMode;
-	float     aniModeStrength;
+	int       aniMode = 0;
+	float     aniModeStrength = 0.0;
 	int       zBias;
 
 	zCRigidBody* rigidBody;
 
-	zCOLOR   lightColorStat;
-	zCOLOR   lightColorDyn;
+	zCOLOR   lightColorStat{0};
+	zCOLOR   lightColorDyn{0};
 	zVEC3    lightDirectionStat;
 
-	zSTRING* vobPresetName;
+	zSTRING* vobPresetName = nullptr;
 
 	zCEventManager* eventManager;
 
-	float nextOnTimer;
+	float nextOnTimer = std::numeric_limits<float>::max();
 
 	struct {
 		uint32_t showVisual                : 1; // 1
@@ -369,7 +369,7 @@ private:
 		uint32_t lightColorDynDirty        : 1;
 	} flags1;
 
-	uint8_t isInMovementMode;
+	uint8_t isInMovementMode : 2;
 
 	struct {
 		uint32_t sleepingMode              : 2;
@@ -386,6 +386,6 @@ private:
 		uint32_t isAmbientVob             : 1;
 	} flags3;
 
-	zCCollisionObjectDef* collisionObjectClass;
-	zCCollisionObject*    collisionObject;
+	zCCollisionObjectDef* collisionObjectClass = &zCCollObjectUndef::s_oCollObjClass;
+	zCCollisionObject*    collisionObject      = nullptr;
 };

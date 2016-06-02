@@ -1,3 +1,32 @@
+// private static
+void zCVob::LoadGroundShadowMesh()
+{
+	zCVob::s_shadowMesh = zCMesh::Load("_intern\\groundShadow.3ds", 0);
+	if ( zCVob::s_shadowMesh ) {
+		zCVob::s_shadowMesh->polyList[0]->material->alphaFunc = 5;
+		zCVob::s_shadowMesh->SetStaticLight({-1,-1,-1});
+		zCVob::s_shadowMesh->ResetLightDynToLightStat();
+	}
+}
+
+// static
+void zCVob::InitVobSystem()
+{
+	LoadGroundShadowMesh();
+
+	zCVob::s_poCollisionDetector = new zCCollisionDetector();
+	zCCollObjectBase::S_RegisterCollisionTestFuncs(s_poCollisionDetector);
+}
+
+void zCVob::CleanupVobSystem()
+{
+	Release( zCVob::s_shadowMesh );
+
+	s_helperVisualMap.clear(); // don't know, bunch of nonsense
+
+	Delete( zCVob::s_poCollisionDetector );
+}
+
 zCVob* zCVob::zCVob()
 	// vobLeafList — preallcoate 16
 	: vobLeafList(16),
@@ -1207,26 +1236,6 @@ void zCVob::AdoptCollObjResults()
 	DestroyCollisionObject(0);
 }
 
-void zCVob::CleanupVobSystem()
-{
-	Release( zCVob::s_shadowMesh );
-
-	s_helperVisualMap.clear(); // don't know, bunch of nonsense
-
-	Delete( zCVob::s_poCollisionDetector );
-}
-
-// private static
-void zCVob::LoadGroundShadowMesh()
-{
-	zCVob::s_shadowMesh = zCMesh::Load("_intern\\groundShadow.3ds", 0);
-	if ( zCVob::s_shadowMesh ) {
-		zCVob::s_shadowMesh->polyList[0]->material->alphaFunc = 5;
-		zCVob::s_shadowMesh->SetStaticLight({-1,-1,-1});
-		zCVob::s_shadowMesh->ResetLightDynToLightStat();
-	}
-}
-
 zVEC3 zCVob::GetVelocity()
 {
 	if ( flags1.physicsEnabled)
@@ -1241,11 +1250,45 @@ zVEC3 zCVob::GetVelocity()
 	return {0.0f, 0.0f, 0.0f};
 }
 
-// static
-void zCVob::InitVobSystem()
+void zCVob::CalcDestinationBBox3DWorld(zTBBox3D *outbbox)
 {
-	LoadGroundShadowMesh();
+	if ( visual && visual->IsBBox3DLocal() ) {
+		auto bbox = visual->GetBBox3D();
+		bbox.Transform(collisionObject->trafoObjToWorld, outbbox);
+	} else {
+		auto vec1 = collisionObject->trafoObjToWorld.GetTranslation();
+		auto vec2 = collisionObject->trafo.GetTranslation();
+		zVEC3 tmp = vec1 - vec2;
+		outbbox = bbox3d;
+		outbbox.mins += tmp;
+		outbbox.maxs += tmp;
+	}
+}
 
-	zCVob::s_poCollisionDetector = new zCCollisionDetector();
-	zCCollObjectBase::S_RegisterCollisionTestFuncs(s_poCollisionDetector);
+int zCVob::DetectCollision(zMAT4 *trafoObjToWorldNew)
+{
+	int old_flag = 0;
+	if ( trafoObjToWorldNew ) {
+		old_flag = flags2.sleepingMode;
+		SetPhysicsEnabled(1); // was inlined
+		SetSleepingMode(1);
+	}
+
+	BeginMovement();
+	if ( traf )
+		SetTrafoObjToWorld(*trafoObjToWorldNew); // inlined
+
+	bool isColliding = IsColliding();
+	if ( trafoObjToWorldNew && isInMovementMode) {
+		collisionObject->trafoObjToWorld = trafoObjToWorld;
+		collisionObject->flags &= 0xFCu;
+	}
+
+	EndMovement(1);
+	if ( trafoObjToWorldNew ) {
+		SetPhysicsEnabled(old_flag); // was inlined
+		SetSleepingMode(old_flag);
+	}
+
+	return isColliding;
 }

@@ -18,9 +18,9 @@ enum zPAR_TYPE {
 	zPAR_TYPE_INSTANCE
 };
 
-class zCPar_Symbol {
-public:
+struct zCPar_Symbol {
 	zCPar_Symbol() = default;
+
 private:
 	zSTRING name;
 	int next = 0;
@@ -56,10 +56,9 @@ private:
 };
 
 class zCPar_SymbolTable {
-public:
 	int GetNumInList()
 	{
-		return this->table.size();
+		return table.GetNumInList();
 	}
 
 	zCPar_SymbolTable* GetLastSymbol()
@@ -71,6 +70,7 @@ public:
 	{
 		return firstsym;
 	}
+
 private:
 	zCArray<zCPar_Symbol*> table;
 	zCArraySort<int> tablesort;
@@ -79,6 +79,41 @@ private:
 
 }
 
-class zCPar_StringTable {
-	zCArray <zSTRING *> array;
+struct zCPar_StringTable {
+	int GetNumInList()
+	{
+		return table.GetNumInList();
+	}
+
+	int GetLastEntry()
+	{
+		return GetNumInList() - 1;
+	}
+
+	zSTRING* GetString(int idx)
+	{
+		if (idx > GetNumInList())
+			return nullptr;
+		return table[idx];
+	}
+
+	void Clear()
+	{
+		for (auto string : table) {
+			if (string)
+				delete string;
+		}
+		table.DeleteList();
+	}
+
+	void Show()
+	{
+		for (auto string : table) {
+			if (string)
+				printf("%s\n", string.Data());
+		}
+	}
+
+private:
+	zCArray <zSTRING *> table;
 };

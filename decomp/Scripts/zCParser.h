@@ -47,19 +47,23 @@ public:
 		return CallFunc(index);
 	}
 
+	int GetNumFiles()
+	{
+		return files.GetNumInList();
+	}
+
 private:
 	void Error(zSTRING& errmsg, int);
 
 	MessageFunc msgfunc;
 
 	// Liste von eingebundenen Files
-	zCArray <zCPar_File *>    file;
+	zCArray <zCPar_File *> files;
 
-	// Symboltable 
+	// Symboltable
 	zCPar_SymbolTable     symtab;
 
 	zCPar_Stack stack;
-
 
 	zCPar_DataStack datastack;
 
@@ -92,12 +96,12 @@ private:
 	zCPar_Symbol*  in_class;
 	zBOOL  error;
 	zBOOL  stop_on_error;
-	int errorline;  
+	int errorline;
 	char* prevword_index[16];
-	int prevline_index[16];              
-	int prevword_nr;              
-	zSTRING aword;       
-	int _instance;              
+	int prevline_index[16];
+	int prevword_nr;
+	zSTRING aword;
+	int _instance;
 	int instance_help;
 	zCViewProgressBar* progressBar;
 	zCPar_TreeNode*  tree;

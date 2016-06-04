@@ -52,8 +52,9 @@ public:
 	}
 
 private:
-	int ani_num;
-	zCModelAni **ani_array;
+	int active_ani_num;
+	zCModelAniActive* active_anis;
+
 	int unn2;
 	int unn3;
 	int unn4;

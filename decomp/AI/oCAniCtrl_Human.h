@@ -38,6 +38,13 @@ public:
 		}
 	}
 
+	void Reset()
+	{
+		InitFightAnis(npc->GetWeaponMode());
+		SetWalkMode(0);
+		StartStandAni();
+	}
+
 	void StartUp(zCVob* vob)
 	{
 		zCAIPlayer::Begin(vob);
@@ -48,9 +55,39 @@ public:
 		return actionMode;
 	}
 
+	void StopTurnAnis()
+	{
+		model->FadeOutAnisLayerRange(20, 20);
+	}
+
 	bool IsAlwaysWalk()
 	{
 		return always_walk && npc->IsAPlayer();
+	}
+
+	void ToggleWalkMode(int nextAni)
+	{
+		StopTurnAnis();
+		StartAni(togglewalk, nextAni);
+		SetWalkMode(nextwalkmode);
+	}
+
+	void StrafeLeft()
+	{
+		if (actionMode != 5) {
+			StopTurnAnis();
+			StartAni(_t_strafel, 0);
+			npc->SetBodyState(BS_WALK);
+		}
+	}
+
+	void StrafeRight()
+	{
+		if (actionMode != 5) {
+			StopTurnAnis();
+			StartAni(_t_strafer, 0);
+			npc->SetBodyState(BS_WALK);
+		}
 	}
 
 	void SetFightAnis(int fmode);
@@ -65,11 +102,6 @@ public:
 		model->FadeOutAni(id);
 	}
 
-	void StopTurnAnis()
-	{
-		model->FadeOutAnisLayerRange(20, 20);
-	}
-
 	void SetComboHitTarget(zCVob* target)
 	{
 		hitTarget = target;
@@ -80,7 +112,13 @@ public:
 		InterpolateCombineAni(lookTargetx, lookTargety, s_look);
 	}
 
+	void HitInterrupt();
+
 	zCModelAniActive* GetLayerAni(int layer);
+	int CheckLayerAni(int layer, zSTRING const&)
+	{
+		return GetLayerAni(int layer) != 0 ? -1 : 0;
+	}
 
 	void FirstPersonDrawWeapon() {}
 	void DoAniWithOffset() {}
@@ -515,4 +553,13 @@ zCModelAniActive* oCAniCtrl_Human::GetLayerAni(int layer)
 	}
 
 	return active;
+}
+
+void oCAniCtrl_Human::HitInterrupt()
+{
+	flags.endCombo = 1;
+	// flags &= 0xC2; // dunno about that
+	lastHitAniFrame = 0;
+	model->StopAni(hitAniID);
+	hitAniID = -1;
 }

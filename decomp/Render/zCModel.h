@@ -25,6 +25,8 @@ public:
 	virtual void IsAnimationActive(zSTRING const &);
 	virtual void GetAnyAnimation();
 
+	zCModelAniActive* GetAniActive(int aniId);
+
 	zTBBox3D GetBBox3DNodeWorld(zCModelNodeInst* node)
 	{
 		CalcNodeListBBoxWorld();
@@ -88,3 +90,11 @@ private:
 	int unkno;
 	zCModelAni **showAniList;
 };
+
+zCModelAniActive* zCModel::GetActiveAni(int aniId)
+{
+	for (unsigned i = 0; i < active_ani_num; ++i)
+		if (active_anis[i]->ani->aniId == aniId)
+			return active_anis[i];
+	return nullptr;
+}

@@ -2,10 +2,12 @@ class zCModelPrototype {
 
 	zCModelAni* SearchAni(zSTRING const& aniName);
 	
-	zSTRING& GetModelProtoileName()
+	zSTRING& GetModelProtoFileName()
 	{
 		return fileName;
 	}
+
+	void SetFileSourceType(int sourceType);
 
 private:
 	static void ConvertVec3(zVEC3& vec);
@@ -36,7 +38,7 @@ private:
 	zVEC3 unk8;
 	int unk9;
 	zVEC3 unk10;
-	int unk11;
+	int fileType;
 	int unk12[3];
 };
 
@@ -55,4 +57,14 @@ void zCModelPrototype::ConvertVec3(zVEC3& vec)
 	vec.x = -vec.x;
 	vec.y =  vec.z;
 	vec.z = -vecy;
+}
+
+void zCModelPrototype::SetFileSourceType(int sourceType)
+{
+	this->fileType = sourceType;
+
+	if (sourceType == 1)
+		modelProtoName = ".ASC";
+	else
+		modelProtoName = ".MDS";
 }

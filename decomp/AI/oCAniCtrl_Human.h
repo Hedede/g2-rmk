@@ -18,41 +18,8 @@ const int ANI_HITLIMB_MAX = 4;
 class oCAniCtrl_Human : public zCAIPlayer {
 	Z_OBJECT(oCAniCtrl_Human);
 public:
-	virtual void Archive(zCArchiver& arc)
-	{
-		zCAIPlayer::Archive(arc);
-		if ( arc.InSaveGame() ) {
-			arc.WriteObject("aiNpc", npc);
-			arc.WriteInt("walkMode", walkmode);
-			arc.WriteInt("weaponMode",  weaponmode);
-			arc.WriteInt("wmodeLast",   weaponmode_last);
-			arc.WriteInt("wmodeSelect", weaponmode_selected);
-			arc.WriteBool("changeWeapon", changeweapon);
-			arc.WriteInt("actionMode", actionMode);
-		}
-	}
-
-	virtual void Unarchive(zCArchiver& arc)
-	{
-		zCAIPlayer::Unarchive(arc);
-		if ( arc.InSaveGame() ) {
-			npc = arc.ReadObject("aiNpc", 0);
-
-			Init(npc);
-			if ( npc )
-				npc->Release();
-
-			walkmode = 0;
-			actionMode = 0;
-
-			arc.ReadInt("walkMode", walkmode);
-			arc.ReadInt("weaponMode",  weaponmode);
-			arc.ReadInt("wmodeLast",   weaponmode_last);
-			arc.ReadInt("wmodeSelect", weaponmode_selected);
-			arc.ReadBool("changeWeapon", changeweapon);
-			arc.ReadInt("actionMode", actionMode);
-		}
-	}
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
 
 	virtual ~oCAniCtrl_Human();
 	virtual void StartStandAni();
@@ -70,6 +37,54 @@ public:
 			InitAnimations();
 		}
 	}
+
+	void StartUp(zCVob* vob)
+	{
+		zCAIPlayer::Begin(vob);
+	}
+
+	int GetActionMode()
+	{
+		return actionMode;
+	}
+
+	bool IsAlwaysWalk()
+	{
+		return always_walk && npc->IsAPlayer();
+	}
+
+	void SetFightAnis(int fmode);
+
+	void StartStandAni()
+	{
+		model->StartAni(_s_walk, 0); //??
+	}
+
+	void StopCombineAni(int id)
+	{
+		model->FadeOutAni(id);
+	}
+
+	void StopTurnAnis()
+	{
+		model->FadeOutAnisLayerRange(20, 20);
+	}
+
+	void SetComboHitTarget(zCVob* target)
+	{
+		hitTarget = target;
+	}
+
+	void LookAtTarget()
+	{
+		InterpolateCombineAni(lookTargetx, lookTargety, s_look);
+	}
+
+	zCModelAniActive* GetLayerAni(int layer);
+
+	void FirstPersonDrawWeapon() {}
+	void DoAniWithOffset() {}
+
 private:
 	zREAL  angle_slide1;
 	zREAL  angle_slide2;
@@ -112,7 +127,7 @@ private:
 	zREAL                   paradeBeginFrame;
 	zREAL                   paradeEndFrame;
 
-	//so wie im Struct im Kommentar   
+	//so wie im Struct im Kommentar
 	struct {
 		zUINT8          canEnableNextCombo              : 1;
 		zUINT8          endCombo                        : 1;
@@ -184,30 +199,30 @@ private:
 	zTModelAniID t_run_2_sneak       [ANI_NUM];
 	zTModelAniID t_sneak_2_run     [ANI_NUM];
 
-	zTModelAniID s_walk              [ANI_NUM];
+	zTModelAniID s_walk            [ANI_NUM];
 	zTModelAniID t_walk_2_walkl    [ANI_NUM];
-	zTModelAniID t_walkl_2_walk  [ANI_NUM];
-	zTModelAniID s_walkl             [ANI_NUM];
+	zTModelAniID t_walkl_2_walk    [ANI_NUM];
+	zTModelAniID s_walkl           [ANI_NUM];
 	zTModelAniID t_walkl_2_walkr   [ANI_NUM];
-	zTModelAniID t_walkr_2_walkl [ANI_NUM];
-	zTModelAniID s_walkr             [ANI_NUM];
+	zTModelAniID t_walkr_2_walkl   [ANI_NUM];
+	zTModelAniID s_walkr           [ANI_NUM];
 	zTModelAniID t_walkr_2_walk    [ANI_NUM];
-	zTModelAniID t_walkturnl         [ANI_NUM];
+	zTModelAniID t_walkturnl       [ANI_NUM];
 	zTModelAniID t_walkturnr       [ANI_NUM];
-	zTModelAniID t_walkstrafel       [ANI_NUM];
+	zTModelAniID t_walkstrafel     [ANI_NUM];
 	zTModelAniID t_walkstrafer     [ANI_NUM];
 
-	zTModelAniID t_walk_2_walkbl     [ANI_NUM];
+	zTModelAniID t_walk_2_walkbl   [ANI_NUM];
 	zTModelAniID t_walkbl_2_walk   [ANI_NUM];
-	zTModelAniID s_walkbl            [ANI_NUM];
+	zTModelAniID s_walkbl          [ANI_NUM];
 	zTModelAniID t_walkbl_2_walkbr [ANI_NUM];
-	zTModelAniID t_walkbr_2_walkbl[ANI_NUM];
-	zTModelAniID s_walkbr            [ANI_NUM];
+	zTModelAniID t_walkbr_2_walkbl [ANI_NUM];
+	zTModelAniID s_walkbr          [ANI_NUM];
 	zTModelAniID t_walkbr_2_walk   [ANI_NUM];
 
-	zTModelAniID t_runl_2_jump       [ANI_NUM];
+	zTModelAniID t_runl_2_jump     [ANI_NUM];
 	zTModelAniID t_runr_2_jump     [ANI_NUM];
-	zTModelAniID t_jump_2_runl       [ANI_NUM];
+	zTModelAniID t_jump_2_runl     [ANI_NUM];
 
 	zTModelAniID t_stand_2_jumpuplow;
 	zTModelAniID s_jumpuplow;
@@ -237,23 +252,23 @@ private:
 	zTModelAniID s_sneakbr           [ANI_NUM];
 	zTModelAniID t_sneakbr_2_sneak   [ANI_NUM];
 
-	zTModelAniID t_walkl_2_aim       [ANI_NUM];
-	zTModelAniID t_walkr_2_aim       [ANI_NUM];
-	zTModelAniID t_walk_2_aim        [ANI_NUM];
-	zTModelAniID s_aim               [ANI_NUM];
+	zTModelAniID t_walkl_2_aim   [ANI_NUM];
+	zTModelAniID t_walkr_2_aim   [ANI_NUM];
+	zTModelAniID t_walk_2_aim    [ANI_NUM];
+	zTModelAniID s_aim           [ANI_NUM];
 	zTModelAniID t_aim_2_walk    [ANI_NUM];
-	zTModelAniID t_hitl              [ANI_NUM];
-	zTModelAniID t_hitr              [ANI_NUM];
+	zTModelAniID t_hitl          [ANI_NUM];
+	zTModelAniID t_hitr          [ANI_NUM];
 	zTModelAniID t_hitback       [ANI_NUM];
-	zTModelAniID t_hitf              [ANI_NUM];
-	zTModelAniID s_hitf              [ANI_NUM];
-	zTModelAniID t_aim_2_defend      [ANI_NUM];
-	zTModelAniID s_defend            [ANI_NUM];
+	zTModelAniID t_hitf          [ANI_NUM];
+	zTModelAniID s_hitf          [ANI_NUM];
+	zTModelAniID t_aim_2_defend  [ANI_NUM];
+	zTModelAniID s_defend        [ANI_NUM];
 	zTModelAniID t_defend_2_aim  [ANI_NUM];
-	zTModelAniID t_paradeL           [ANI_NUM];
-	zTModelAniID t_paradeM           [ANI_NUM];
+	zTModelAniID t_paradeL       [ANI_NUM];
+	zTModelAniID t_paradeM       [ANI_NUM];
 	zTModelAniID t_paradeS       [ANI_NUM];
-	zTModelAniID t_hitfrun           [ANI_NUM];
+	zTModelAniID t_hitfrun       [ANI_NUM];
 
 	zTModelAniID t_stumble;
 	zTModelAniID t_stumbleb;
@@ -261,38 +276,38 @@ private:
 	zTModelAniID t_fallenb_2_stand;
 
 	zTModelAniID t_walk_2_walkwl;
-	zTModelAniID t_walkwl_2_walk        ;
+	zTModelAniID t_walkwl_2_walk;
 	zTModelAniID s_walkwl;
-	zTModelAniID t_walkwl_2_walkwr      ;
+	zTModelAniID t_walkwl_2_walkwr;
 	zTModelAniID t_walkwr_2_walkwl;
 	zTModelAniID s_walkwr;
 	zTModelAniID t_walkwr_2_walk;
 
 	zTModelAniID t_walk_2_walkwbl;
-	zTModelAniID t_walkwbl_2_walk       ;
+	zTModelAniID t_walkwbl_2_walk;
 	zTModelAniID s_walkwbl;
-	zTModelAniID t_walkwbl_2_walkwbr    ;
+	zTModelAniID t_walkwbl_2_walkwbr;
 	zTModelAniID t_walkwbr_2_walkwbl;
 	zTModelAniID s_walkwbr;
 	zTModelAniID t_walkwbr_2_walk;
 
 	zTModelAniID _s_walk;
-	zTModelAniID _t_walk_2_walkl        ;
+	zTModelAniID _t_walk_2_walkl;
 	zTModelAniID _t_walkl_2_walk;
 	zTModelAniID _s_walkl;
-	zTModelAniID _t_walkl_2_walkr       ;
+	zTModelAniID _t_walkl_2_walkr;
 	zTModelAniID _t_walkr_2_walkl;
 	zTModelAniID _s_walkr;
-	zTModelAniID _t_walkr_2_walk        ;
+	zTModelAniID _t_walkr_2_walk;
 	zTModelAniID _t_turnl;
-	zTModelAniID _t_turnr               ;
+	zTModelAniID _t_turnr;
 	zTModelAniID _t_strafel;
 	zTModelAniID _t_strafer;
 
 	zTModelAniID _t_walk_2_walkbl;
-	zTModelAniID _t_walkbl_2_walk       ;
+	zTModelAniID _t_walkbl_2_walk;
 	zTModelAniID _s_walkbl;
-	zTModelAniID _t_walkbl_2_walkbr     ;
+	zTModelAniID _t_walkbl_2_walkbr;
 	zTModelAniID _t_walkbr_2_walkbl;
 	zTModelAniID _s_walkbr;
 	zTModelAniID _t_walkbr_2_walk;
@@ -300,9 +315,9 @@ private:
 	zTModelAniID s_jumpstand;
 	zTModelAniID t_stand_2_jumpstand;
 	zTModelAniID t_jumpstand_2_stand;
-	zTModelAniID _t_jumpb            ;
+	zTModelAniID _t_jumpb;
 	zTModelAniID _t_stand_2_jump;
-	zTModelAniID _s_jump            ;
+	zTModelAniID _s_jump;
 	zTModelAniID t_jump_2_stand;
 	zTModelAniID _t_stand_2_jumpup;
 	zTModelAniID _s_jumpup;
@@ -408,3 +423,96 @@ private:
 
 	int dummyLastVar;
 };
+
+
+void oCAniCtrl_Human::Archive(zCArchiver& arc)
+{
+	zCAIPlayer::Archive(arc);
+	if ( arc.InSaveGame() ) {
+		arc.WriteObject("aiNpc", npc);
+		arc.WriteInt("walkMode", walkmode);
+		arc.WriteInt("weaponMode",  weaponmode);
+		arc.WriteInt("wmodeLast",   weaponmode_last);
+		arc.WriteInt("wmodeSelect", weaponmode_selected);
+		arc.WriteBool("changeWeapon", changeweapon);
+		arc.WriteInt("actionMode", actionMode);
+	}
+}
+
+void oCAniCtrl_Human::Unarchive(zCArchiver& arc)
+{
+	zCAIPlayer::Unarchive(arc);
+	if ( arc.InSaveGame() ) {
+		npc = arc.ReadObject("aiNpc", 0);
+
+		Init(npc);
+		if ( npc )
+			npc->Release();
+
+		walkmode = 0;
+		actionMode = 0;
+
+		arc.ReadInt("walkMode", walkmode);
+		arc.ReadInt("weaponMode",  weaponmode);
+		arc.ReadInt("wmodeLast",   weaponmode_last);
+		arc.ReadInt("wmodeSelect", weaponmode_selected);
+		arc.ReadBool("changeWeapon", changeweapon);
+		arc.ReadInt("actionMode", actionMode);
+	}
+}
+
+void oCAniCtrl_Human::SetFightAnis(int fm)
+{
+	_t_walk_2_aim = t_walk_2_aim[fm];
+	_t_walkl_2_aim = t_walkl_2_aim[fm];
+	_t_walkr_2_aim = t_walkr_2_aim[fm];
+	_s_aim = s_aim[fm];
+	_t_aim_2_walk = t_aim_2_walk[fm];
+
+	if ( fm <= FMODE_2H ) {
+		_t_hitl = t_hitl[fm];
+		_t_hitr = t_hitr[fm];
+		_t_hitf = t_hitf[fm];
+		_t_hitfrun = t_hitfrun[fm];
+		_t_paradeL = t_paradeL[fm];
+	} else if ( fm == FMODE_BOW || fm == FMODE_CBOW ) {
+		_t_hitback = t_hitback[fm];
+		_t_hitf = t_hitf[fm];
+		_s_hitf = s_hitf[fm];
+	}
+
+	int guild = npc->GetTrueGuild();
+
+	int *gil_values = 0;
+	if ( fm == FMODE_FIST ) {
+		gil_values = TGilValues.fight_range_fist;
+	} else if ( fm == FMODE_1H ) {
+		gil_values = TGilValues.fight_range_1hs;
+	} else if ( fm == FMODE_2H )
+		gil_values = TGilValues.fight_range_2hs;
+	} else {
+		return;
+	}
+
+	int range = gil_values[guild];
+	if (!range && guild < GIL_MAX )
+		range = gil_values[GIL_HUMAN];
+
+	if (fm == FMODE_FIST)
+		npc->SetFightRangeFist(range);
+}
+
+zCModelAniActive* oCAniCtrl_Human::GetLayerAni(int layer)
+{
+	if ( model->active_ani_num <= 0 )
+		return nullptr;
+
+	zCModelAniActive* active = nullptr;
+	for (unsigned i = 0; i < model->active_ani_num; ++i) {
+		active = model->active_anis[i];
+		if (active->ani->layer == layer)
+			break;
+	}
+
+	return active;
+}

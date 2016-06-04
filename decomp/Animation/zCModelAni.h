@@ -24,11 +24,13 @@ private:
 	int aniId;
 	int unk0[7];
 	int layer; // maybe?
-	int yob[23];
+	int unk1[9];
+	zCModelAni *__ani;
+	int yob[13];
 	zTMdl_AniSample **eee;
 	int uu;
 	int UU;
-	int **heh;
+	short heh[2];
 	int bitfield;
 	unsigned __int8 flags;
 };

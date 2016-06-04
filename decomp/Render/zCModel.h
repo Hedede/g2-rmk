@@ -53,14 +53,10 @@ public:
 
 private:
 	int active_ani_num;
-	zCModelAniActive* active_anis;
+	zCModelAniActive* active_anis[6];
 
-	int unn2;
-	int unn3;
-	int unn4;
-	int unn5;
-	int unn6;
-	void **guc;
+	zCModelAniActive* guc; // pointer to array (allocated by new)
+
 	zCArray alsoarray;
 	zCVob *usedBy;
 	ModelPrototypeArray _prototypes;

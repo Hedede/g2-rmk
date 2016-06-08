@@ -3,8 +3,8 @@ class zCTrigger : public zCTriggerBase {
 public:
 	virtual ~zCTrigger();
 
-	virtual void Archive(zCArchiver& arc);
-	virtual void Unarchive(zCArchiver& arc);
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
 
 	void OnTrigger(zCVob* otherVob, zCVob* vobInstigator) override
 	{

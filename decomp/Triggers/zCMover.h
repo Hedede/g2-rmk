@@ -7,17 +7,41 @@ class zCMover : public zCTrigger {
 	Z_OBEJCT(zCMover);
 public:
 	virtual ~zCMover();
-	virtual void Archive(zCArchiver& arc);
-	virtual void Unarchive(zCArchiver& arc);
-	virtual void OnTrigger(zCVob *,zCVob *);
-	virtual void OnUntrigger(zCVob *,zCVob *);
-	virtual void OnTouch(zCVob *);
-	virtual void OnDamage(zCVob *,zCVob *,float,int,zVEC3 const &);
-	virtual void OnMessage(zCEventMessage *,zCVob *);
-	virtual void OnTick();
-	virtual void PostLoad();
-	virtual void CanThisCollideWith(zCVob *);
-	virtual void SetVisual(zCVisual	*);
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
+
+	void OnTrigger(zCVob *,zCVob *) override;
+	void OnUntrigger(zCVob *,zCVob *) override;
+	void OnTouch(zCVob *) override;
+	void OnDamage(zCVob*, zCVob* vobAttacker, float damage, int, zVEC3 const&) override;
+	{
+		if (flags.isEnabled && filterFlags.reactToOnDamage &&
+		    damage > 0.0 && damage > damageThreshold)
+			TriggerMover(vobAttacker);
+	}
+	void OnMessage(zCEventMessage *,zCVob *) override;
+	void OnTick() override;
+
+	void PostLoad() override;
+
+	void CanThisCollideWith(zCVob *) override;
+	void SetVisual(zCVisual	*) override;
+
+	void AdvanceKeyframe_KF()
+	{
+		float adv = advanceDir * moveSpeedUnit;
+		SetToKeyframe_KF(adv * ztimer.frameTimeFloat + actKeyframeF);
+	}
+
+	void FinishedClosing()
+	{
+		zCVob::SetSleeping(1);
+		moverState = 2;
+		zsound->PlaySound3D(soundCloseEnd, this, 1, 0);
+		zsound->StopSound(soundMovingHandle);
+		ShowDebugInfo(this);
+	}
+
 private:
 	struct zTMov_Keyframe {
 		zPOINT3     pos;

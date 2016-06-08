@@ -1,14 +1,14 @@
 class oCAIHuman : public oCAniCtrl_Human {
 	Z_OBJECT(oCAIHuman);
 public:
-	virtual void Archive(zCArchiver& arc);
+	void Archive(zCArchiver& arc) override
 	{
 		oCAniCtrl_Human::Archive(arc);
 		if (arc.InSaveGame()) {
 		}
 	}
 
-	virtual void Unarchive(zCArchiver& arc)
+	void Unarchive(zCArchiver& arc) override
 	{
 		oCAniCtrl_Human::Unarchive(arc);
 		if (arc.InSaveGame()) {
@@ -22,6 +22,8 @@ public:
 	virtual void AddIgnoreCD(zCVob *);
 	virtual void SubIgnoreCD(zCVob *);
 	virtual void DoHackSpecials();
+
+	void CamMessages();
 
 private:
 	//Da oCAIHuman (eine Unterklasse) nicht mehr viel zusätzlich enthält, hier einfach mal drangeklatscht:

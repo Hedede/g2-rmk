@@ -31,6 +31,16 @@ public:
 		return model;
 	}
 
+	int CheckEnoughSpaceMoveBackward(int dontDetectWalkStopChasm)
+	{
+		zMAT4 const& trafo = vob->trafoObjToWorld;
+		float x = trafo[0][2]; // -GetHeadingWorld()?
+		float y = trafo[1][2];
+		float z = trafo[2][2];
+		zVEC3 dir{-x,-y,-z};
+		return CheckEnoughSpaceMoveDir(dir, dontDetectWalkStopChasm);
+	}
+
 
 private:
 	// Config
@@ -112,10 +122,11 @@ private:
 
 	//Zur Bedeutung siehe obenstehende Struktur.
 	struct {    // 27 Bit
-		zUINT8          zMV_DO_SURFACE_ALIGN            : 2;    // zTSurfaceAlignMode
-		zUINT8          zMV_DO_DETECT_WALK_STOP_CHASM   : 1;
-		zUINT8          zMV_DO_WALL_SLIDING             : 1;
-		zUINT8          zMV_DO_HEIGHT_CORRECTION        : 1;
+		// zTSurfaceAlignMode
+		zUINT8          zMV_DO_SURFACE_ALIGN            : 2; // 1,2
+		zUINT8          zMV_DO_DETECT_WALK_STOP_CHASM   : 1; // 4
+		zUINT8          zMV_DO_WALL_SLIDING             : 1; // 8
+		zUINT8          zMV_DO_HEIGHT_CORRECTION        : 1; // 16
 
 		zUINT8          cdStatOriginal                  : 1;
 		zUINT8          cdStat                          : 1;

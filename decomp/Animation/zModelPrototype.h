@@ -1,5 +1,4 @@
 class zCModelPrototype {
-
 	zCModelAni* SearchAni(zSTRING const& aniName);
 	
 	zSTRING& GetModelProtoFileName()
@@ -13,6 +12,8 @@ private:
 	static void ConvertVec3(zVEC3& vec);
 	static void ConvertAngle(float& angle) {}
 	void ReadComment() {}
+
+	void AddAni(zCModelAni* ani);
 
 private:
 	zCModelPrototype *__next;
@@ -48,6 +49,16 @@ zCModelAni* zCModelPrototype::SearchAni(zSTRING const& aniName)
 	if (idx >= 0)
 		return anis[idx];
 	return nullptr;
+}
+
+int zCModelPrototype::AddAni(zCModelAni *ani)
+{
+	if (SearchAni(ani->aniName)) {
+		zFATAL("D: zModel(zCModelPrototype::AddAni): ani already defined: " + ani->aniName); // 1573, _dieter
+	}
+
+	anis.InsertSort(ani);
+	return anis.GetNumInList();
 }
 
 void zCModelPrototype::ConvertVec3(zVEC3& vec)

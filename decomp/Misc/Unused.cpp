@@ -1,6 +1,7 @@
 void D_Reset() { }
 void D_Print(char *, TDebug) { }
 void D_ClrWin() { }
+void D_Print(zVEC3 const &,zSTRING const &,TDebug) {}
 
 void winCreateMenu() { }
 

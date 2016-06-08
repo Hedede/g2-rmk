@@ -90,6 +90,15 @@ public:
 		}
 	}
 
+	void PC_GoBackWard();
+
+	bool Swim_CanClimbLedge()
+	{
+		zVEC3 ledgePos;
+		return DetectClimbUpLedge(ledgePos, 0) &&
+		       fabs(ledgePos.y - headY) < config.zMV_YMAX_SWIM_CLIMB_OUT;
+	}
+
 	void SetFightAnis(int fmode);
 
 	void StartStandAni()
@@ -562,4 +571,14 @@ void oCAniCtrl_Human::HitInterrupt()
 	lastHitAniFrame = 0;
 	model->StopAni(hitAniID);
 	hitAniID = -1;
+}
+
+void oCAniCtrl_Human::PC_GoBackward()
+{
+	if (CheckEnoughSpaceMoveBackward(0) || CheckForceModelHalt(0)) {
+		_Stand();
+	} else {
+		flags2.zMV_DO_WALL_SLIDING = 1;
+		_Backward();
+	}
 }

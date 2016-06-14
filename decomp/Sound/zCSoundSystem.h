@@ -13,7 +13,19 @@ public:
 
 	enum zTSpeakerType {};
 
-	struct zTSound3DParams {};
+	struct zTSound3DParams {
+		void SetDefaults()
+		{
+			unk0 = 0;
+			unk1 = 1.0;
+			unk2 = -1.0;
+			unk4 = 0;
+			unk5 = 1.0;
+			unk6 = 0;
+			unk7 = -999999.0;
+			unk3 = 1;
+		}
+	};
 
 public:
 	virtual ~zCSoundSystem();

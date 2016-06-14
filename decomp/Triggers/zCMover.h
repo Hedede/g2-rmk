@@ -6,6 +6,8 @@ class zTMov_Keyframe {
 class zCMover : public zCTrigger {
 	Z_OBEJCT(zCMover);
 public:
+	static zTMov_Keyframe GetKeyrame(zCVob* keyframeVob);
+
 	zCMover()
 		: zCTrigger()
 	{
@@ -45,7 +47,7 @@ public:
 	void PostLoad() override;
 
 	void CanThisCollideWith(zCVob* other) override;
-	void SetVisual(zCVisual	*) override;
+	void SetVisual(zCVisual* newVisual) override;
 
 	bool IsKeyToThisMover(zCVob* other)
 	{
@@ -55,11 +57,14 @@ public:
 		return other->GetObjectName() == respondToVobName;
 	}
 
+	void SetToKeyframe(float newKeyframe, float advDir);
+
 	void AdvanceKeyframe_KF()
 	{
 		float adv = advanceDir * moveSpeedUnit;
 		SetToKeyframe_KF(adv * ztimer.frameTimeFloat + actKeyframeF);
 	}
+
 
 	void FinishedClosing()
 	{
@@ -73,6 +78,9 @@ public:
 	void DoClose();
 	void DoOpen();
 	void InvertMovement();
+
+	void Lock();
+	void Unlock();
 
 private:
 	void StartMovingSound();
@@ -292,10 +300,32 @@ void zCMover::Unarchive(zCArchiver& arc)
 		sfxMoving = zsound->LoadSoundFX(soundMoving);
 
 	if ( visual )
-		model = dynamic_cast<zCMovel>(visual);
+		model = dynamic_cast<zCModel*>(visual);
 
 	if ( !arc.InSaveGame() )
 		SetToKeyframe(0.0, 0.0);
+}
+
+void zCMover::SetVisual(zCVisual *newVisual)
+{
+	zCVob::SetVisual(newVisual);
+
+	model = 0;
+	moverAniType = 0;
+
+	if ( visual ) {
+		model = dynamic_cast<zCModel*>(visual);
+		if ( model )
+			moverAniType = 1;
+	}
+
+	if ( model ) {
+		if ( moverLocked ) {
+			model->StartAni("S_LOCKED", 0);
+		} else {
+			model->StartAni("S_UNLOCKED", 0);
+		}
+	}
 }
 
 void zCMover::MoveToKeyframe(int idx)
@@ -355,15 +385,7 @@ int zCMover::CanThisCollideWith(zCVob* other)
 void zCMover::StartMovingSound()
 {
 	zTSound3DParams params;
-
-	params.unk0 = 0;
-	params.unk1 = 1.0;
-	params.unk2 = -1.0;
-	params.unk4 = 0;
-	params.unk5 = 1.0;
-	params.unk6 = 0;
-	params.unk7 = -999999.0;
-	params.unk3 = 1;
+	params.SetDefaults();
 	soundMovingHandle = zsound->PlaySound3D(sfxMoving, this, 2, &params);
 }
 
@@ -413,9 +435,29 @@ void zCMover::InvertMovement()
 	}
 }
 
+void zCMover::OnTick()
+{
+	if (moverState == 0 && stayOpenTimeDest != 0.0 && ztimer.totalTimeFloat >= stayOpenTimeDest )
+	{
+		stayOpenTimeDest = 0;
+
+		DoClose();
+	}
+	AdvanceMover();
+}
+
+void zCMover::OnTrigger(zCVob* other, zCVob* instigator)
+{
+	if (flags.isEnabled) {
+		zINFO("D: zMOV: Trigger Mover " + GetObjectName()); // 1271
+		if ( filterFlags.reactToOnTrigger)
+			TriggerMover(instigator);
+	}
+}
+
 void zCMover::OnUntrigger(zCVob* other, zCVob* instigator)
 {
-	if (trg_flags & 2) {
+	if (flags.isEnabled) {
 		zINFO(8,"D: zMOV: Untrigger Mover " + GetObjectName()); // _dieter/zVobMisc.cpp, 1285
 		if ( moverBehavior == 1 && --numTriggerEvents <= 0 ) {
 			if ( moverState == 0 ) {
@@ -432,13 +474,13 @@ void zCMover::OnTouch(zCVob *other)
 	if ( autoLinkEnabled )
 		other->CheckAutoLink(this);
 
-	if ( trg_flags & 2 && other ) {
+	if (flags.isEnabled && other ) {
 		if ( flags2.sleepingMode && advanceDir != 0.0 ) {
 			if ( touchBlockerDamage > 0.0 ) {
 				zVEC3 pos;
 				other->GetEM()->OnDamage(this, this, touchBlockerDamage, 1, pos);
 			}
-		} else if ( trg_filterFlags & 2 ) {
+		} else if (filterFlags.reactToOnTouch) {
 			TriggerMover(other);
 		}
 	}
@@ -461,5 +503,128 @@ void zCMover::ClearStateInternals()
 	if ( sfxMoving ) {
 		zsound->StopSound(soundMovingHandle);
 		Release(sfxMoving);
+	}
+}
+
+zTMov_Keyframe zCMover::GetKeyframe(zCVob *kfVob)
+{
+	zTMov_Keyframe result;
+	if (kfVob) {
+		result.pos = kfVob->GetPositionWorld();
+		result.quat.Matrix4ToQuat(kfVob->trafoObjToWorld);
+	}
+
+	return result;
+}
+
+void zCMover::Lock(zCVob* other)
+{
+	if ( !moverLocked && moverState == 2 ) {
+		if (IsKeyToThisMover(other)) {
+			if ( auto model = dynamic_cast<zCModel*>(visual) ) {
+				model->StartAni("T_UNLOCKED_2_LOCKED", 0);
+			}
+			zsound->PlaySound3D(soundLock, this, 1, 0);
+			moverLocked = 1;
+		}
+	}
+}
+
+void zCMover::Unlock(zCVob* other)
+{
+	if ( moverLocked && moverState == 2 ) {
+		if (IsKeyToThisMover(other)) {
+			if ( auto model = dynamic_cast<zCModel*>(visual) ) {
+				model->StartAni("T_LOCKED_2_UNLOCKED", 0);
+			}
+			zsound->PlaySound3D(soundUnlock, this, 1, 0);
+			moverLocked = 0;
+		}
+	}
+}
+
+void zCMover::SetToKeyframe(float newKeyframe, float advDir)
+{
+	advanceDir = advDir;
+	if (moverAniType == 0) {
+		SetToKeyframe_KF(newKeyframe);
+		if ( advDir == 0.0 ) {
+			AdvanceKeyframe_KF();
+			InterpolateKeyframes_KF();
+		}
+	} else if (moverAniType == 1) {
+		if ( moverBehavior <= 2 ) {
+			zSTRING aniName;
+			if ( newKeyframe ) {
+				if ( advDir != 0.0 ) {
+					aniName = "T_OPEN_2_CLOSED";
+				} else {
+					aniName = "S_OPEN";
+				}
+			} else if ( advDir == 0.0 ) {
+				aniName = "S_CLOSED";
+			} else {
+				aniName = "T_CLOSED_2_OPEN";
+			}
+			model->StartAni(aniName, 0);
+		} else if (newKeyframe < model->prototypes[0]->anis.GetNumInList()) {
+			model->StartAni(newKeyframe, 0);
+		}
+	}
+}
+
+void zCMover::TriggerMover(zCVob *other)
+{
+	if (moverLocked && !IsKeyToThisMover(other)) {
+		zsound->PlaySound3D(soundUseLocked, this, 1, 0);
+		return;
+	}
+
+	if ( CanBeActivatedNow(other) ) {
+		if (moverLocked)
+			Unlock(other);
+
+		if (!moverLocked) {
+			switch (moverBehavior) {
+			case MB_2STATE_TOGGLE:
+				if ( moverState == 0) {
+					DoClose();
+				} else if ( moverState == 2 ) {
+				 	DoOpen();
+				} else {
+					InvertMovement();
+				}
+				return;
+			case MB_2STATE_TRIGGER_CONTROL:
+				++numTriggerEvents;
+				if ( moverState != 2 )
+					return;
+				DoOpen();
+				return;
+			case MB_2STATE_OPEN_TIMED:
+				if ( moverState == 2 ) {
+				 	DoOpen();
+					return;
+				} else if (moverState == 0) {
+					if ( stayOpenTimeDest == 0.0 )
+						stayOpenTimeDest = 1.0;
+					else
+						stayOpenTimeDest = stayOpenTimeSec * 1000.0 + ztimer.totalTimeFloat;
+				} else {
+					InvertMovement();
+				}
+				return;
+			case MB_NSTATE_LOOP:
+				if ( advanceDir == 0.0 ) {
+					DoOpen();
+				} else {
+					InvertMovement();
+				}
+				return;
+			case MB_NSTATE_SINGLE_KEYS:
+			default:
+				return;
+			}
+		}
 	}
 }

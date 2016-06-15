@@ -1,6 +1,5 @@
 class zVEC3 {
 	zVEC3() = default;
-	zVEC3(float val);
 
 	zVEC3(zVEC3 const& other)
 	{
@@ -17,22 +16,19 @@ class zVEC3 {
 	}
 
 	zVEC3(float x, float y, float z)
-	{
-		v[0] = x;
-		v[1] = y;
-		v[2] = z;
-	}
+		: x{x}, y{y}, z{z}
+	{ }
 
 	float& operator[](size_t index)
 	{
-		return v[index];
+		return (&x)[index];
 	}
 
 	zVEC3& operator*=(float val)
 	{
-		v[0] *= val;
-		v[1] *= val;
-		v[2] *= val;
+		x *= val;
+		y *= val;
+		z *= val;
 		return *this;
 	}
 
@@ -134,5 +130,10 @@ class zVEC3 {
 		return tmp *= val;;
 	}
 
-	float v[3];
+	friend float operator*(zVEC3 const& a, zVEC3 const& b)
+	{
+		return a.x * b.x + a.y * b.y + a.z * b.z;
+	}
+
+	float x, y, z;
 };

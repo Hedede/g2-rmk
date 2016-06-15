@@ -64,6 +64,8 @@ public:
 		float adv = advanceDir * moveSpeedUnit;
 		SetToKeyframe_KF(adv * ztimer.frameTimeFloat + actKeyframeF);
 	}
+	void SetToKeyframe_KF(float kf);
+	void InterpolateKeyframes_KF();
 
 	void AdvanceMover();
 	void TriggerMover(zCVob* other);
@@ -706,6 +708,106 @@ void zCMover::OnMessage(zCEventMessage *ev_msg, zCVob *source)
 			break;
 		default:
 			return;
+		}
+	}
+}
+
+void zCMover::SetToKeyframe_KF(float newKeyFrame)
+{
+	int num_kf = keyframeList.GetNumInList();
+	if ( num_kf <= 1 )
+		return;
+	actKeyframeF = newKeyFrame;
+	if ( advanceDir <= 0.0 ) {
+		if ( moverBehavior > 2 ) {
+			if ( moverBehavior == 3 ) {
+				if ( newKeyFrame < 0.0 )
+					actKeyframeF = num_kf - 0.00001;
+			} else if ( moverBehavior == 4 ) {
+				if ( newKeyFrame <= nextKeyframe ) {
+					actKeyframeF = nextKeyframe;
+					advanceDir = 0;
+				}
+			}
+		} else if ( newKeyFrame < 0.0 ) {
+			actKeyframeF = 0;
+			advanceDir = 0;
+		}
+	} else if ( moverBehavior > 2 ) {
+		if ( moverBehavior == 3 ) {
+			if ( num_kf <= newKeyFrame )
+				actKeyframeF = 0;
+		} else if ( moverBehavior == 4 ) {
+			newKeyFrame = floor(newKeyFrame);
+			if ( newKeyFrame != actKeyframe ) {
+				advanceDir = 0;
+				actKeyframeF = nextKeyframe;
+			}
+		}
+	} else {
+		if ( newKeyFrame >= num_kf - 1 ) {
+			actKeyframeF = num_kf - 1;
+			advanceDir = 0;
+		}
+	}
+
+	// fld     dword ptr [esi+1A0h]
+	// fcomp   ds:__real@4@00000000000000000000
+	// fld     dword ptr [esi+190h]
+	// fnstsw  ax
+	// test    ah, 1000001b
+	// jnz     CEIL_CALL
+	if (advanceDir > 0.0) {
+		actKeyframe = floor(newKeyFrame);
+	} else {
+		actKeyframe = ceil(actKeyframeF);
+	}
+
+	if ( actKeyframe < 0 ) {
+		actKeyframe = keyframeList.numInArray - 1;
+	} else if ( actKeyframe >= keyframeList.numInArray )
+		actKeyframe = 0;
+	}
+
+	if ( this->moverBehavior != 4 ) {
+		nextKeyframe = actKeyframe + advanceDir;
+
+		if ( nextKeyframe < 0 ) {
+			nextKeyframe = keyframeList.numInArray - 1;
+		} else if ( actKeyframe >= keyframeList.numInArray )
+			nextKeyframe = 0;
+		}
+	}
+
+	actKeyPosDelta = keyframeList[nextKeyframe].pos - keyframeList[actKeyframe].pos;
+
+	float unit = actKeyPosDelta.LengthApprox();
+	if ( unit <= 0.01 ) {
+		zVEC3 axis1, axis2;
+		// angle discarded
+		keyframeList[actKeyframe].quat.QuatToAxisAngle(axis1, newKeyFrame);
+		keyframeList[nextKeyframe].quat.QuatToAxisAngle(axis2, newKeyFrame);
+
+		float len1 = Alg_SqrtInvApprox(axis1.Length2());
+		float len2 = Alg_SqrtInvApprox(axis2.Length2());
+
+		axis1 *= len1;
+		axis2 *= len1;
+
+		float dot = (1.0 - axis2 * axis1) * 500.0;
+
+		if (dot <= 0.0)
+			unit = moveSpeed * 10000.0;
+	}
+
+	moveSpeedUnit = moveSpeed / unit;
+
+	if ( advanceDir == 0.0 ) {
+		nextKeyframe = actKeyframe;
+		if ( moverState == 1 ) {
+			FinishedOpening();
+		} else if ( moverState == 3 ) {
+			FinishedClosing();
 		}
 	}
 }

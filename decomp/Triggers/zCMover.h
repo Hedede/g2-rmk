@@ -65,15 +65,8 @@ public:
 		SetToKeyframe_KF(adv * ztimer.frameTimeFloat + actKeyframeF);
 	}
 
-
-	void FinishedClosing()
-	{
-		zCVob::SetSleeping(1);
-		moverState = 2;
-		zsound->PlaySound3D(soundCloseEnd, this, 1, 0);
-		zsound->StopSound(soundMovingHandle);
-		ShowDebugInfo(this);
-	}
+	void AdvanceMover();
+	void TriggerMover(zCVob* other);
 
 	void DoClose();
 	void DoOpen();
@@ -85,6 +78,7 @@ public:
 private:
 	void StartMovingSound();
 	void MoveToKeyframe(int idx);
+	void FinishedClosing();
 	void FinishedOpening();
 	void ClearStateInternals();
 	void UpdateInternals();
@@ -343,21 +337,33 @@ void zCMover::MoveToKeyframe(int idx)
 	}
 }
 
+void zCMover::FinishedClosing()
+{
+	SetSleeping(1);
+
+	moverState = 2;
+
+	zsound->PlaySound3D(soundCloseEnd, this, 1, 0);
+	zsound->StopSound(soundMovingHandle);
+
+	UntriggerTarget(this);
+}
+
 void zCMover::FinishedOpening()
 {
 	SetSleeping(1);
 
 	moverState = 0;
 
-	zsound->StopSound(&soundMovingHandle);
-	zsound->PlaySound3D(&soundOpenEnd, this, 1, 0);
+	zsound->StopSound(soundMovingHandle);
+	zsound->PlaySound3D(soundOpenEnd, this, 1, 0);
 
 	if ( moverBehavior == 2 ) {
 		stayOpenTimeDest = stayOpenTimeSec * 1000.0 + ztimer.totalTimeFloat;
 		SetSleeping(0);
 	}
 
-	Init();
+	TriggerTarget(this);
 }
 
 void zCMover::UpdateInternals()
@@ -650,26 +656,9 @@ void zCMover::AdvanceMover(zCMover *this)
 
 		if ( advanceDir == 0.0 ) {
 			if ( moverState == 1 ) {
-				SetSleeping(1);
-				moverState = 0;
-
-				zsound->StopSound(soundMovingHandle);
-				zsound->PlaySound3D(soundOpenEnd, this, 1, 0);
-
-				if ( moverBehavior == 2 ) {
-					stayOpenTimeDest = stayOpenTimeSec * 1000.0 + ztimer.totalTimeFloat;
-					SetSleeping(0);
-				}
-
-				TriggerTarget(this);
+				FinishedOpening();
 			} else if ( moverState == 3 ) {
-				SetSleeping(1);
-				moverState = 2;
-
-				zsound->PlaySound3D(soundCloseEnd, this, 1, 0);
-				zsound->StopSound(soundMovingHandle);
-
-				UntriggerTarget(this);
+				FinishedClosing();
 			}
 		}
 	}

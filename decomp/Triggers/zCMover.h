@@ -811,3 +811,113 @@ void zCMover::SetToKeyframe_KF(float newKeyFrame)
 		}
 	}
 }
+
+void zCMover::InterpolateKeyframes_KF()
+{
+	int num_kf = keyframeList.GetNumInList();
+	if ( num_kf <= 1 )
+		return;
+
+	float kf_delta = actKeyframeF - floor(actKeyframeF);
+
+	// Этот кусок требует тщательной проверки, т.к. компилер превратил это в
+	// полное спагетти, и кроме того, я удалил кучу дублированных условий и
+	// дохлого (unreachable) кода
+	switch (speedType) {
+	case ST_CONST:
+		break;
+	case ST_SLOW_START_END:
+		if (moverBehavior != 3) {
+			if ((num_kf - 2) > actKeyframeF)
+				break;
+
+			if (actKeyframeF < 1.0) {
+				kf_delta = (zSinApprox(kf_delta * Pi - Half_Pi) + 1.0) * 0.5;
+			} else {
+				kf_delta = zSinApprox(kf_delta * Half_Pi);
+			}
+		}
+		break;
+	case ST_SLOW_START:
+		if ( moverBehavior != 3 ) {
+			if (actKeyframeF < 1.0) {
+				kf_delta = (zSinApprox(kf_delta * Pi - Half_Pi) + 1.0) * 0.5;
+			} else if ((num_kf - 2) <= actKeyframeF) {
+				kf_delta = zSinApprox(kf_delta * Half_Pi);
+			}
+		}
+		break;
+	case ST_SLOW_END:
+		if ( moverBehavior != 3 )
+			kf_delta = zSinApprox(kf_delta * Half_Pi);
+		break;
+	case ST_SEG_SLOW_START_END:
+		kf_delta = (zSinApprox(kf_delta * Pi - Half_Pi) + 1.0) * 0.5;
+		break;
+	case ST_SEG_SLOW_START:
+		kf_delta = 1.0 - zCosApprox(kf_delta * Half_Pi);
+		break;
+	case ST_SEG_SLOW_END:
+		kf_delta = zSinApprox(kf_delta * Half_Pi);
+		break;
+	}
+
+	if ( advanceDir < 0.0 )
+		kf_delta = 1.0 - kf_delta;
+
+	zVEC3 pos2;
+	zVEC3 pos1 = trafoObjToWorld.GetTranslation();
+	if ( posLerpType != 1 || num_kf <= 2 ) {
+		pos2 = kf_delta * actKeyPosDelta;
+
+		pos2.x += keyframeList[actKeyframe].pos.x;
+		pos2.y += keyframeList[actKeyframe].pos.z;
+		pos2.z += keyframeList[actKeyframe].pos.z;
+	} else {
+		int prev_kf = actKeyframe - advanceDir;
+		if ( prev_kf >= 0 ) {
+			if ( prev_kf >= num_kf )
+				prev_kf = 0;
+		} else {
+			prev_kf = num_kf - 1;
+		}
+
+		int next_kf = nextKeyFrame + advanceDir;
+		if ( next_kf >= 0 ) {
+			if ( next_kf >= num_kf )
+				next_kf = 0;
+		} else {
+			next_kf = num_kf - 1;
+		}
+
+		zVEC3 act_pos = keyframeList[actKeyframe].pos;
+		zVEC3 pa = keyframeList[prev_kf].pos - act_pos;
+		zVEC3 nn = keyframeList[next_kf].pos - keyframeList[nextKeyFrame].pos;
+		zVEC3 td = keyframeList[nextKeyFrame].pos - keyframeList[prev_kf].pos;
+
+		zVEC3 pn = nn - pa;
+
+		float kf_delta2 = kf_delta * kf_delta;
+
+		zVEC3 tdd = td * kf_delta;
+		zVEC3 pnn = (pa - pn) * kf_delta2;
+
+		float kf_delta3 = kf_delta2 * kf_delta;
+
+		zVEC3 pnnn = pn * kf_delta3 + pnn;
+
+		pos2 = pnnn + tdd + act_pos;
+	}
+
+	zVEC3 diff = pos2 - pos1;
+	if ( autoRotate && diff.Length2() > 0.0 ) {
+		SetHeadingWorld(pos2);
+		SetPositionWorld(pos2);
+	} else {
+		zCQuat quat;
+		quat.Slerp(kf_delta, keyframeList[actKeyframe].quat, keyframeList[nextKeyFrame].quat);
+
+		SetPositionWorld(pos2);
+		SetRotationWorld(&quat);
+	}
+}

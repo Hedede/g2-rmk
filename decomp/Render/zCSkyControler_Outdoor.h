@@ -47,17 +47,28 @@ class zCSkyPlanet {
 class zCSkyControler_Outdoor : public zCSkyControler_Mid {
 	Z_OBJECT(zCSkyControler_Outdoor);
 public:
-	virtual void Archive(zCArchiver &);
-	virtual void Unarchive(zCArchiver &);
-	virtual  ~zCSkyControler(uint);
-	virtual void SetTime(float);
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
+
+	virtual ~zCSkyControler();
+
+	void SetTime(float newTime) override;
 	virtual void GetTime();
 	virtual void ResetTime();
+
 	virtual void SetFarZ(float);
-	virtual void GetFarZ();
+	float GetFarZ()
+	{
+		return userFogFar;
+	}
+
 	virtual void SetFarZScalability(float);
-	virtual void GetFarZScalability();
-	virtual void SetBackgroundColor(zCOLOR);
+	float GetFarZScalability() override
+	{
+		return userFarZScalability;
+	}
+
+	void SetBackgroundColor(zCOLOR) override;
 	virtual void GetBackgroundColor();
 	virtual void GetBackgroundColorDef();
 	virtual void SetOverrideColor(zVEC3);
@@ -69,15 +80,30 @@ public:
 	virtual void RenderSkyPre();
 	virtual void RenderSkyPost(int);
 	virtual void GetGlobalWindVec(zVEC3 &,zTAnimationMode);
-	virtual void SetGlobalSkyScale(float);
-	virtual float GetGlobalSkyScale()
+
+	void SetGlobalSkyScale(float scale) override
+	{
+		if (skyScale != scale) {
+			skyScale = scale;
+			skyScaleChanged = true;
+		}
+	}
+	float GetGlobalSkyScale() override
 	{
 		return skyScale;
 	}
-	virtual void GetGlobalSkyScaleChanged();
+	bool GetGlobalSkyScaleChanged() override
+	{
+		return skyScaleChanged;
+	}
+
 	virtual void SetCameraLocationHint(zCSkyControler::zTCamLocationHint);
 	virtual void SetWeatherType(zTWeather);
-	// virtual void GetRenderLightning();
+	bool GetRenderLightning() override
+	{
+		return rainFX.renderLightning;
+	}
+	
 private:
 	//ab hier: Outdoor spezifisch!
 	zBOOL initDone;           //
@@ -102,8 +128,9 @@ private:
 	zCArray<zVEC3> fogColorDayVariations;
 	zCArray<zVEC3> fogColorDayVariations2;
 
-	zREAL m_fSkyScale;             //
-	zBOOL m_bSkyScaleChanged;      //
+	zREAL skyScale;
+	zBOOL skyScaleChanged;
+
 	zVEC3 m_overrideColor[3];      //
 	zBOOL m_bOverrideColorFlag;    //
 	zBOOL m_bDontRain;             //

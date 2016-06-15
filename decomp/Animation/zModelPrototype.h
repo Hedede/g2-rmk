@@ -8,6 +8,28 @@ class zCModelPrototype {
 
 	void SetFileSourceType(int sourceType);
 
+	void Release()
+	{
+		if (--refCtr <= 0) {
+			++refCtr;
+			delete this;
+		}
+	}
+
+	void ReleaseMeshSoftSkinList()
+	{
+		for (auto skin : softSkins)
+			Release(skin);
+		softSkins.DeleteList();
+	}
+
+	void zCModelPrototype::ReleaseMeshes()
+	{
+		ReleaseMeshSoftSkinList();
+		for (auto& node : nodes)
+			node->SetNodeVisualS(0);
+	}
+
 private:
 	static void ConvertVec3(zVEC3& vec);
 	static void ConvertAngle(float& angle) {}
@@ -16,8 +38,11 @@ private:
 	void AddAni(zCModelAni* ani);
 
 private:
-	zCModelPrototype *__next;
-	int unk0[2];
+	zCModelPrototype* __next; // unsure
+	zCModelPrototype* __prev; // unsure
+
+	int refCtr;
+
 	zSTRING modelProtoName; // stringized pointer to this
 	zSTRING fileName;
 	zCTree<zCModelNode*> nodeTree;

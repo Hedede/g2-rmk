@@ -1,6 +1,12 @@
 class zCWayNet : public zCObject {
 	Z_OBJECT(zCWayNet);
 public:
+	static int EstimateCost(zCWaypoint* from, zCWaypoint* to)
+	{
+		zVEC3 diff = from.pos - to.pos;
+		return abs(diff.x) + abs(diff.y) + abs(diff.z);
+	}
+
 	virtual ~zCWayNet();
 
 	virtual void Archive(zCArchiver& arc);

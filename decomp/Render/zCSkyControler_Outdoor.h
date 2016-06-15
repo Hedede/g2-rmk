@@ -1,7 +1,6 @@
 const int zSKY_NUM_LAYER = 2;
 
-struct zCSkyLayerData
-{
+struct zCSkyLayerData {
 	zESkyLayerMode skyMode;
 	zCTexture *tex;
 	zSTRING texName;
@@ -32,18 +31,21 @@ class zCSkyState {
 };
 
 enum zTPlanet {
+	SUN = 0,
+	MOON = 1,
 	NUM_PLANETS = 2;
 };
 
 class zCSkyPlanet {
-	zCMesh* mesh;        //
-	zVEC4   color0;   //  
-	zVEC4   color1;   //  
-	zREAL   size;        //  
-	zVEC3   pos;      //  
-	zVEC3   rotAxis;  //  
+	zCMesh* mesh;
+	zVEC4   color0;
+	zVEC4   color1;
+	zREAL   size;
+	zVEC3   pos;
+	zVEC3   rotAxis;
 };
 
+// Der Outdoor Skycontroller ist der speziellste aller SkyController.
 class zCSkyControler_Outdoor : public zCSkyControler_Mid {
 	Z_OBJECT(zCSkyControler_Outdoor);
 public:
@@ -97,7 +99,11 @@ public:
 		return skyScaleChanged;
 	}
 
-	virtual void SetCameraLocationHint(zCSkyControler::zTCamLocationHint);
+	void SetCameraLocationHint(zCSkyControler::zTCamLocationHint hint) override
+	{
+		rainFX.camLocationHint = hint;
+	}
+
 	virtual void SetWeatherType(zTWeather);
 	bool GetRenderLightning() override
 	{
@@ -110,18 +116,25 @@ private:
 	zREAL masterTime;         // //Outdoorsky hat eine Zeit
 	zREAL masterTimeLast;     //
 
-	enum zESkyLayerMode { zSKY_MODE_POLY, zSKY_MODE_BOX };
+	enum zESkyLayerMode {
+		zSKY_MODE_POLY,
+		zSKY_MODE_BOX
+	};
 
 	zCSkyState masterState;
 	zCSkyState* state[zSKY_NUM_LAYER];
 	zCArray<zCSkyState*>      stateList;
 
-	zCOLOR polyLightCLUT[256];
 	////Farbtabelle für Beleuchtung. Abhängig von der Tageszeit
-	/*  Its basically a rolled function that maps an intensity between 0 and 255 to a certain colour. It affects static lighting only.
-	    polyLightCLUT is updated regularly by the Sky Controller from certain presets for different parts of the day (red in the evening, blue in the morning...).
-	    In other words: At any given point it is a linear interpolation between black and the current sunlight.
+	/*  Its basically a rolled function that maps an intensity between
+	 *  0 and 255 to a certain colour. It affects static lighting only.
+	 *  polyLightCLUT is updated regularly by the Sky Controller from
+	 *  certain presets for different parts of the day (red in the evening,
+	 *  blue in the morning...).
+	 *  In other words: At any given point it is a linear interpolation
+	 *  between black and the current sunlight.
 	 */
+	zCOLOR polyLightCLUT[256];
 
 	zREAL dayCounter;     //sehr nutzlos
 
@@ -131,54 +144,60 @@ private:
 	zREAL skyScale;
 	zBOOL skyScaleChanged;
 
-	zVEC3 m_overrideColor[3];      //
-	zBOOL m_bOverrideColorFlag;    //
-	zBOOL m_bDontRain;             //
-	zBOOL m_bLevelChanged;         //
-	zBOOL m_bDarkSky;              // //Oldworld
+	zVEC3 overrideColor[3];
+	zBOOL overrideColorFlag;
+	zBOOL dontRain;
+	zBOOL levelChanged;
+	zBOOL darkSky;    //Oldworld
 
 	//fog
-	zREAL  resultFogScale;          //            
-	zREAL  heightFogMinY;           //            
-	zREAL  heightFogMaxY;           //            
-	zREAL  userFogFar;              //            
-	zREAL  resultFogNear;           //            
-	zREAL  resultFogFar;            //            
-	zREAL  resultFogSkyNear;        //            
-	zREAL  resultFogSkyFar;         //            
-	zCOLOR resultFogColor;          //           
-	zCOLOR resultFogColorOverride;  //           
-	zREAL  userFarZScalability;     //            
+	zREAL  resultFogScale;
+	zREAL  heightFogMinY;
+	zREAL  heightFogMaxY;
+	zREAL  userFogFar;
+	zREAL  resultFogNear;
+	zREAL  resultFogFar;
+	zREAL  resultFogSkyNear;
+	zREAL  resultFogSkyFar;
+	zCOLOR resultFogColor;
+	zCOLOR resultFogColorOverride;
+	zREAL  userFarZScalability;
 
 	zCSkyState* skyLayerState[2];
 
-	zCSkyLayer skyLayer[2];    
+	zCSkyLayer skyLayer[2];
 	zCSkyLayer skyLayerRainClouds;
 
-	zCTexture*     skyCloudLayerTex;        //
-
-	// planets
-	//enum { NUM_PLANETS = 2 }; //Sonne:0, Mond:1
+	zCTexture*     skyCloudLayerTex;
 
 	zCSkyPlanet planets[NUM_PLANETS];
 
-	zBOOL m_bSunVisible;        //
-	zREAL m_fFadeScale;         //
+	zBOOL sunVisible;
+	zREAL fadeScale;
 
 	// sky-pfx
-	zCVob*    vobSkyPFX;            //
-	zREAL     skyPFXTimer;          //
+	zCVob*    vobSkyPFX;
+	zREAL     skyPFXTimer;
 
 	// wind
-	zBOOL m_bIsMainControler;   // //gibts überhaupt noch andere als den Hauptcontroller?
+	// gibts überhaupt noch andere als den Hauptcontroller?
+	zBOOL isMainControler;
 
-	zVEC3 m_bWindVec;        //
+	zVEC3 windVec;
 
-	enum zTCamLocationHint {
-		zCAM_OUTSIDE_SECTOR,
-		zCAM_INSIDE_SECTOR_CANT_SEE_OUTSIDE,
-		zCAM_INSIDE_SECTOR_CAN_SEE_OUTSIDE,
-	};
+	struct zTRainFX {
+		zCOutdoorRainFX*  outdoorRainFX;
+		zTCamLocationHint camLocationHint;
+		zREAL             outdoorRainFXWeight; // 0..1
+		zREAL             soundVolume;         // 0..1
+		zREAL             timerInsideSectorCantSeeOutside;// msec
+		zREAL             timeStartRain;
+		zREAL             timeStopRain;
+		zBOOL             renderLightning;
+		zBOOL             m_bRaining;
+		//Anzahl der bisherigen Regenperioden.
+		int               m_iRainCtr;
+	} rainfx;
 };
 
 void zCSkyControler_Outdoor::Archive(zCArchiver& archiver)

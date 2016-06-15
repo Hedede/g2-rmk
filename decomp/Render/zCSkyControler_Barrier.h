@@ -1,31 +1,9 @@
 class oCSkyControler_Barrier : public zCSkyController_Outdoor {
 public:
-	void zCSkyControler_Outdoor::SetTime(float newTime)
-	{
-		lastRelightTime = lastRelightTime - newTime;
-		masterTime = newTime;
-		if ( fabs(lastRelightTime) > relightTime ) {
-			++relightCtr;
-			lastRelightTime = newTime;
-		}
-	}
+	void ~oCSkyControler_Barrier();
+	void RenderSkyPre() override;
 
 private:
-	struct zTRainFX {
-		zCOutdoorRainFX*  outdoorRainFX;
-		zTCamLocationHint camLocationHint;
-		zREAL             outdoorRainFXWeight; // 0..1
-		zREAL             soundVolume;         // 0..1
-		zREAL             timerInsideSectorCantSeeOutside;// msec
-		zREAL             timeStartRain;
-		zREAL             timeStopRain;
-		zBOOL             renderLightning;
-		zBOOL             m_bRaining;
-		//Anzahl der bisherigen Regenperioden.
-		int               m_iRainCtr;
-	} rainfx;
-
-
 	oCBarrier* barrier;
 	zBOOL bFadeInOut;
 };

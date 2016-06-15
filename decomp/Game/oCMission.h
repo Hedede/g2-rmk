@@ -4,12 +4,72 @@ struct TMisStatus {
 	float startTime;
 };
 
-class oCMission {
-public:
+struct oCMission {
 	oCMission(int instanceId);
 	virtual ~oCMission();
 	virtual Archive(zCArchiver& arc);
 	virtual Unarchive(zCArchiver& arc);
+
+	bool IsAvailable()
+	{
+		return available;
+	}
+
+	int GetStatus()
+	{
+		if (status)
+			return status->state;
+		return -1;
+	}
+
+	void GetCurrentUser(oCNpc*& npc, oCNpc*& player)
+	{
+		npc = npcUser;
+		player = npcPlayer;
+	}
+
+	bool OnTime()
+	{
+		if (duration > 0) {
+			float startTime = GetStartTime();
+			float dur = duration * 250000.0 + startTime;
+			if (ogame->GetWorldTimer()->GetFullTime() > dur)
+				return false;
+		}
+		return true;
+	}
+
+	int CheckMission()
+	{
+		if ( SuccessConditions() ) {
+			Success();
+		} else if ( FailureConditions() ) {
+			Failure();
+		} else if ( ObsoleteConditions() ) {
+			Obsolete();
+		} else if (status && status->state == 3) {
+			Running();
+		} else {
+			return 0;
+		}
+
+		return 1;
+	}
+
+private:
+	float GetStartTime()
+	{
+		if (status)
+			return status->startTime;
+		return -1.0;
+	}
+
+	void SetStartTime(float time)
+	{
+		if (status)
+			status->startTime = time;
+	}
+
 private:
 	// scripted
 	zSTRING name;
@@ -28,10 +88,10 @@ private:
 	// end of scripted
 
 	int symIndex;
-	int unk0;
-	int unk1;
+	oCNpc* npcUser;
+	oCNpc* npcPlayer;
 	int id;
-	int av;
+	int available;
 
 	zCArray<TMisStatus> info;
 	TMisStatus *status;
@@ -47,7 +107,7 @@ void oCMission::Archive(zCArchiver& arc)
 
 		arc.WriteString("name", sym->name);
 		arc.WriteInt("ID", id);
-		arc.WriteBool("Av", av);
+		arc.WriteBool("Av", available);
 		arc.WriteInt("NumInList", info.GetNumInList());
 
 		int statusIndex = -1;
@@ -66,8 +126,8 @@ void oCMission::Archive(zCArchiver& arc)
 
 void oCMission::Unarchive(zCArchiver& arc)
 {
-	unk0 = 0;
-	unk1 = 0;
+	npcUser = 0;
+	npcPlayer = 0;
 
 	if (arc.InSaveGame()) {
 		info.Clear();
@@ -79,7 +139,7 @@ void oCMission::Unarchive(zCArchiver& arc)
 		zparser.CreateInstance(symIndex, &this->name);
 
 		arc.ReadInt("ID", id);
-		arc.ReadBool("Av", av);
+		arc.ReadBool("Av", available);
 
 		int numInList;
 		arc.ReadInt("NumInList", numInList);

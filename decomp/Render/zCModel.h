@@ -25,8 +25,6 @@ public:
 	virtual void IsAnimationActive(zSTRING const &);
 	virtual void GetAnyAnimation();
 
-	zCModelAniActive* GetAniActive(int aniId);
-
 	zTBBox3D GetBBox3DNodeWorld(zCModelNodeInst* node)
 	{
 		CalcNodeListBBoxWorld();
@@ -45,6 +43,28 @@ public:
 		return ani ? ani->aniId : -1;
 	}
 
+	zCModelAni* GetAniFromAniID(int aniId);
+	// v My addition, to prettify stuff
+	zCModelAni* GetAniByName(zSTRING const& name)
+	{
+		return GetAniFromAniID(GetAniIDFromAniName(name));
+	}
+
+	bool IsAniActive(zCModelAni* ani);
+
+	// From G1Demo, optimized out in G2A
+	bool IsAniActive(int aniId)
+	{
+		return IsAniActive(GetAniFromAniID(aniId));
+	}
+	bool IsAniActive(zSTRING const& name)
+	{
+		return IsAniActive(GetAniByName(name));
+	}
+
+	zCModelAniActive* GetAniActive(int aniId);
+
+
 	zVEC3 GetVelocityRing()
 	{
 		zVEC3 ret;
@@ -59,16 +79,18 @@ private:
 
 	zCModelAniActive* guc; // pointer to array (allocated by new)
 
-	zCArray alsoarray;
-	zCVob *usedBy;
-	ModelPrototypeArray _prototypes;
-	zCArray modelNodeInstArray;
-	zCArray_zCMeshSoftSkin _skins;
-	zCArraySort aniAttachments;
-	zCArray __modelNodes;
-	zCArray unknown_ar1;
-	zCArray unknown_ar2;
-	ObjectArray meshLib;
+	zCArray<> alsoarray;
+	zCVob* usedBy;
+
+	zCArray<zCModelPrototype*> _prototypes;
+	zCArray<zCModelNodeInst*> modelNodeInstArray;
+	zCArray<zCMeshSoftSkin*> _skins;
+	zCArraySort<> aniAttachments;
+	zCArray<> __modelNodes;
+	zCArray<> unknown_ar1;
+	zCArray<> unknown_ar2;
+	zCArray<> meshLib;
+
 	void *ukptr;
 	zCArray unkarra;
 	zTBBox3D bbox3d;
@@ -88,6 +110,7 @@ private:
 	zVEC3 velocities[8];
 	char flags;
 	int unkno;
+
 	zCModelAni **showAniList;
 };
 
@@ -96,5 +119,29 @@ zCModelAniActive* zCModel::GetActiveAni(int aniId)
 	for (unsigned i = 0; i < active_ani_num; ++i)
 		if (active_anis[i]->ani->aniId == aniId)
 			return active_anis[i];
+	return nullptr;
+}
+
+bool zCModel::IsAniActive(zCModelAni *ani)
+{
+	if (!ani)
+		return false;
+
+	for (unsigned i = 0; i < active_ani_num; ++i)
+		if (active_anis[i]->ani == ani)
+			return true;
+
+	return false;
+}
+
+zCModelAni* zCModel::GetAniFromAniID(int aniId)
+{
+	if ( aniId == -1 )
+		return nullptr;
+
+	for (auto proto : reverse(_prototypes))
+		if (proto->anis[aniId])
+			return proto->anis[aniId];
+
 	return nullptr;
 }

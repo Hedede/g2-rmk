@@ -84,7 +84,7 @@ public:
 
 private:
 	void StartMovingSound();
-	void MoveToKeyFrame(int idx);
+	void MoveToKeyframe(int idx);
 	void FinishedOpening();
 	void ClearStateInternals();
 	void UpdateInternals();
@@ -335,7 +335,7 @@ void zCMover::MoveToKeyframe(int idx)
 
 		moverState = 1;
 
-		CLAMP(idx, 0, keyframeList.GetNumInList());
+		zClamp(idx, 0, keyframeList.GetNumInList() - 1);
 
 		nextKeyframe = idx;
 
@@ -625,6 +625,98 @@ void zCMover::TriggerMover(zCVob *other)
 			default:
 				return;
 			}
+		}
+	}
+}
+
+void zCMover::AdvanceMover(zCMover *this)
+{
+	if ( advanceDir == 0.0 )
+		return;
+
+	if (moverAniType == 0) {
+		if ( keyframeList.numInArray > 0 ) {
+			AdvanceKeyframe_KF();
+			InterpolateKeyframes_KF();
+		}
+		return;
+	}
+
+	if (moverAniType == 1) {
+		bool ani_active = model->IsAniActive("T_OPEN_2_CLOSED") || model->IsAniActive("T_CLOSED_2_OPEN");
+
+		if (ani_active)
+			advanceDir = 0;
+
+		if ( advanceDir == 0.0 ) {
+			if ( moverState == 1 ) {
+				SetSleeping(1);
+				moverState = 0;
+
+				zsound->StopSound(soundMovingHandle);
+				zsound->PlaySound3D(soundOpenEnd, this, 1, 0);
+
+				if ( moverBehavior == 2 ) {
+					stayOpenTimeDest = stayOpenTimeSec * 1000.0 + ztimer.totalTimeFloat;
+					SetSleeping(0);
+				}
+
+				TriggerTarget(this);
+			} else if ( moverState == 3 ) {
+				SetSleeping(1);
+				moverState = 2;
+
+				zsound->PlaySound3D(soundCloseEnd, this, 1, 0);
+				zsound->StopSound(soundMovingHandle);
+
+				UntriggerTarget(this);
+			}
+		}
+	}
+}
+
+void zCMover::OnMessage(zCEventMessage *ev_msg, zCVob *source)
+{
+	if (auto msg = dynamic_cast<zCEventCommon*>(ev_msg)) {
+		switch (msg->subType) {
+		case 0:
+			flags.isEnabled = true;
+			break;
+		case 1:
+			flags.isEnabled = false;
+			break;
+		case 2:
+			flags.isEnabled = !flags.isEnabled;
+			break;
+		case 3:
+			if ( moverBehavior ) {
+				MoveToKeyframe(0);
+			} else if ( moverState ) {
+				InvertMovement();
+			} else {
+				DoClose();
+			}
+		default:
+			break;
+		}
+	}
+
+	if (auto msg = dynamic_cast<zCEventMover*>(ev_msg)) {
+		switch ( msg->subType ) {
+		case GOTO_KEY_FIXED_DIRECTLY:
+		case 1:
+			MoveToKeyframe(msg->gotoFixedKey);
+			break;
+
+		case GOTO_KEY_NEXT:
+			MoveToKeyframe(floor(actKeyframeF) + 1);
+			// % keyframeList.numInArray; // redundant
+			break;
+		case GOTO_KEY_PREV:
+			MoveToKeyframe(floor(actKeyframeF) - 1);
+			break;
+		default:
+			return;
 		}
 	}
 }

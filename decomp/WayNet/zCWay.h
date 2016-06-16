@@ -74,11 +74,6 @@ struct zCWay {
 		return wp == left ? right : left
 	}
 
-	zCWaypoint* GetGoalWaypoint(zCWaypoint* wp)
-	{
-		return wp == left ? right : left
-	}
-
 	void EstimateCost()
 	{
 		cost = zCWayNet::EstimateCost(left, right);
@@ -253,19 +248,11 @@ void zCWay::Draw(zCCamera* camera)
 		if (!atr.IsEmpty())
 			atr = " [" + atr + "]";
 		if (left_cam.z < 1000.0) {
-			if (left->wpvob)
-				left->wpvob->name = left->GetObjectName();
-
-			zSTRING text = left->wpvob->name + atr;
-
+			zSTRING text = left->GetName() + atr;
 			screen->Print(screen->anx(a1.x), screen->anx(a1.y), text);
 		}
 		if (right_cam.z < 1000.0) {
-			if (right->wpvob)
-				right->wpvob->name = right->GetObjectName();
-
-			zSTRING text = right->wpvob->name + atr;
-
+			zSTRING text = right->GetName() + atr;
 			screen->Print(screen->anx(a2.x), screen->anx(a2.y), text);
 		}
 	}

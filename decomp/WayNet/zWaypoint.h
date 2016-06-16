@@ -3,25 +3,28 @@ class zCWaypoint : public zCObject {
 public:
 	virtual ~zCWaypoint();
 
-	virtual void Archive(zCArchiver& archiver)
+	void Archive(zCArchiver& arc) override
 	{
-		archiver.WriteString("wpName", name);
-		archiver.WriteInt("waterDepth", waterDepth);
-		archiver.WriteBool("underWater", underWater);
-		archiver.WriteVec3("position", pos);
-		archiver.WriteVec3("direction", dir);
+		arc.WriteString("wpName", name);
+		arc.WriteInt("waterDepth", waterDepth);
+		arc.WriteBool("underWater", underWater);
+		arc.WriteVec3("position", pos);
+		arc.WriteVec3("direction", dir);
 	}
 
-	virtual void Unarchive(zCArchiver& archiver)
+	void Unarchive(zCArchiver& arc) override
 	{
-		archiver.ReadString("wpName", name);
-		archiver.ReadInt("waterDepth", waterDepth);
-		archiver.ReadBool("underWater", underWater);
-		archiver.ReadVec3("position", pos);
-		archiver.ReadVec3("direction", dir);
+		arc.ReadString("wpName", name);
+		arc.ReadInt("waterDepth", waterDepth);
+		arc.ReadBool("underWater", underWater);
+		arc.ReadVec3("position", pos);
+		arc.ReadVec3("direction", dir);
 	}
 
-	virtual void CanBeUsed(zCVob const *);
+	virtual bool CanBeUsed(zCVob const *)
+	{
+		return true;
+	}
 
 	int GetNumberOfWays() const
 	{
@@ -33,6 +36,13 @@ public:
 		if (wpvob)
 			name = wpvob->GetObjectName();
 		return name;
+	}
+
+	void Init(zVEC3& pos)
+	{
+		this->wpvob = nullptr
+		this->pos = pos;
+		this->dir = zVEC3{1.0, 0, 0};
 	}
 
 	void Init(zCVobWaypoint* wpwob)
@@ -50,6 +60,47 @@ public:
 
 	void Draw() {}
 
+	zVEC3 const& GetPositionWorld()
+	{
+		return pos;
+	}
+
+	zCList<zCWay>& GetWayList()
+	{
+		return wayList;
+	}
+
+	zCVobWaypoint* GetVob()
+	{
+		return wpvob;
+	}
+
+	void SetWaypointVob(zCVobWaypoint* vob)
+	{
+		Release(wpvob);
+		wpvob = vob;
+		AddRef(wpvob)
+	}
+
+	void InsertWay(zCWay* way)
+	{
+		wayList.Insert(way);
+	}
+
+	void RemoveWay(zCWay* way)
+	{
+		wayList.Remove(way);
+	}
+
+	bool HasWay(zCWaypoint* other)
+	{
+		for (auto way : wayList) {
+			if (way.GetGoalWaypoint(this) == other)
+				return true;
+		}
+		return false;
+	}
+
 private:
 	// Kürzeste Weg Suche durch das zCWaynet
 	// Diese Eigenschaften besser nicht nutzen,
@@ -62,8 +113,8 @@ private:
 	zCWay* parent;
 
 	//Sonstige Daten
-	int waterDepth;                     //int          
-	int underWater;                     //zBOOL 
+	int waterDepth;
+	zBOOL underWater;
 
 	zVEC3 pos;         // Position dieses Waypoints
 	zVEC3 dir;         // AtVector
@@ -73,6 +124,6 @@ private:
 	zCVobWaypoint* wpvob;
 
 	// Liste der hier beginnenden Wege ( Ways )
-	zCList <zCWay>    wayList;
+	zCList<zCWay> wayList;
 };
 

@@ -1,13 +1,60 @@
 bool zCWayNet::HasWaypoint(zCWaypoint* wp)
 {
-	zCList<zCWaypoint>* node = wplist;
-
 	for (auto list : wplist) {
 		if (list == wp)
 			return true;
 	}
 
 	return false;
+}
+
+void zCWayNet::InsertWaypoint(zCWaypoint* wp)
+{
+	if (!HasWaypoint(wp))
+		wplist.InsertSort(wp);
+
+	return false;
+}
+
+zCWaypoint* zCWayNet::HasWaypoint(zVEC3& pos) const
+{
+	for (auto wp: wplist) {
+		if (wp->GetPositionWorld() == pos)
+			return wp;
+	return nullptr;
+}
+
+zCWaypoint* zCWayNet::SearchWaypoint(zCVobWaypoint* wpvob)
+{
+	for (auto wp : wplist) {
+		if (wp->wpvob == wpvob)
+			return wp;
+	}
+	return nullptr;
+}
+
+zCWaypoint* zCWayNet::GetNearestWaypoint(zVEC3 const& pos)
+{
+	zCWaypoint* nearest = nullptr;
+	float min_dist = std::numeric_limits<float>::max();
+
+	for (auto wp : wplist) {
+		float dist = abs(wp->dist - pos);
+		if (dist < min_dist) {
+			nearest = wp;
+			min_dist = dist;
+		}
+	}
+
+	return nearest;
+}
+
+void zCWayNet::CalcProperties(zCWorld *wld)
+{
+	for (auto wp : wplist)
+		wp->CalcProperties(wld);
+	for (auto way : wayList)
+		way->CalcProperties(wld);
 }
 
 void zCWayNet::ArchiveOldFormat(zCArchiver& arc)
@@ -202,8 +249,6 @@ void zCWayNet::Draw(zCCamera* camera)
 {
 	camera->Activate();
 
-	for (auto& way : wayList) {
+	for (auto& way : wayList)
 		way->Draw(camera);
-	}
 }
-

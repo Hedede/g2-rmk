@@ -29,6 +29,8 @@ public:
 	void ArchiveOldFormat(zCArchiver& arc);
 	void UnarchiveOldFormat(zCArchiver& arc);
 
+	void Draw(zCCamera* camera);
+
 	bool HasWaypoint(zCWaypoint* wp) const;
 	void InsertWaypoint(zCWaypoint* wp);
 
@@ -37,12 +39,20 @@ public:
 	{
 		return HasWaypoint(zVEC3{x,y,z});
 	}
-	zCWayPoint* SearchWaypoint(zCVobWaypoint* wpvob);
-	zCWayPoint* GetNearestWaypoint(zVEC3 const& pos);
+	void InsertWaypoint(float x, float y, float z);
 
-	void Draw(zCCamera* camera);
+	zCWayPoint* SearchWaypoint(zCVobWaypoint* wpvob);
+	zCWayPoint* GetWaypoint(zSTRING const& name);
+	zCWayPoint* GetNearestWaypoint(zVEC3 const& pos);
+	zCWayPoint* GetSecNearestWaypoint(zVEC3 const& pos);
+
+	void CreateWay(zCWayPoint* wp1, zCWayPoint* wp2);
+	void AddWays(zCWayPoint* wp1, zCWayPoint* wp2);
+
 
 	void CalcProperties(zCWorld* wld);
+
+	zCRoute* CreateRoute(zCWaypoint* to);
 
 	zCRoute* FindRoute(zCWaypoint* from, zCWaypoint* to, zCVob* vob)
 	{
@@ -77,6 +87,14 @@ public:
 		auto wp2 = GetNearestWaypoint(to);
 		return FindRoute(wp1, wp2, vob);
 	}
+
+	void CorrectHeight()
+	{
+		for (auto wp : wplist)
+			wp->CorrectHeight(world);
+	}
+
+	void RemoveUnusedWPVobs();
 
 private:
 	void InsertInClosed(zCWaypoint* wp)

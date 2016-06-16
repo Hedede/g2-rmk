@@ -16,6 +16,29 @@ void zCWayNet::InsertWaypoint(zCWaypoint* wp)
 	return false;
 }
 
+void zCWayNet::CreateWay(zCWaypoint *wp1, zCWaypoint *wp2)
+{
+	if ( wp1 == wp2 )
+		return;
+
+	if (!HasWaypoint(wp1))
+		InsertWaypoint(wp1);
+	if (!HasWaypoint(wp2))
+		InsertWaypoint(wp2);
+
+	if (!wp1->HasWay(wp2)) {
+		auto way = zfactory->CreateWay();
+		way->Init(wp1, wp2);
+		waylist.Insert(way);
+	}
+}
+
+void zCWayNet::AddWays(zCWaypoint *left, zCWaypoint *right)
+{
+	for (auto way : right->wayList)
+		CreateWay(left, way->GetGoalWaypoint(right));
+}
+
 zCWaypoint* zCWayNet::HasWaypoint(zVEC3& pos) const
 {
 	for (auto wp: wplist) {
@@ -24,12 +47,31 @@ zCWaypoint* zCWayNet::HasWaypoint(zVEC3& pos) const
 	return nullptr;
 }
 
+void zCWayNet::InsertWaypoint(float x, float y, float z)
+{
+	if (!HasWaypoint(x, y, z)) {
+		auto wp = zfactory->CreateWaypoint();
+		wp->pos = zVEC3{x,y,z};
+		InsertWaypoint(wp);
+	}
+}
+
 zCWaypoint* zCWayNet::SearchWaypoint(zCVobWaypoint* wpvob)
 {
 	for (auto wp : wplist) {
 		if (wp->wpvob == wpvob)
 			return wp;
 	}
+	return nullptr;
+}
+
+zCWaypoint* zCWayNet::GetWaypoint(zSTRING const& name)
+{
+	// Тут был бредовый binary search с индексами,
+	// но потому что это linked list, оно не имеет смысла
+	for (auto wp : wplist)
+		if (wp->GetName() == name)
+			return wp;
 	return nullptr;
 }
 
@@ -49,12 +91,79 @@ zCWaypoint* zCWayNet::GetNearestWaypoint(zVEC3 const& pos)
 	return nearest;
 }
 
+zCWaypoint* zCWayNet::GetSecNearestWaypoint(zVEC3 *pos)
+{
+	zCWaypoint* near1 = nullptr;
+	zCWaypoint* near2 = nullptr;
+	unsigned min1 = -1;
+	unsigned min2 = -1;
+
+	for (auto wp : wplist) {
+		zVEC3 diff = wp->dist - pos;
+		unsigned dist = abs(diff.x) + abs(diff.y) + abs(diff.z);
+		if (dist < min2) {
+			if (dist < min1) {
+				min2 = min1;
+				near2 = near1;
+				min1 = dist;
+				near1 = wp;
+			} else {
+				min2 = dist;
+				near2 = wp;
+			}
+		}
+	}
+
+	return near2;
+}
+
 void zCWayNet::CalcProperties(zCWorld *wld)
 {
 	for (auto wp : wplist)
 		wp->CalcProperties(wld);
 	for (auto way : wayList)
 		way->CalcProperties(wld);
+}
+
+zCRoute* zCWayNet::CreateRoute(zCWaypoint *to)
+{
+	auto route = new zCRoute{};
+	zCWaypoint* wp = to;
+	while (wp) {
+		zCWay* parent = wp->parent;
+		if ( !parent )
+			break;
+		route.wayList.InsertFront(parent);
+		wp = parent->GetGoalWaypoint(wp);
+	}
+
+	route->target = wp; // `wp` in asm, but shouldn't it be `to`?
+	route->startwp = wp;
+
+	return route;
+}
+
+void zCWayNet::InsertWaypoint(zCWaypoint *wp1, zCWaypoint *wp2, zCWaypoint *wp3)
+{
+	if ( wp1 != wp2 && wp2 != wp3 && wp1 != wp3 ) {
+		InsertWaypoint(wp1);
+		InsertWaypoint(wp2);
+		InsertWaypoint(wp3);
+
+		for (auto way : wp1->wayList) {
+			if (way->GetGoalWaypoint(wp1) == wp3) {
+				wp1->wayList.Remove(way);
+				wp3->wayList.Remove(way);
+				this->waylist.Remove(way);
+				way->Free();
+				delete way;
+				break;
+			}
+		}
+
+		CreateWay(wp1, wp2);
+		CreateWay(wp2, wp3);
+	}
 }
 
 void zCWayNet::ArchiveOldFormat(zCArchiver& arc)
@@ -251,4 +360,16 @@ void zCWayNet::Draw(zCCamera* camera)
 
 	for (auto& way : wayList)
 		way->Draw(camera);
+}
+
+void zCWayNet::RemoveUnusedWPVobs()
+{
+	if ( world ) {
+		zCList<zCVobWaypoint> wpvobs;
+		CreateWPVobList(wpvobs, world->globalVobTree);
+		for (auto vob : wpvobs) {
+			if (!SearchWaypoint(vob))
+				vob->Release();
+		}
+	}
 }

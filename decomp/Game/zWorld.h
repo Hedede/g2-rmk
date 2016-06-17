@@ -407,6 +407,17 @@ zCWorld::zCWorld()
 	}
 }
 
+zCWorld::~zCWorld()
+{
+	DisposeWorld();
+	Release(wayNet);
+	Release(csPlayer);
+	Release(skyControlerIndoor);
+	Release(skyControlerOutdoor);
+	zCPolygon::S_DeleteMorphedVerts();
+	Delete(cbspTree);
+}
+
 void zCWorld::SetOwnerSession(zCSession* owner)
 {
 	ownerSession = owner;

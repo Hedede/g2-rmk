@@ -720,3 +720,37 @@ void CGameManager::Read_Savegame(int slot)
 		}
 	}
 }
+
+int CGameManager::PlayVideo(zSTRING fileName)
+{
+	if ( videoPlayer ) {
+		videoPlayInGame = 0;
+		bool musicEnabled = zoptions->ReadBool(zOPT_SEC_SOUND, "musicEnabled", 1);
+		if ( zsound )
+			zsound->StopAllSounds();
+
+		zCZoneMusic::SetAutochange(0);
+		zCMusicSystem::DisableMusicSystem(1);
+
+		if ( gameSession )
+			gameSession->Pause(exitSession);
+
+		auto dirName = zoptions->GetDirString(DIR_VIDEO);
+
+		videoPlayer->OpenVideo(dirName + fileName);
+
+		videoPlayer->SetFullscreen(1, "videoback.tga");
+		videoPlayer->Play(0);
+		videoPlayer->vtab->CloseVideo();
+
+		if ( gameSession && !exitSession )
+			gameSession->Unpause();
+
+		zCZoneMusic::SetAutochange(musicEnabled);
+		zCMusicSystem::DisableMusicSystem(!musicEnabled);
+
+		return true;
+	}
+
+	return false;
+}

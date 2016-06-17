@@ -409,7 +409,7 @@ int zCWayNet::AStar(zCWaypoint* from, zCWaypoint* to, zCVob const* vob)
 						wp2->parent = way;
 						wp2->curCost = cost;
 
-						// I made this func up
+						// I made this func up (SquareDist)
 						unsigned dist2 = SquareDist(wp2->pos, to->pos);
 						wp2->estCost = dist2;
 						wp2->score = cost + dist2;

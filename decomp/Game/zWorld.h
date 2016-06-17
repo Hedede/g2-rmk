@@ -128,11 +128,16 @@ public:
 	}
 
 	virtual zCVob* SearchVob(zCVob* vob, zCTree<zCVob>* vobNode = nullptr);
-	virtual void SearchVobByID(unsigned vobId, zCTree<zCVob>* vobNode = nullptr);
-	virtual zCVob* SearchVobByName(zSTRING const &);
-	virtual void SearchVobListByName(zSTRING const &,zCArray<zCVob *> &);
-	virtual void SearchVobListByClass(zCClassDef *,zCArray<zCVob *> &,zCTree<zCVob> *);
-	virtual void SearchVobListByBaseClass(zCClassDef *,zCArray<zCVob *> &,zCTree<zCVob> *);
+	virtual zCVob* SearchVobByID(unsigned vobId, zCTree<zCVob>* vobNode = nullptr);
+	virtual zCVob* SearchVobByName(zSTRING const& name)
+	{
+		return SearchVobHashTable(name);
+	}
+
+	virtual void SearchVobListByName(zSTRING const& name, zCArray<zCVob*>& result);
+	virtual void SearchVobListByClass(zCClassDef* classDef, zCArray<zCVob*>& result, zCTree<zCVob>* vobNode);
+	virtual void SearchVobListByBaseClass(zCClassDef* classDef, zCArray<zCVob*>& result, zCTree<zCVob>* vobNode);
+
 	virtual void VobAddedToWorld(zCVob *);
 	virtual void VobRemovedFromWorld(zCVob *);
 	virtual void RenderWaynet(zCCamera *cam);
@@ -208,6 +213,7 @@ public:
 	}
 
 	void TraverseVobTree(zCVobCallback& callback, void* callbackData, zCTree<zCVob*> vobNode);
+	void TraverseBsp(zCCBspTree *bsp, VobTree *node, int removeLevelCompos);
 
 	void UpdateVobTreeBspDepencdencies(zCTree<zCVob>* vobNode);
 
@@ -251,6 +257,7 @@ public:
 
 	void MoveVobs();
 
+	void InsertVobHashTable(zCVob* vob);
 	void RemoveVobHashTable(zCVob* vob);
 
 	void UnregisterPerFrameCallback(zCWorldPerFrameCallback *callback)
@@ -278,6 +285,8 @@ private:
 	{
 		return GetVobHashIndex(vob->GetObjectName());
 	}
+
+	zCVob* SearchVobHashTable(zSTRING const& name);
 
 	static int ActiveZoneListCompare(const void* a1, const void *a2);
 
@@ -371,13 +380,6 @@ private:
 	zCArray<zCVob*>               walkList;
 	// for fast vob searching by name
 	zCArray<zCVob*>               vobHashTable[VOB_HASHTABLE_SIZE];
-	//Mit "array", "numAlloc" und "numInArray" also 3*VOB_HASHTABLE_SIZE Wörter.
-	//Der Lexer erlaubt keine so großen Arrays, daher ist meine Deklaration semantischer Unsinn.
-	//Wer mit der Hashtabelle arbeiten will, muss selbst die Offsetrechnung betreiben.
-	//Siehe MEM_SearchVobByName für Benutzung.
-
-	zSTRING worldFilename;   //zSTRING Pfad des aktuellen Levels
-	zSTRING worldName;       //zSTRING Name des aktuellen Levels
 };
 
 // ------------------- CPP --------------------------
@@ -415,7 +417,42 @@ void zCWorld::SetOwnerSession(zCSession* owner)
 	}
 }
 
+// ---------- HashTable
+zCVob* zCWorld::SearchVobHashTable(zSTRING const& name)
+{
+	if (name.IsEmpty())
+		return nullptr;
 
+	auto hash = GetVobHashIndex(name);
+	auto bucket = vobHashTable[hash];
+
+	for (auto vob : bucket) {
+		if (vob->GetObjectName() == name)
+			return vob;
+
+	return nullptr;
+}
+
+void zCWorld::InsertVobHashTable(zCVob *vob)
+{
+	auto vobName = vob->GetObjectName();
+	if (vobName) {
+		auto bucket = vobHashTable[GetVobHashIndex(vob)];
+		bucket.Insert(vob);
+	}
+}
+
+void zCWorld::RemoveVobHashTable(zCVob *vob)
+{
+	auto vobName = vob->GetObjectName();
+	if (vobName) {
+		auto bucket = vobHashTable[GetVobHashIndex(vob)];
+		bucket.Remove(vob);
+	}
+}
+
+
+// --------- Search
 zCVob* zCWorld::SearchVob(zCVob* vob, zCTree<zCVob>* vobNode)
 {
 	if ( !vobNode )
@@ -457,6 +494,33 @@ zCVob* zCWorld::SearchVobByID(unsigned vobId, VobTree *vobNode)
 	return result;
 }
 
+void zCWorld::SearchVobListByClass(zCClassDef* classDef, zCArray<zCVob *>& result, zCTree<zCVob>* vobNode)
+{
+	if ( !vobNode )
+		vobNode = &this->globalVobTree;
+
+	auto vob = vobNode->data;
+	if (vob->GetClassDef() == classDef)
+		result.Insert(vob);
+
+	for (auto i = vobNode->firstChild; i; i = i->next) {
+		SearchVobListByClass(classDef, result, i);
+}
+
+void zCWorld::SearchVobListByBaseClass(zCClassDef* classDef, zCArray<zCVob *>& result, zCTree<zCVob>* vobNode)
+{
+	if ( !vobNode )
+		vobNode = &this->globalVobTree;
+
+	auto vob = vobNode->data;
+	if (zCObject::CheckInheritance(vob->GetClassDef(), classDef))
+		result.Insert(vob);
+
+	for (auto i = vobNode->firstChild; i; i = i->next) {
+		SearchVobListByClass(classDef, result, i);
+}
+
+// --------- Traversal
 int zCWorld::TraverseVobTree(zCVobCallback *callback, void *callbackData, zCTree<zCVob> *vobNode)
 {
 	if ( !vobNode )
@@ -466,6 +530,37 @@ int zCWorld::TraverseVobTree(zCVobCallback *callback, void *callbackData, zCTree
 		TraverseVobTree(callback, callbackData, result);
 
 	return callback->HandleVob(callback, vobNode->Data, callbackData);
+}
+
+int zCWorld::TraverseBsp(zCCBspTree *bsp, VobTree *node, int removeLevelCompos)
+{
+	if ( !node )
+		return 0;
+
+	auto vob = node->data;
+	if (auto compo = dynamic_cast<zCVobLevelCompo*>(vob)) {
+		// visual->GetClassDef() ==  &zCMesh::classDef )
+		if (auto mesh = dynamic_cast<zCMesh*>(vob->visual))
+			bsp->AddMesh(bsp, mesh, vob->trafoObjToWorld);
+	}
+
+	node = node->firstChild;
+	while ( node ) {
+		if ( TraverseBsp(bsp, node, removeLevelCompos) == 1 )
+			node = node->firstChild;
+		else
+			node = node->next;
+	}
+
+	if (auto compo = dynamic_cast<zCVobLevelCompo*>(vob)) {
+		if ( removeLevelCompos ) {
+			RemoveVob(compo);
+			return 1;
+		}
+		compo->flags1.showVisual = false;
+	}
+
+	return 0;
 }
 
 void MoveVobs()
@@ -720,15 +815,6 @@ zCZone* SearchZoneDefaultByClass(zCClassDef* cd)
 	return nullptr;
 }
 
-// ---------- HashTable
-void zCWorld::RemoveVobHashTable(zCVob *vob)
-{
-	auto vobName = vob->GetObjectName();
-	if (vobName) {
-		auto bucket = vobHashTableStart[GetVobHashIndex(vob)];
-		bucket.Remove(vob);
-	}
-}
 
 // ---------- Render
 void zCWorld::RenderWaynet(zCCamera *cam)

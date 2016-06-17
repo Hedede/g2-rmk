@@ -4,8 +4,10 @@ public:
 	virtual ~oCWorld();
 	virtual void Archive(zCArchiver& arc);
 	virtual void Unarchive(zCArchiver& arc);
+
 	virtual void LoadWorld(zSTRING const &,zCWorld::zTWorldLoadMode);
-	virtual void SaveWorld(zSTRING const &,zCWorld::zTWorldSaveMode,int,int);
+	void SaveWorld(zSTRING const& fileName, zCWorld::zTWorldSaveMode saveMode, int writeBinary, int saveLevelMesh) override;
+
 	virtual void DisposeWorld();
 	virtual void AddVobAsChild(zCVob *,zCTree<zCVob> *);
 	virtual void RemoveVob(zCVob *);
@@ -21,6 +23,9 @@ public:
 	virtual void DisposeVobs();
 
 private:
+	zSTRING worldFilename;   //Pfad des aktuellen Levels
+	zSTRING worldName;       //Name des aktuellen Levels
+
 	//nicht ausprobiert, aber hoffentlich ist der Name Programm.
 	//wie hier sortiert ist weiß ich nicht.
 	zCListSort<zCVob>*   voblist;
@@ -69,4 +74,12 @@ void oCWorld::Unarchive(zCArchiver& arc)
 
 	if ( ogame )
 		ogame->GetSpawnManager()->Unarchive(arc);
+}
+
+void oCWorld::SaveWorld(zSTRING const& fileName, zCWorld::zTWorldSaveMode saveMode, int writeBinary, int saveLevelMesh)
+{
+	zINFO(9,"U: (oCWorld::SaveWorld) " + fileName); // 401, _ulf\\oWorld.cpp
+	if ( wayNet )
+		wayNet->ClearVobDependencies();
+	return zCWorld::SaveWorld(fileName, saveMode, writeBinary, saveLevelMesh);
 }

@@ -32,12 +32,17 @@ struct CGameManager : zCInputCallback {
 	void GameSessionDone();
 	void GameSessionReset();
 
+	void ApplySomeSettings();
+
+	int IntroduceChapter();
+
 	bool IsGameRunning();
 
 	void Read_Savegame();
 	void Write_Savegame();
 
 	int MenuEnabled(/*zBOOL&*/);
+	int Menu(zBOOL inMenu);
 
 protected:
 	void InitScreen_Open();
@@ -716,6 +721,298 @@ void CGameManager::GameSessionDone()
 	ogame = 0;
 }
 
+void CGameManager::ApplySomeSettings()
+{
+	zINFO(3,"B: OPT: Applying settings ..."); //1178,
+
+	auto readTemp_old = zoptions->readTemp;
+	zoptions->readTemp = 0;
+
+	auto extendedMenu   = zoptions->ReadBool(zOPT_SEC_INTERNAL, "extendedMenu", 0);
+	auto texDetailIndex = zoptions->ReadReal(zOPT_SEC_INTERNAL, "texDetailIndex", 1.0);
+	int sightValue   = zoptions->ReadInt(zOPT_SEC_PERFORMANCE, "sightValue", 4);
+	auto modelDetail = zoptions->ReadReal(zOPT_SEC_PERFORMANCE, "modelDetail", 0.5);
+	int skyEffects   = zoptions->ReadInt(zOPT_SEC_GAME, "skyEffects", 1);
+	int bloodDetail  = zoptions->ReadInt(zOPT_SEC_GAME, "bloodDetail", 2);
+
+	auto brightness  = zoptions->ReadReal(zOPT_SEC_VIDEO, "zVidBrightness", 0.5);
+	auto contrast    = zoptions->ReadReal(zOPT_SEC_VIDEO, "zVidContrast", 0.5);
+	auto gamma       = zoptions->ReadReal(zOPT_SEC_VIDEO, "zVidGamma", 0.5);
+
+	auto sfxVol   = zoptions->ReadReal(zOPT_SEC_SOUND, ZOPT_SND_SFX_VOL, 1.0);
+	auto musicVol = zoptions->ReadReal(zOPT_SEC_SOUND, ZOPT_SND_MUSIC_VOL, 0.8);
+	bool camLookaroundInverse = zoptions->ReadBool(zOPT_SEC_GAME, "camLookaroundInverse", 0);
+	bool enableMouse = zoptions->ReadBool(zOPT_SEC_GAME, "enableMouse", 1);
+	auto mouseSensitivity = zoptions->ReadReal(zOPT_SEC_GAME, "mouseSensitivity", 0.5);
+	auto vobFarClipZScale = zoptions->ReadReal("ENGINE", "zVobFarClipZScale", 4.0);
+	bool waterAni    = zoptions->ReadBool("ENGINE", "zWaterAniEnabled", 1);
+	bool envMapping  = zoptions->ReadBool("ENGINE", "zEnvMappingEnabled", 1);
+	bool clipFade    = zoptions->ReadBool("ENGINE", "zFarClipAlphaFade", 1);
+	bool windEnabled = zoptions->ReadBool("ENGINE", "zWindEnabled", 1);
+	bool ambientVobs = zoptions->ReadBool("ENGINE", "zAmbientVobsEnabled", 1);
+	auto ambientPFXEnabled = zoptions->ReadBool("ENGINE", "zAmbientPFXEnabled", 1);
+	bool radialFog   = zoptions->ReadBool("GAME", "zFogRadial", 1);
+	auto cloudShadow = zoptions->ReadReal("ENGINE", "zCloudShadowScale", 0.0);
+	float speechReverb = zoptions->ReadReal("GAME", "useSpeechReverbLevel", 1.0);
+	auto meleeFocus    = zoptions->ReadInt("GAME", "highlightMeleeFocus", 0);
+	auto interFocus    = zoptions->ReadBool("GAME", "highlightInteractFocus", 0);
+	bool g1Controls    = zoptions->ReadBool("GAME", "useGothic1Controls", 1);
+
+	zCAICamera::lookAroundSgn = 2 * (camLookaroundInverse == 0) - 1;
+
+	zINFO(3,"B: OPT: Lookaround inverse = "_s + camLookaroundInverse); // 1221,
+
+	int soundProviderIndex = zoptions->ReadInt(zOPT_SEC_INTERNAL, "soundProviderIndex", 0);
+	int soundSpeakerIndex = zoptions->ReadInt(zOPT_SEC_INTERNAL, "soundSpeakerIndex", 0);
+
+	zsound->SetProvider(soundProviderIndex);
+	zsound->SetSpeakerType(soundSpeakerIndex);
+
+	zINFO(3,"B: OPT: Music-Volume: Value="_s + musicVol); // 1233,
+	zINFO(3,"B: OPT: Sound-Volume: Value="_s + sfxVol); // 1234,
+
+	zinput->SetDeviceEnabled(2, enableMouse);
+
+	float sens = mouseSensitivity * 0.5 + 0.3;
+	zinput->SetMouseSensitivity(zinput, sens, sens);
+
+	zINFO(3,"B: OPT: Mouse-Enabled = "_s + enableMouse); // 1240,
+	zINFO(3,"B: OPT: Mouse-Sensitivity = "_s + sens); // 1241,
+	if ( gameSession ) {
+		auto sight = 4 * (5 * sightValue + 5);
+		zClamp(sight,20,300);
+		float sightFactor = sight * 0.01;
+
+		auto world = gameSession->GetWorld();
+		world->GetActiveSkyControler()->SetFarZScalability(sightFactor);
+
+		zINFO(3,"B: OPT: Level-Sight: Value="_s + sightValue + ", resulting factor="_s + sightFactor); // 1251,
+
+		world->vobFarClipZScalability = vobFarClipZScale * 0.22142857 + 0.4;
+		zINFO(3,"B: OPT: Vob-Sight: Value=" + vobFarClipZScale); // 1254,
+
+		zCParticleFX::s_bAmbientPFXEnabled = ambientPFXEnabled;
+		zCVob::s_enableAnimations     = windEnabled;
+		zCWorld::s_bEnvMappingEnabled = envMapping;
+		zCWorld::s_bWaveAnisEnabled   = waterAni;
+		zCWorld::s_bFadeOutFarVerts   = clipFade;
+		oCGame::s_bUseOldControls     = g1Controls;
+
+		if ( zrenderer )
+			zrenderer->SetRadialFog(radialFog);
+
+		if ( zCSkyControler::s_activeSkyControler ) {
+			float sf = cloudShadow == 0.0 ? 0.0 : 1.0;
+			zCSkyControler::s_activeSkyControler->SetCloudShadowScale(sf);
+		}
+
+		oCGame::s_fUseSpeechReverb = speechReverb;
+		oCNpcFocus::s_iHightlightMeleeFocus = meleeFocus;
+		oCNpcFocus::s_bHighlightInteractFocus = interFocus;
+		zCSkyControler::s_skyEffectsEnabled = skyEffects == 1;
+
+		zINFO(3,"B: OPT: Sky: Value="_s + skyEffects); // 1271
+		auto texSize = zoptions->ReadInt(zOPT_SEC_VIDEO, "zTexMaxSize", -1);
+
+		int texSizeI = 0x4000;
+		zClamp(texDetailIndex, 0.0, 1.0);
+		if (texDetailIndex < 0.15) {
+			texSizeI = 32;
+		} else if (texDetailIndex < 0.35) {
+			texSizeI = 64;
+		} else if (texDetailIndex < 0.55) {
+			texSizeI = 128;
+		} else if (texDetailIndex < 0.75) {
+			texSizeI = 256;
+		} else if (texDetailIndex < 0.95) {
+			texSizeI = 512;
+		}
+
+		if ( texSizeI != texSize ) {
+			zCTexture::RefreshTexMaxSize(texSizeI);
+			if ( zresMan )
+				zresMan->PurgeCaches(&zCTexture::classDef);
+
+			zINFO(3, "B: OPT: TextureDetails: Value="_s + texDetailIndex + ", resulting size = "_s + texSizeI); // 1288
+		}
+
+		zClamp(modelDetail, 0.0, 1.0);
+		zCProgMeshProto::SetLODParamStrengthModifier(modelDetail);
+		zINFO(3,"B: OPT: Model-Details: Value="_s + modelDetail); // 1294
+
+		zClamp(bloodDetail, 0, 3);
+		oCNpc::modeBlood = bloodDetail;
+
+		zINFO(3,"B: OPT: Blood-Details: Value="_s + bloodDetail); // 1302,
+
+		bool subTitles = zoptions->ReadBool(zOPT_SEC_GAME, "subTitles", 0);
+
+		if ( zgameoptions && zgameoptions->ReadBool(zOPT_SEC_OPTIONS, "force_Subtitles", 0) )
+			subTitles = 1;
+
+		oCNpc::isEnabledTalkBox = subTitles;
+		oCNpc::isEnabledTalkBoxPlayer = zoptions->ReadBool(zOPT_SEC_GAME, "subTitlesPlayer", 1);
+		oCNpc::isEnabledTalkBoxAmbient = zoptions->ReadBool(zOPT_SEC_GAME, "subTitlesAmbient", 1);
+		oCNpc::isEnabledTalkBoxNoise = zoptions->ReadBool(zOPT_SEC_GAME, "subTitlesNoise", 0);
+
+		oCInformationManager::GetInformationManager().UpdateViewSettings();
+		if ( ogame )
+			ogame->UpdateViewSettings();
+	}
+
+	if ( zrenderer )
+		zrenderer->Vid_SetGammaCorrection(gamma, contrast, brightness);
+
+	zoptions->readTemp = readTemp_old;
+
+	auto ini = zoptions->ParmValue("ini");
+	if (!ini)
+		ini = "Gothic.ini";
+
+	zoptions->Save(ini);
+
+	zINFO(3,""); 1337,
+}
+
+void CGameManager::Menu(int inMenu)
+{
+	zINFO(3,"B: GMAN: Entering Menu-Section"); //1350,
+
+	zinput->ResetRepeatKey(1);
+	gameSession->SetShowPlayerStatus(0);
+
+	zoptions->WriteString("internal", "menuAction", "RESUME_GAME", 0);
+
+	if (exitGame)
+		return;
+
+	std::string::string(&msg.data, "NOMENU", &v42);
+	msg.vtable = &zSTRING::`vftable';
+	LOBYTE(v49) = 3;
+	NOMENU = zoptions->Parm(&msg);
+	LOBYTE(v49) = 1;
+	msg.vtable = &zSTRING::`vftable';
+	std::string::_Tidy(&msg.data, 1);
+	CGameManager::PreMenu();
+	gameSession = this->gameSession;
+	if ( gameSession && gameSession->GetCamera(gameSession) ) {
+		if ( NOMENU ) {
+			exitGame = 1;
+			return;
+		}
+
+		zINFO(4,"B: GMAN: Menu started (ingame)") // 1396,
+
+		if ( gameSession )
+			gameSession->Pause(exitSession);
+
+		auto inGameMenu = zCMenu::inGameMenu;
+		if ( !inMenu )
+			zCMenu::inGameMenu = 0;
+
+		auto gameMenu = zCMenu::Create("MENU_MAIN");
+
+		gameMenu->Run();
+		gameMenu->Release();
+
+		zCMenu::inGameMenu = inGameMenu;
+
+		if ( gameSession )
+			gameSession->Unpause();
+
+		zINFO("B: GMAN: Menu finished"); // 1410,
+	} else {
+		if ( NOMENU ) {
+			zoptions->WriteString("internal", "menuAction", "NEW_GAME", 0);
+		} else {
+			zINFO(4,"B: GMAN: Menu started (outgame)"); //1375,
+
+			auto mainmenu = zCMenu::Create("MENU_MAIN");
+
+			mainmenu->Run();
+			mainmenu->Release();
+
+			zINFO(4,"B: GMAN: Menu finished"); // 1381,
+		}
+	}
+
+	if ( zrenderer ) {
+		screen->DrawItems();
+		zrenderer->Vid_Blit(0, 0, 0);
+	}
+
+	auto menuAction = zoptions->ReadString("internal", "menuAction", 0);
+
+	zINFO("B: MENU: " + menuAction); // 1430
+
+	if ( menuAction == "LEAVE_GAME") {
+		zINFO(5,"B: GMAN: Menu-Selection \"exit\"");// 1437,
+
+		zoptions->WriteBool(zOPT_SEC_INTERNAL, "gameAbnormalExit", 0, 0);
+		goto LABEL_85;
+	} else if (menuAction == "NEW_GAME") {
+		zSTRING world;
+		if ( zgameoptions )
+			world = zgameoptions->ReadString(zOPT_SEC_SETTINGS, "World", 0);
+		else
+			world = zoptions->ReadString(zOPT_SEC_INTERNAL, "gamePath", 0);
+
+		if (!world)
+			world = "NewWorld\\NewWorld.zen";
+
+		zINFO(4,"B: GMAN: Menu-Selection NEW_GAME "); // 1463,
+
+		GameSessionReset();
+		exitSession = 0;
+
+		zINFO(1,"B: GMAN: Loading the World ..."); // 1470,
+
+		v40 = SAVEGAME_SLOT_NEW;
+		gameSession->LoadGame(SAVEGAME_SLOT_NEW, world);
+
+		if ( zmusic )
+			zmusic->Stop();
+
+		zINFO(1,"B: GMAN: Completed loading the world ..."); // 1476,
+
+		playTime = 0;
+	} else if (menuAction == "SAVEGAME_LOAD") {
+		Read_Savegame(menu_load_savegame->GetSelectedSlot());
+	} else if (menuAction == "SAVEGAME_SAVE") {
+		Write_Savegame(menu_save_savegame->GetSelectedSlot());
+	} else if (menuAction == "RESUME_GAME") {
+		//
+	} else {
+		zFATAL("C: oGameManager.cpp(CGameManager::Menu()): Menu Selection not known :" + menuAction); // 1516,
+	}
+
+	auto ini = zoptions->ParmValue("ini");
+	if (!ini)
+		ini = "Gothic.ini";
+
+	zoptions->Save(ini);
+
+	introActive = 0;
+
+	ApplySomeSettings();
+
+	if ( gameSession )
+		gameSession->UpdateScreenResolution();
+
+	zinput->ProcessInputEvents();
+	zinput->ClearKeyBuffer();
+	zinput->ResetRepeatKey(1);
+
+	if ( !exitSession )
+		gameSession->SetShowPlayerStatus(1);
+
+	zinput->ProcessInputEvents();
+	zinput->ClearKeyBuffer();
+	zinput->ResetRepeatKey(1);
+
+	zINFO(3,"B: GMAN: Leaving Menu-Section"); // 1537,
+}
+
 void CGameManager::Read_Savegame(int slot)
 {
 	if ( slot >= 0 ) {
@@ -1013,3 +1310,95 @@ void CGameManager::ShowRealPlayTime()
 		ogame->array_view[0]->PrintTimed(100, 300, ptstr, 3000.0, 0);
 	}
 }
+
+int CGameManager::IntroduceChapter()
+{
+	if ( !chapBool )
+		return 0;
+
+	chapBool = 0;
+
+	if ( zsound ) {
+		if (!chapWAV.IsEmpty()) {
+			auto sfx = zsound->LoadSavegame(chapWAV);
+			zsound->PlaySound(sfx, 0);
+			Release(sfx);
+		}
+	}
+
+	auto chapView = new zCView(0, 0, 0x2000, 0x2000, 2);
+	screen->InsertItem(chapView, 0);
+	chapView->InsertBack(chapTGA);
+
+	int x = screen->anx(800);
+	int y = screen->any(600);
+
+	chapView->SetPos((0x2000 - x) / 2, (0x2000 - y) / 2);
+	chapView->SetSize(x, y);
+
+	auto chapText1 = new zCView(0, 0, 0x2000, 0x2000, 2);
+	chapView->InsertItem(chapText1, 0);
+	chapText1->SetPos(0, 700);
+	chapText1->SetSize(0x2000, 600);
+
+	zSTRING font = "font_old_20_white.tga";
+	auto sym = zparser.GetSymbol("TEXT_FONT_20");
+
+	if (sym)
+		sym->GetValue(font, 0);
+
+	chapText1->SetFont(font);
+	chapText1->PrintCXY(chapName);
+
+	auto chapText2 = new zCView(0, 0, 0x2000, 0x2000, 2);
+	chapView->InsertItem(chapText2, 0);
+
+	chapText2->SetPos(0, 7100);
+	chapText2->SetSize(0x2000, 600);
+
+	zSTRING font_small = "font_old_10_white.tga";
+	auto sym = zparser.GetSymbol("TEXT_FONT_10");
+
+	if (sym)
+		sym->GetValue(font_small, 0);
+
+	chapText2->SetFont(font_small);
+	chapText2->PrintCXY(chapText);
+
+	chapView->Blit();
+	chapText1->Blit();
+	chapText2->Blit();
+	zrenderer->Vid_Blit(1, 0, 0);
+
+	zCTimer timer;
+	float time = 0.0;
+	do {
+		zinput->ProcessInputEvents();
+		time += timer.frameTime;
+
+		timer.ResetTimer();
+
+		if ( chapTime < time )
+			break;
+		if ( zinput->KeyPressed(KEY_ESCAPE) )
+			break;
+		if ( zinput->GetMouseButtonPressedRight() )
+			break;
+		zinput->GetState(0xEu);
+	} while ( chapTime <= 0.0 );
+	// ^ recheck, doesn't make sense
+
+	chapView->RemoveItem(chapText2);
+	chapView->RemoveItem(chapText1);
+	screen->RemoveItem(chapView);
+
+	delete chapView;
+	delete chapText1;
+	delete chapText2;
+
+	zinput->ClearKeyBuffer();
+	zinput->ResetRepeatKey(1);
+
+	return 1;
+}
+

@@ -1,13 +1,12 @@
 //######################################################
-//
 //	Game Manager: Kümmert sich darum
 //  Game Sessions zu starten zu speichern usw.
-//
 //######################################################
-struct CGameManager {
+struct CGameManager : zCInputCallback {
 	CGameManager();
 	virtual ~CGameManager();
-	virtual int HandleEvent(int key);
+	int HandleEvent(int key) override;
+	bool HandleCancelKey();
 
 	void InsertMenuWorld(zSTRING& backWorld, zSTRING& backDatFile) { }
 	void RemoveMenuWorld() { }
@@ -17,8 +16,28 @@ struct CGameManager {
 		return this->gameSession;
 	}
 
+	int GetPlaytimeSeconds();
+	void ShowRealPlayTime();
+
+	int PlayVideoEx(zSTRING fileName, short blendTime, int exit);
+	int PlayVideo(zSTRING fileName);
+
 	void ShowIntro() { }
 	void ShowExtro() { }
+
+	void ExitGame();
+	void ExitSession();
+
+	void GameSessionInit();
+	void GameSessionDone();
+	void GameSessionReset();
+
+	bool IsGameRunning();
+
+	void Read_Savegame();
+	void Write_Savegame();
+
+	int MenuEnabled(/*zBOOL&*/);
 
 protected:
 	void InitScreen_Open();
@@ -29,35 +48,36 @@ private:
 	zTRnd_AlphaBlendFunc   oldAlphaBlendFunc;
 	zTSystemContextHandle  sysContextHandle;
 
-	oCGame*            gameSession;        //
-	oCGame*            backLoop;           //
-	zBOOL              exitGame;	    //
-	zBOOL              exitSession;	    //
-	zBOOL              gameIdle;           //
-	zBOOL              lastWorldWasGame;   //
-	oCSavegameManager* savegameManager;    //
+	oCGame*            gameSession;
+	oCGame*            backLoop;
+	zBOOL              exitGame;
+	zBOOL              exitSession;
+	zBOOL              gameIdle;
+	zBOOL              lastWorldWasGame;
+	oCSavegameManager* savegameManager;
 
 	zCArray<zSTRING>	lastDatFileList;
 	zCArray<zSTRING>	lastWorldList;
 
-	zSTRING backWorldRunning;    //zSTRING
-	zSTRING backDatFileRunning;  //zSTRING
+	zSTRING backWorldRunning;
+	zSTRING backDatFileRunning;
 
-	zCView*        vidScreen;              //
-	zCView*        initScreen;             //
+	zCView*        vidScreen;
+	zCView*        initScreen;
 
-	zBOOL          introActive;            //
-	zBOOL          dontStartGame;          //
+	zBOOL          introActive;
+	zBOOL          dontStartGame;
 
-	oCBinkPlayer*  videoPlayer;            //
-	zBOOL          videoPlayInGame;        //
+	oCBinkPlayer*  videoPlayer;
+	zBOOL          videoPlayInGame;
 
-	zCMenu*        menu_chgkeys;           //
-	zCMenu*        menu_chgkeys_ext;       //
-	oCMenuSavegame*menu_save_savegame;     //
-	oCMenuSavegame*menu_load_savegame;	//
+	zCMenu*         menu_chgkeys;
+	zCMenu*         menu_chgkeys_ext;
+	oCMenuSavegame* menu_save_savegame;
+	oCMenuSavegame* menu_load_savegame;
 
-	int playTime;	 //wird selten (?) aktualisiert. Mindestens aber beim Speichern und Laden.
+	//wird selten (?) aktualisiert. Mindestens aber beim Speichern und Laden.
+	int playTime;
 };
 
 bool chapBool;
@@ -701,7 +721,7 @@ void CGameManager::Read_Savegame(int slot)
 	if ( slot >= 0 ) {
 		auto sav = savegameManager->GetSavegame(slot);
 		if ( sav && !sav->saveIncompatible ) {
-			if ( oCSavegameInfo::DoesSavegameExist(sav) ) {
+			if ( sav->DoesSavegameExist() ) {
 				zINFO(4, "B: GMAN: Loading game from slot "_s + slot); //1548
 
 				exitSession = 0;
@@ -719,6 +739,181 @@ void CGameManager::Read_Savegame(int slot)
 			}
 		}
 	}
+}
+
+void CGameManager::Write_Savegame(int slot)
+{
+	if ( slot >= 0 ) {
+		auto sav = savegameManager->GetSavegame(slot);
+		auto name = sav->GetName();
+
+		if ( name.IsEmpty() ) {
+			name = sav->GetWorldName() + "... ";
+			sav->title = name;
+		}
+
+		zINFO(4,"B: GMAN: Saving game to slot "_s + slot); // 1574, _bert\\oGameManager.cpp
+
+		playTimeSeconds = GetPlaytimeSeconds();
+
+		int day, hour, min;
+		ogame->GetTime(day, hour, min);
+
+		sav->worldName = ogame->GetWorld()->GetWorldName();
+		sav->timeDay = day;
+		sav->timeHour = hour;
+		sav->timeMin = min;
+
+		auto texconvert = zrenderer->CreateTextureConvert();
+
+		gameSession->Render();
+
+		zrenderer->Vid_GetFrontBufferCopy(texconvert);
+
+		gameSession->WriteSavegame(sav->slot, 1);
+		sav->UpdateThumbPic(texconvert);
+
+		Delete(texconvert);
+
+		savegameManager->SetAndWriteSavegame(slot, sav);
+	}
+}
+
+bool CGameManager::HandleCancelKey(int key)
+{
+	if ( !gameSession )
+		return 0;
+	if ( !gameSession->GetCamera() )
+		return 0;
+	if ( !gameSession->GetWorld() )
+		return 0;
+	if ( !oCNpc::player )
+		return 0;
+
+	auto world = gameSession->GetWorld();
+	auto csPlayer = world->csPlayer;
+
+	if ( !csPlayer )
+		return 0;
+
+	if ( csPlayer->GetPlayingGlobalCutscene() ) {
+		auto globCs = csPlayer->GetPlayingGlobalCutscene(csPlayer);
+		if ( globCs->TryToCancel() ) {
+			zINFO(4,"B: CS: User canceled global cutscene"); //1608,
+		} else {
+			zINFO(4,"B: CS: User tried to cancel global cutscene: Not allowed at this moment!"); // 1610,
+		return 1;
+	}
+
+	if ( !oCNpc::player || !oCNpc::player->GetTalkingWith() )
+		return 0;
+
+	zINFO(4,"B: CS: User tried to cancel OutputUnits ..."); // 1619,
+
+	int numOu1 = csPlayer->StopAllOutputUnits(oCNpc::player);
+	int numOu2 = csPlayer->StopAllOutputUnits(oCNpc::player->GetTalkingWith());
+	int numOu = numOu1 + numOu2;
+
+	oCNpc::player::StopAllVoices();
+	oCNpc::player->GetTalkingWith()->StopAllVoices();
+	oCNpc::player->StopFaceAni(NPC_TALK_ANI);
+	oCNpc::player->GetTalkingWith()->StopFaceAni(NPC_TALK_ANI);
+
+	zINFO(4,"");// 1631,
+
+	return numOu > 0;
+}
+
+int CGameManager::HandleEvent(int key)
+{
+	if ( !gameSession )
+		return 0;
+
+	int menu = 1;
+	int ret = 0;
+
+	switch (key) {
+	case KEY_F5:
+		if ( oCGame::s_bUseQuickSave && zinput->KeyToggled(KEY_F5) )
+			if ( gameSession && gameSession->GetCamera() ) {
+				if (!gameSession->game_testmode != zinput->KeyPressed(KEY_LCONTROL) ) {
+					if ( MenuEnabled(menu) ) {
+						gameMan->Write_Savegame(SAVEGAME_SLOT_QUICK);
+						ret = 1;
+					}
+				}
+			}
+		}
+		return 1;
+
+	case KEY_F9:
+		if (oCGame::s_bUseQuickSave && zinput->KeyToggled(KEY_F9)) {
+			if (!gameSession || (!gameSession->game_testmode != zinput->KeyPressed(zinput, KEY_LCONTROL))) {
+				gameMan->Read_Savegame(SAVEGAME_SLOT_QUICK);
+				ret = 1;
+			}
+		}
+		return ret;
+
+	case KEY_ESCAPE:
+		if (!zinput->KeyPressed(KEY_LSHIFT)) {
+			if ( MenuEnabled(menu) ) {
+				Menu(menu);
+				return 1;
+			}
+
+			ret = HandleCancelKey(key);
+			if ( ret ) {
+				zinput->ClearKeyBuffer();
+				zinput->ResetRepeatKey(1);
+			}
+			return ret;
+		}
+
+		Menu(0);
+		return 1;
+
+	case MOUSE_BUTTONRIGHT:
+		ret = CGameManager::HandleCancelKey(this, key);
+		if ( ret ) {
+			zinput->ClearKeyBuffer();
+			zinput->ResetRepeatKey(1);
+		}
+		return ret;
+
+	default:
+		if (key > KEY_F9)
+			break;
+		return 0;
+	}
+
+	if ( !oCGame::s_bUsePotionKeys )
+		return ret;
+	if ( !zinput->KeyToggled(key) )
+		return ret;
+
+	if ( !gameSession || !gameSession->GetCamera())
+		return ret;
+
+	if (gameSession->game_testmode)
+		return ret;
+	if ( !oCNpc::player )
+		return ret;
+
+	auto lame = zinput->GetFirstBindedLogicalKey(key) - GAMEKEY_LAME_POTION;
+	int func = -1;
+	if (lame == 0) {
+		func = zparser.GetIndex("PLAYER_HOTKEY_LAME_HEAL");
+	} else if ( lame == 1 ) {
+		func = zparser.GetIndex("PLAYER_HOTKEY_LAME_POTION");
+	}
+
+	if ( func <= 0 )
+		return ret;
+
+	auto msg = new oCMsgManipulate(EV_CALLSCRIPT, func);
+	oCNpc::player->GetEM()->OnMessage(msg, oCNpc::player);
+	return 1;
 }
 
 int CGameManager::PlayVideo(zSTRING fileName)
@@ -741,7 +936,7 @@ int CGameManager::PlayVideo(zSTRING fileName)
 
 		videoPlayer->SetFullscreen(1, "videoback.tga");
 		videoPlayer->Play(0);
-		videoPlayer->vtab->CloseVideo();
+		videoPlayer->CloseVideo();
 
 		if ( gameSession && !exitSession )
 			gameSession->Unpause();
@@ -753,4 +948,68 @@ int CGameManager::PlayVideo(zSTRING fileName)
 	}
 
 	return false;
+}
+
+int CGameManager::PlayVideoEx(zSTRING fileName, short blendTime, int exit)
+{
+	if ( videoPlayer ) {
+		videoPlayInGame = 0;
+		bool musicEnabled = zoptions->ReadBool(zOPT_SEC_SOUND, "musicEnabled", 1);
+
+		if ( zsound )
+			zsound->StopAllSounds();
+
+		zCZoneMusic::SetAutochange(0);
+		zCMusicSystem::DisableMusicSystem(1);
+
+		if ( gameSession )
+			gameSession->Pause(exitSession);
+
+		auto dirName = zoptions->GetDirString(DIR_VIDEO);
+
+		videoPlayer->OpenVideo(dirName + fileName);
+
+		videoPlayer->SetFullscreen(1, "videoback.tga");
+		videoPlayer->Play(0);
+		if ( blendTime && !exit && oCNpc::player ) {
+			auto vfx = oCVisualFX::CreateAndPlay("BLACK_SCREEN", oCNpc::player, 0, 1, 0.0, 0, 0);
+			Release(vfx);
+		}
+
+		videoPlayer->CloseVideo();
+
+		if ( exit ) {
+			ExitSession();
+		} else {
+			if ( gameSession )
+				gameSession->Unpause();
+		}
+
+		zCZoneMusic::SetAutochange(musicEnabled);
+		zCMusicSystem::DisableMusicSystem(!musicEnabled);
+	} else {
+		if (!exit)
+			return 0;
+
+		ExitSession();
+	}
+
+	return 1;
+}
+
+void CGameManager::ShowRealPlayTime()
+{
+	int playTimeSec = GetPlaytimeSeconds();
+	int playTimeHours = playTimeSec / 3600;
+	int playTimeMin   = playTimeSec / 60 - 60 * playTimeHours;
+
+	if ( ogame->array_view[0] ) {
+		zSTRING ptstr;
+		ptstr += playTimeHours + ":"_s;
+		if ( playTimeMin < 10 )
+			ptstr += "0";
+		ptstr += playTimeMin + " played"_s;
+
+		ogame->array_view[0]->PrintTimed(100, 300, ptstr, 3000.0, 0);
+	}
 }

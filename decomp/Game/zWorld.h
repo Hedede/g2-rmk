@@ -251,6 +251,9 @@ public:
 		MoveVobSubtreeTo(vob, &globalVobTree);
 	}
 
+	void MoveVobs();
+
+
 	void UnregisterPerFrameCallback(zCWorldPerFrameCallback *callback)
 	{
 		perFrameCallbackList.Remove(callback);
@@ -561,6 +564,21 @@ int zCWorld::DisposeVobsDbg(zCTree<zCVob> *vobNode)
 	return 0;
 }
 
+void MoveVobs()
+{
+	/* walkList.Resize(activeVobList.GetNumInList());
+	for (unsigned i = 0; i < activeVobList.GetNumInList(); ++i)
+		walkList[i] = activeVobList[i];*/
+	walkList = activeVobList;
+
+	for (auto vob : walkList) {
+		if (vob)
+			vob->DoFrameActivity();
+	}
+
+	walkList.DeleteList();
+}
+
 zCZone* SearchZoneDefaultByClass(zCClassDef* cd)
 {
 	for (auto zone : zoneGlobalList) {
@@ -639,15 +657,7 @@ void zCWorld::Render(zCCamera *cam)
 
 	cam->Activate();
 
-	walkList.Resize(activeVobList.GetNumInList());
-	for (unsigned i = 0; i < activeVobList.GetNumInList(); ++i)
-		walkList[i] = activeVobList[i];
-
-	for (auto vob : walkList) {
-		if (vob)
-			vob->DoFrameActivity();
-	}
-	walkList.DeleteList();
+	MoveVobs();
 
 	if ( hasLevelName ) {
 		zCEventManager::DoFrameActivity();

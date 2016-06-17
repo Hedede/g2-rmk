@@ -94,6 +94,9 @@ public:
 	void Archive(zCArchiver& arc) override;
 	void Unarchive(zCArchiver& arc) override;
 
+	void ArcTraverseVobs(zCArchiver *arc, zCTree<zCVob>* node, int root);
+	void UnarcTraverseVobs(zCArchiver *arc, zCTree<zCVob>* node);
+
 	virtual void LoadWorld(zSTRING const &,zCWorld::zTWorldLoadMode);
 	virtual void SaveWorld(zSTRING const &,zCWorld::zTWorldSaveMode,int,int);
 	virtual void MergeVobSubtree(zSTRING const& fileName, zCVob* paramVob, zTWorldLoadMergeMode mergeMode);
@@ -1171,4 +1174,133 @@ void zCWorld::Unarchive(zCArchiver& arc)
 
 	if ( progressBar )
 		progressBar->SetPercent(100, "");
+}
+
+void zCWorld::ArcTraverseVobs(zCArchiver *arc, zCTree<zCVob>* node, int root)
+{
+	if (!node )
+		return;
+
+	if ( world->progressBar && !(arcNumChildCtr & 7) ) {
+		auto percent = arcNumChildCtr / (world->numVobsInWorld + 0.1) * 100.0;
+		GetProgressBar()->SetPercent(percent, "");
+	}
+
+	unsigned numChilds = 0;
+	for (auto i = node->firstChild; i; i = i->next) {
+		if (!i->GetData()->GetDontWriteIntoArchive())
+			++numChilds;
+	}
+
+	if ( root ) {
+		int num = arcNumChildCtr++;
+		
+		auto str = "childs"_s + num;
+		if ( node->GetData() ) {
+
+			arc->WriteInt(str, 1);
+			zASSERT(!node->GetData()->GetDontWriteIntoArchive()); //_dieter\\zWorld.cpp, 2773
+		} else {
+			arc->WriteInt(str, numChilds);
+		}
+	}
+
+	auto obj = node->GetData();
+	if ( obj && !obj->GetDontWriteIntoArchive()) {
+		arc->WriteObject(obj);
+		auto visual = obj->visual;
+		if ( s_saveLevelMesh && obj->type == VOB_TYPE_LEVELCOMPO) {
+			//if (visual && visual->GetClassDef() == &zCMesh::classDef) {
+			if (auto mesh = zSTRICT_CAST<zCMesh>(visual)) { // madeupcast
+				zoptions->ChangeDir(DIR_MESHES);
+				zCFile3DS::Save3DS(visual->meshName, visual);
+			}
+		}
+
+		int num = arcNumChildCtr++;
+		arc->WriteInt(arc, "childs"_s + num, numChilds);
+	}
+
+	for (auto i = node->firstChild; i; i = i->next )
+		world->ArcTraverseVobs(arc, i, 0);
+}
+
+void zCWorld::UnarcTraverseVobs(zCArchiver *arc, zCTree<zCVob> *node)
+{
+	if ( progressBar && !(arcNumChildCtr & 7) ) {
+		auto file = arc->GetFile();
+		auto pos = file->Pos() - unarchiveStartPosVobtree;
+		float percent = pos / (unarchiveFileLen + 0.1) * 100.0
+		GetProgressBar()->SetPercent(percent, "");
+	}
+
+	int ignoreVisuals = 0;
+	zCTree<zCVob>* tree = nullptr;
+	bool b = false;
+	if ( node ) {
+		if (s_worldLoadMode == zWLD_LOAD_GAME_STARTUP ||
+		    s_worldLoadMode == zWLD_LOAD_GAME_SAVED_DYN1)
+			ignoreVisuals = 1;
+		zCVobLevelCompo::unarcIgnoreVisuals = ignoreVisuals;
+
+		auto obj = arc->ReadObject(0);
+		if ( obj ) {
+			if ( s_worldLoadMode == zWLD_LOAD_MERGE ) {
+				if ( s_worldMergeMode == zWLD_LOAD_MERGE_REPLACE_ROOT_VISUAL ) {
+					s_worldMergeMode = zWLD_LOAD_MERGE_ADD;
+
+					if ( !s_firstVobMergeVobSubtree )
+						goto LABEL_50;
+
+					s_firstVobMergeVobSubtree->SetVisual(obj->visual);
+
+					obj->Release();
+					obj = s_firstVobMergeVobSubtree;
+
+					b = true;
+				} else {
+					zCVob::SetVobID(zCVob::GetNextFreeVobID());
+					if ( !s_firstVobMergeVobSubtree )
+						s_firstVobMergeVobSubtree = obj;
+				}
+			}
+
+			auto compo = dynamic_cast<zCVobLevelCompo*>(obj);
+			if (compo) {
+				if (s_worldLoadMode == zWLD_LOAD_EDITOR_COMPILED ||
+				    s_worldLoadMode == zWLD_LOAD_EDITOR_UNCOMPILED )
+					obj->flags1.showVisual = 0;
+			}
+
+			if (b == 0) {
+				if ( compo && ignoreVisuals ) {
+					Release(obj);
+					tree = node;
+				} else {
+					tree = AddVobAsChild(obj, node);
+					if (!tree)
+						tree = node;
+					Release(obj);
+				}
+			} else {
+				tree = obj->globalVobTreeNode;
+			}
+
+			if (obj) {
+				if (obj->type = VOB_TYPE_LIGHT)
+					obj->SetRange(obj->lightData.range, 1);
+
+				s_unarcVobList.Insert(obj);
+			}
+		}
+	} else if ( s_unarcTraverseVobsFirstParent ) {
+		tree = s_unarcTraverseVobsFirstParent;
+	} else {
+		tree = &globalVobTree;
+	}
+
+LABEL_50:
+	int numChilds = arc->ReadInt("childs"_s + arcNumChildCtr++);
+	while (numChilds --> 0)
+		UnarcTraverseVobs(arc, tree);
 }

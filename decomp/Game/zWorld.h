@@ -56,7 +56,7 @@ class zCWorld : zCObject {
 private:
 	zBOOL showTextureStats;
 	zBOOL s_bWaveAnisEnabled;
-
+	zBOOL s_bFadeOutFarVerts;
 public:
 	static void SetShowTextureStats(int b)
 	{
@@ -78,6 +78,7 @@ public:
 		return s_bWaveAnisEnabled;
 	}
 
+	zCWorld();
 	virtual ~zCWorld();
 
 	void Archive(zCArchiver& arc) override;
@@ -92,8 +93,22 @@ public:
 	virtual void DisposeVobsDbg(zCTree<zCVob> *);
 	virtual void DisposeStaticWorld(void);
 	virtual void AddVobAsChild(zCVob *,zCTree<zCVob> *);
-	virtual void RemoveVob(zCVob *);
-	virtual void RemoveVobSubtree(zCVob *);
+
+	virtual void RemoveVob(zCVob* vob)
+	{
+		if ( vob && vob->homeWorld == this ) {
+			VobRemovedFromWorld(vob);
+			vob->RemoveWorldDependencies(1);
+		}
+	}
+	virtual void RemoveVobSubtree(zCVob* vob)
+	{
+		if ( vob ) {
+			MoveVobSubtreeTo(vob, 0);
+			RemoveVobSubtree_r(vob->globalVobTreeNode, 1);
+		}
+	}
+
 	virtual void MoveVobSubtreeTo(zCVob *,zCTree<zCVob> *);
 	virtual void GetPlayerGroup(void);
 	virtual void SearchVob(zCVob *,zCTree<zCVob> *);
@@ -132,6 +147,16 @@ public:
 		return bspTree;
 	}
 
+	zCSkyControler* GetActiveSkyControler()
+	{
+		if ( bspTree.bspTreeMode == 0) {
+			activeSkyControler = skyControlerIndoor;
+		} else {
+			activeSkyControler = skyControlerOutdoor;
+		}
+		return activeSkyControler;
+	}
+
 	zCViewProgressBar* GetProgressBar()
 	{
 		return progressBar;
@@ -154,6 +179,58 @@ public:
 		zoneBoxSorter.Update(zone);
 	}
 
+	void SetVobFarClipZScalability(float val)
+	{
+		vobFarClipZScalability = val;
+	}
+
+	void AddVob(zCVob* vob)
+	{
+		AddVobAsChild(vob, &globalVobTree);
+	}
+
+	void AddVobAsChild(zCVob* vob, zCVob* parent)
+	{
+		if ( parent ) {
+			auto tree = parent->globalVobTreeNode;
+			if ( tree )
+				AddVobAsChild(vob, tree);
+		}
+	}
+
+	void MoveVobSubtreeTo(zCVob* vob, zCVob* parent)
+	{
+		if ( parent ) {
+			auto tree = parent->globalVobTreeNode;
+			if ( tree )
+				MoveVobSubtreeTo(vob, tree);
+		}
+	}
+
+	void MoveVobSubtreeToWorldSpace(zCVob *vob)
+	{
+		MoveVobSubtreeTo(vob, &globalVobTree);
+	}
+
+	void RenderWaynet(zCCamera *cam)
+	{
+		if ( showWaynet ) {
+			if ( wayNet )
+				wayNet->Draw(cam);
+		}
+	}
+
+private:
+	unsigned GetVobHashIndex(zSTRING const& name)
+	{
+		return zCChecksum::GetBufferCRC32(name.Data(), name.Length(), 0) & 2047;
+	}
+
+	unsigned GetVobHashIndex(zCVob* vob)
+	{
+		return GetVobHashIndex(vob->GetObjectName());
+	}
+
 private:
 	//Jedes (?) Vob in der Welt ist hier drin.
 	zCTree<zCVob>     globalVobTree;
@@ -170,45 +247,44 @@ private:
 
 	enum zTWld_RenderMode {
 		zWLD_RENDER_MODE_VERT_LIGHT,
-
 		zWLD_RENDER_MODE_LIGHTMAPS
 	};
 
-	zCSession*       ownerSession;
-	zCCSPlayer*      csPlayer;
+	zCSession*       ownerSession = nullptr;
+	zCCSPlayer*      csPlayer     = nullptr;
 
 	zSTRING          levelName;
-	zBOOL            compiled;
-	zBOOL            compiledEditorMode;
-	zBOOL            traceRayIgnoreVobFlag;
-	zBOOL            isInventoryWorld;
-	zTWld_RenderMode worldRenderMode;
+	zBOOL            compiled = false;
+	zBOOL            compiledEditorMode = false;
+	zBOOL            traceRayIgnoreVobFlag = false;
+	zBOOL            isInventoryWorld = false;
+	zTWld_RenderMode worldRenderMode = zWLD_RENDER_MODE_LIGHTMAPS;
 	zCWayNet*        wayNet;
-	zTFrameCtr       masterFrameCtr;
-	zREAL            vobFarClipZ;
-	zREAL            vobFarClipZScalability;
+	zTFrameCtr       masterFrameCtr = 0;
+	zREAL            vobFarClipZ            = 5000.0;
+	zREAL            vobFarClipZScalability = 1.0;
 
-	zCArray<zCVob*>               traceRayVobList;
-	zCArray<zCVob*>               traceRayTempIgnoreVobList;
+	zCArray<zCVob*>  traceRayVobList;
+	zCArray<zCVob*>  traceRayTempIgnoreVobList;
 
-	zBOOL             renderingFirstTime;
-	zBOOL             showWaynet;
-	zBOOL             showTraceRayLines;
+	zBOOL            renderingFirstTime = true;
+	zBOOL            showWaynet         = false;
+	zBOOL            showTraceRayLines  = false;
 
-	zCViewProgressBar* progressBar;
+	zCViewProgressBar* progressBar = nullptr;
 
-	zDWORD unarchiveFileLen;
-	zDWORD unarchiveStartPosVobtree;
+	zDWORD unarchiveFileLen         = 0;
+	zDWORD unarchiveStartPosVobtree = 0;
 
-	int numVobsInWorld;
+	int numVobsInWorld = 0;
 
 	zCArray<zCWorldPerFrameCallback*> perFrameCallbackList;
 
 	//Der Outdoorskycontroller ist der interessante
 	//Hat eine Outdoorwelt einen Indoorskycontroller für Portalräume?
-	zCSkyControler* skyControlerIndoor;
-	zCSkyControler* skyControlerOutdoor;
-	zCSkyControler* activeSkyControler;
+	zCSkyControler* skyControlerIndoor  = nullptr;
+	zCSkyControler* skyControlerOutdoor = nullptr;
+	zCSkyControler* activeSkyControler  = nullptr;
 
 	//Defaut-Zonen sind am Anfang der Liste
 	zCArray<zCZone*>          zoneGlobalList;
@@ -223,21 +299,24 @@ private:
 	//Um die zur Zeit relevante Menge von Zonen einzugrenzen?
 	zCVobBBox3DSorter<zCZone>::zTBoxSortHandle    zoneActiveHandle;
 
-	zBOOL addZonesToWorld;
-	zBOOL showZonesDebugInfo;
+	zBOOL addZonesToWorld    = false;
+	zBOOL showZonesDebugInfo = false;
 
 	//--------------------------------------
 	// Binary Space Partitioning Tree
 	//--------------------------------------
 
 	//"construction" Bsp. Was tut der?
-	zCCBspTree* cbspTree;
+	zCCBspTree* cbspTree = nullptr;
 	//Hier der eigentliche bsp Tree:
 	zCBspTree   bspTree;
 
-	zCArray<zCVob*>               activeVobList;  //aktive Vobs (Physik / AI)
-	zCArray<zCVob*>               walkList; // wird im jedem Frame als Kopie der activeVobList gesetzt. Dann bekommt jedes Objekt in der Liste die Gelegenheit seinen Kram zu erledigen.
-	zCArray<zCVob*>               vobHashTable[VOB_HASHTABLE_SIZE];               // for fast vob searching by name
+	//aktive Vobs (Physik / AI)
+	zCArray<zCVob*>               activeVobList;
+	// wird im jedem Frame als Kopie der activeVobList gesetzt. Dann bekommt jedes Objekt in der Liste die Gelegenheit seinen Kram zu erledigen.
+	zCArray<zCVob*>               walkList;
+	// for fast vob searching by name
+	zCArray<zCVob*>               vobHashTable[VOB_HASHTABLE_SIZE];
 	//Mit "array", "numAlloc" und "numInArray" also 3*VOB_HASHTABLE_SIZE Wörter.
 	//Der Lexer erlaubt keine so großen Arrays, daher ist meine Deklaration semantischer Unsinn.
 	//Wer mit der Hashtabelle arbeiten will, muss selbst die Offsetrechnung betreiben.
@@ -248,6 +327,26 @@ private:
 };
 
 // ------------------- CPP --------------------------
+zCWorld::zCWorld()
+	: zCObject(), activeVobList(128)
+{
+	wayNet = new zCWayNet(this);
+	SetSkyControlerIndoor(new zCSkyControler_Indoor());
+	SetSkyControlerOutdoor(new zCSkyControler_Outdoor());
+
+	bspTreeMode.worldRenderMode = worldRenderMode;
+	zoneBoxSorter.InsertHandle(zoneActiveHandle);
+
+	if (zVobFarClipZScale <= 0.0) {
+		zVobFarClipZScale = zoptions->ReadReal("ENGINE", "zVobFarClipZScale", 4.0);
+		zClamp(zVobFarClipZScale, 0.0001, 9999999.0);
+
+		vobFarClipZScalability = zVobFarClipZScale * 0.22142857 + 0.4;
+
+		s_bFadeOutFarVerts = zoptions->ReadBool("ENGINE", "zFarClipAlphaFade", 1);
+		s_bWaveAnisEnabled = zoptions->ReadBool("ENGINE", "zWaterAniEnabled", 1);
+	}
+}
 
 void zCWorld::SetOwnerSession(zCSession* owner)
 {

@@ -13,8 +13,8 @@ class zTTraceRayReport  {
 
 
 class zCBspTree {
-	zCBspNode* actNodePtr;           ////nur beim Aufbau interessant
-	zCBspLeaf* actLeafPtr;           ////nur beim Aufbau interessant
+	zCBspNode* actNodePtr;  //nur beim Aufbau interessant
+	zCBspLeaf* actLeafPtr;  //nur beim Aufbau interessant
 
 	zCBspBase* bspRoot;
 	zCMesh*    mesh;
@@ -26,9 +26,9 @@ class zCBspTree {
 	int        numPolys;
 
 	zCArray<zCVob*>         renderVobList;    //Im letzten Frame gerendert
-	zCArray<zCVobLight*>        renderLightList;        //Im letzten Frame gerendert
+	zCArray<zCVobLight*>    renderLightList;  //Im letzten Frame gerendert
 
-	zCArray<zCBspSector*>       sectorList; //im letzten Frame gerendert
+	zCArray<zCBspSector*>   sectorList;       //im letzten Frame gerendert
 	zCArray<zCPolygon*>     portalList;
 
 	enum zTBspTreeMode      {
@@ -36,19 +36,20 @@ class zCBspTree {
 		zBSP_MODE_OUTDOOR
 	};
 
-	zTBspTreeMode     bspTreeMode;         //
-	zTWld_RenderMode  worldRenderMode;     //
-	zREAL             vobFarClipZ;         //
-	zTPlane           vobFarPlane[4];      //
-	int               vobFarPlaneSignbits; //
-	zBOOL             drawVobBBox3D;       //
-	int               leafsRendered;       //
-	int               vobsRendered;        //
-	zBOOL             m_bRenderedFirstTime;//
-	zTFrameCtr        masterFrameCtr;      //
+	zTBspTreeMode     bspTreeMode;
+	zTWld_RenderMode  worldRenderMode;
+	zREAL             vobFarClipZ;
+	zTPlane           vobFarPlane[4];
+	int               vobFarPlaneSignbits;
+	zBOOL             drawVobBBox3D;
+	int               leafsRendered;
+	int               vobsRendered;
+	zBOOL             renderedFirstTime;
+	zTFrameCtr        masterFrameCtr;
+
 	//nur beim Aufbau interessant
-	zCPolygon**   actPolyPtr;          //
-	zBOOL         compiled;            //
+	zCPolygon**   actPolyPtr;
+	zBOOL         compiled;
 };
 
 class zCWorld : zCObject {
@@ -78,6 +79,15 @@ public:
 		return s_bWaveAnisEnabled;
 	}
 
+	static void AdvanceClock(float delta)
+	{
+		if ( delta >= 0.0 ) {
+			ztimer.SetFrameTime(delta * 1000.0);
+		} else {
+			ztimer.ResetTimer();
+		}
+	} 
+
 	zCWorld();
 	virtual ~zCWorld();
 
@@ -88,10 +98,11 @@ public:
 	virtual void SaveWorld(zSTRING const &,zCWorld::zTWorldSaveMode,int,int);
 	virtual void MergeVobSubtree(zSTRING const &,zCVob *,zCWorld::zTWorldLoadMergeMode);
 	virtual void SaveVobSubtree(zSTRING const &,zCVob *,int,int);
-	virtual void DisposeWorld(void);
-	virtual void DisposeVobs(zCTree<zCVob> *);
-	virtual void DisposeVobsDbg(zCTree<zCVob> *);
-	virtual void DisposeStaticWorld(void);
+	virtual void DisposeWorld();
+	virtual int DisposeVobs(zCTree<zCVob>* vobNode);
+	virtual int DisposeVobsDbg(zCTree<zCVob>* vobNode);
+	virtual void DisposeStaticWorld();
+
 	virtual void AddVobAsChild(zCVob *,zCTree<zCVob> *);
 
 	virtual void RemoveVob(zCVob* vob)
@@ -110,16 +121,21 @@ public:
 	}
 
 	virtual void MoveVobSubtreeTo(zCVob *,zCTree<zCVob> *);
-	virtual void GetPlayerGroup(void);
-	virtual void SearchVob(zCVob *,zCTree<zCVob> *);
-	virtual void SearchVobByID(ulong,zCTree<zCVob> *);
+	virtual zCPlayerGroup* GetPlayerGroup()
+	{
+		return nullptr;
+	}
+
+	virtual zCVob* SearchVob(zCVob* vob, zCTree<zCVob>* vobNode = nullptr);
+	virtual void SearchVobByID(unsigned vobId, zCTree<zCVob>* vobNode = nullptr);
 	virtual zCVob* SearchVobByName(zSTRING const &);
 	virtual void SearchVobListByName(zSTRING const &,zCArray<zCVob *> &);
 	virtual void SearchVobListByClass(zCClassDef *,zCArray<zCVob *> &,zCTree<zCVob> *);
 	virtual void SearchVobListByBaseClass(zCClassDef *,zCArray<zCVob *> &,zCTree<zCVob> *);
 	virtual void VobAddedToWorld(zCVob *);
 	virtual void VobRemovedFromWorld(zCVob *);
-	virtual void RenderWaynet(zCCamera *);
+	virtual void RenderWaynet(zCCamera *cam);
+	void Render(zCCamera* cam);
 
 	enum zTWorldLoadMode {
 		zWLD_LOAD_GAME_STARTUP,
@@ -157,6 +173,22 @@ public:
 		return activeSkyControler;
 	}
 
+	void SetSkyControlerOutdoor(zCSkyControler* ctr);
+	{
+		if (skyControlerOutdoor != ctr) {
+			Release(skyControlerOutdoor);
+			skyControlerOutdoor = ctr;
+		}
+	}
+
+	void SetSkyControlerIndoor(zCSkyControler* ctr);
+	{
+		if (skyControlerIndoor != ctr) {
+			Release(skyControlerIndoor);
+			skyControlerIndoor = ctr;
+		}
+	}
+
 	zCViewProgressBar* GetProgressBar()
 	{
 		return progressBar;
@@ -169,11 +201,6 @@ public:
 		return ownerSession;
 	}
 
-	zCPlayerGroup* GetPlayerGroup()
-	{
-		return nullptr;
-	}
-
 	void UpdateZone(zCZone* zone)
 	{
 		zoneBoxSorter.Update(zone);
@@ -182,6 +209,18 @@ public:
 	void SetVobFarClipZScalability(float val)
 	{
 		vobFarClipZScalability = val;
+	}
+
+	void TraverseVobTree(zCVobCallback& callback, void* callbackData, zCTree<zCVob*> vobNode);
+
+	void UpdateVobTreeBspDepencdencies(zCTree<zCVob>* vobNode);
+
+	int ShouldAddThisVobToBsp(zCVob *vob)
+	{
+		if (zDYNAMIC_CAST<zCZone>(vob))
+			return addZonesToWorld;
+
+		return true;
 	}
 
 	void AddVob(zCVob* vob)
@@ -212,24 +251,29 @@ public:
 		MoveVobSubtreeTo(vob, &globalVobTree);
 	}
 
-	void RenderWaynet(zCCamera *cam)
+	void UnregisterPerFrameCallback(zCWorldPerFrameCallback *callback)
 	{
-		if ( showWaynet ) {
-			if ( wayNet )
-				wayNet->Draw(cam);
-		}
+		perFrameCallbackList.Remove(callback);
 	}
 
+	zCZone* SearchZoneDefaultByClass(zCClassDef* classDef);
+
 private:
-	unsigned GetVobHashIndex(zSTRING const& name)
+	static unsigned GetVobHashIndex(zSTRING const& name)
 	{
 		return zCChecksum::GetBufferCRC32(name.Data(), name.Length(), 0) & 2047;
 	}
 
-	unsigned GetVobHashIndex(zCVob* vob)
+	static unsigned GetVobHashIndex(zCVob* vob)
 	{
 		return GetVobHashIndex(vob->GetObjectName());
 	}
+
+	static int ActiveZoneListCompare(const void* a1, const void *a2);
+
+	void ResetCutscenePlayer();
+
+	void RemoveAllZones();
 
 private:
 	//Jedes (?) Vob in der Welt ist hier drin.
@@ -331,8 +375,11 @@ zCWorld::zCWorld()
 	: zCObject(), activeVobList(128)
 {
 	wayNet = new zCWayNet(this);
+
 	SetSkyControlerIndoor(new zCSkyControler_Indoor());
 	SetSkyControlerOutdoor(new zCSkyControler_Outdoor());
+
+	GetActiveSkyControler();
 
 	bspTreeMode.worldRenderMode = worldRenderMode;
 	zoneBoxSorter.InsertHandle(zoneActiveHandle);
@@ -357,6 +404,269 @@ void zCWorld::SetOwnerSession(zCSession* owner)
 		Release(csPlayer);
 	}
 }
+
+
+zCVob* zCWorld::SearchVob(zCVob* vob, zCTree<zCVob>* vobNode)
+{
+	if ( !vobNode )
+		vobNode = &globalVobTree;
+
+	if ( vobNode->data == vob )
+		return vob;
+
+	zCVob* result = nullptr;
+	for (auto i = vobNode->firstChild; i; i = i->next) {
+		result = SearchVob(vob, i);
+		if (result)
+			break;
+	}
+
+	return result;
+}
+
+zCVob* zCWorld::SearchVobByID(unsigned vobId, VobTree *vobNode)
+{
+	if ( !vobNode ) {
+		if (!vobId)
+			return nullptr;
+
+		vobNode = &globalVobTree;
+	}
+
+	zCVob* result = vobNode->data;
+	if ( result && vobId == 1 )
+		return result;
+
+	result = nullptr;
+	for (auto i = vobNode->firstChild; i; i = i->next) {
+		result = SearchVobByID(vobId, i);
+		if (result)
+			break;
+	}
+
+	return result;
+}
+
+int zCWorld::TraverseVobTree(zCVobCallback *callback, void *callbackData, zCTree<zCVob> *vobNode)
+{
+	if ( !vobNode )
+		vobNode = &this->globalVobTree;
+
+	for (auto i = vobNode->firstChild; i; i = i->next)
+		TraverseVobTree(callback, callbackData, result);
+
+	return callback->HandleVob(callback, vobNode->Data, callbackData);
+}
+
+void zCWorld::UpdateVobTreeBspDependencies(VobTree *vobNode)
+{
+	if ( !vobNode )
+		vobNode = &this->globalVobTree;
+
+	auto vob = vobNode->data;
+	if ( vob ) {
+		vob->groundPoly = 0;
+		vob->CalcGroundPoly();
+
+		vob->vobLeafList.DeleteList();
+		vob->RemoveVobFromBspTree(v4);
+
+		bspTree.AddVob(vob);
+	}
+
+	for (auto i = vobNode->firstChild; i; i = i->next)
+		UpdateVobTreeBspDependencies(i);
+}
+
+void zCWorld::ResetCutscenePlayer();
+{
+	if ( csPlayer )
+		csPlayer->ResetCutscenePlayer();
+
+	Release(csPlayer);
+
+	if (ownerSession) {
+		auto csman = ownerSession->GetCutsceneManager();
+		csPlayer = csman->CreateCutscenePlayer(this);
+	}
+}
+
+void zCWorld::RemoveAllZones()
+{
+	zoneBoxSorter.Clear();
+	for (auto zone : zoneGlobalList)
+		zone->ThisVobRemovedFromWorld(this);
+
+	zoneActiveList.DeleteList();
+	zoneLastClassList.DeleteList();
+	zoneGlobalList.DeleteList();
+	zoneBoxSorter.Clear();
+}
+
+int zCWorld::DisposeVobs(zCTree<zCVob> *vobNode)
+{
+	zCRenderLightContainer::S_ReleaseVobLightRefs();
+
+	if ( !vobNode ) {
+		Release(wayNet);
+		wayNet = new zCWayNet(this);
+		ResetCutscenePlayer();
+		RemoveAllZones();
+
+		vobNode = &this->globalVobTree;
+		renderingFirstTime = 1;
+	}
+
+	for (auto i = vobNode->firstChild; i;) {
+		if (DisposeVobs(i) == 1)
+			i = vobNode->firstChild;
+		else
+			i = i->next;
+	}
+
+	if ( vobNode->data ) {
+		RemoveVob(vobNode->data);
+		return 1;
+	}
+
+	return 0;
+}
+
+int zCWorld::DisposeVobsDbg(zCTree<zCVob> *vobNode)
+{
+	zCRenderLightContainer::S_ReleaseVobLightRefs();
+
+	if ( !vobNode ) {
+		Release(wayNet);
+		wayNet = new zCWayNet(this);
+		ResetCutscenePlayer();
+		RemoveAllZones();
+
+		vobNode = &this->globalVobTree;
+		renderingFirstTime = 1;
+	}
+
+	for (auto i = vobNode->firstChild; i;) {
+		if (DisposeVobsDbg(i) == 1)
+			i = vobNode->firstChild;
+		else
+			i = i->next;
+	}
+
+	if ( vobNode->data ) {
+		RemoveVob(vobNode->data);
+		return 1;
+	}
+
+	return 0;
+}
+
+zCZone* SearchZoneDefaultByClass(zCClassDef* cd)
+{
+	for (auto zone : zoneGlobalList) {
+		if (zone->GetClassDef() == cd)
+			return zone;
+		if (zone->GetClassDef() == zone->GetDefaultZoneClass())
+			continue;
+	}
+
+	return nullptr;
+}
+
+// ---------- Render
+void zCWorld::RenderWaynet(zCCamera *cam)
+{
+	if ( showWaynet ) {
+		if ( wayNet )
+			wayNet->Draw(cam);
+	}
+}
+
+void zCWorld::Render(zCCamera *cam)
+{
+	if (!cam)
+		return;
+	if (!cam->connectedVob)
+		return;
+
+	if ( cam->connectedVob->homeWorld != this)
+		return;
+
+	int hasLevelName = 0;
+	if (!levelName.IsEmpty()) {
+		hasLevelName = 1;
+	} else if (auto oworld = zDYNAMIC_CAST<oCWorld>(this)) {
+		hasLevelName = !oworld->worldFilename.IsEmpty();
+	}
+
+	zCCacheBase::S_PurgeCaches();
+
+	if ( hasLevelName && zCWorld::s_bWaveAnisEnabled )
+		zCFFT::S_SetFrameCtr(masterFrameCtr);
+
+	cam->PreRenderProcessing();
+	cam->UpdateViewport();
+	cam->Activate();
+
+	GetActiveSkyControler();
+
+	if ( renderingFirstTime ) {
+		zresMan->cacheInImmedMsec = 1500.0;
+		renderingFirstTime = 0;
+	}
+
+	if ( hasLevelName ) {
+		zsound->SetListener(zCCamera::activeCam->connectedVob);
+		ProcessZones();
+		zsound->DoSoundUpdate();
+	}
+
+	zCPolygon::PrepareRendering();
+
+	bspTree.vobFarClipZ = vobFarClipZScalability * vobFarClipZ;
+	bspTree.Render(/*cam*/);
+	cam->PostRenderProcessing();
+	zrenderer->FlushPolys();
+
+	zCPolygon::S_ResetMorphedVerts();
+
+	if ( hasLevelName ) {
+		zlineCache.Flush(cam->targetView);
+		RenderWaynet(cam);
+		ShowZonesDebugInfo();
+		ShowTextureStats();
+	}
+
+	cam->Activate();
+
+	walkList.Resize(activeVobList.GetNumInList());
+	for (unsigned i = 0; i < activeVobList.GetNumInList(); ++i)
+		walkList[i] = activeVobList[i];
+
+	for (auto vob : walkList) {
+		if (vob)
+			vob->DoFrameActivity();
+	}
+	walkList.DeleteList();
+
+	if ( hasLevelName ) {
+		zCEventManager::DoFrameActivity();
+		zresMan->DoFrameActivity();
+
+		if ( csPlayer )
+			csPlayer->Process();
+
+		for (auto callback : perFrameCallbackList)
+			callback(this, cam);
+	}
+
+	++masterFrameCtr;
+	zCVertex::ResetVertexTransforms();
+	++zCTexAniCtrl::masterFrameCtr;
+}
+
+
+// ----------- Archive
 
 void zCWorld::Archive(zCArchiver& arc)
 {
@@ -448,7 +758,6 @@ void zCWorld::Archive(zCArchiver& arc)
 
 void zCWorld::Unarchive(zCArchiver& arc)
 {
-	v3 = 0;
 	dword_9A4428 = 0;
 
 	auto arcFile = arc.GetFile();
@@ -597,3 +906,12 @@ void zCWorld::Unarchive(zCArchiver& arc)
 		progressBar->SetPercent(100, "");
 }
 
+int zCWorld::ActiveZoneListCompare(const void* a1, const void *a2)
+{
+	auto zone1 = *static_cast<zCZone* const*>(a1);
+	auto zone2 = *static_cast<zCZone* const*>(a2);
+
+	if (zone1->GetZoneMotherClass() >= zone2->GetZoneMotherClass())
+		return zone2->GetZoneMotherClass() < zone1->GetZoneMotherClass();
+	return -1;
+}

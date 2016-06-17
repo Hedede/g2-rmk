@@ -96,8 +96,9 @@ public:
 
 	virtual void LoadWorld(zSTRING const &,zCWorld::zTWorldLoadMode);
 	virtual void SaveWorld(zSTRING const &,zCWorld::zTWorldSaveMode,int,int);
-	virtual void MergeVobSubtree(zSTRING const &,zCVob *,zCWorld::zTWorldLoadMergeMode);
-	virtual void SaveVobSubtree(zSTRING const &,zCVob *,int,int);
+	virtual void MergeVobSubtree(zSTRING const& fileName, zCVob* paramVob, zTWorldLoadMergeMode mergeMode);
+	virtual void SaveVobSubtree(zSTRING const& fileName, zCVob* vob, int writeBinary, int saveLevelMesh);
+
 	virtual void DisposeWorld();
 	virtual int DisposeVobs(zCTree<zCVob>* vobNode);
 	virtual int DisposeVobsDbg(zCTree<zCVob>* vobNode);
@@ -201,11 +202,6 @@ public:
 		return ownerSession;
 	}
 
-	void UpdateZone(zCZone* zone)
-	{
-		zoneBoxSorter.Update(zone);
-	}
-
 	void SetVobFarClipZScalability(float val)
 	{
 		vobFarClipZScalability = val;
@@ -237,6 +233,8 @@ public:
 		}
 	}
 
+	void MoveVobSubtreeTo(zCVob *vob, zCTree<zCVob>* vobNode);
+
 	void MoveVobSubtreeTo(zCVob* vob, zCVob* parent)
 	{
 		if ( parent ) {
@@ -253,13 +251,22 @@ public:
 
 	void MoveVobs();
 
+	void RemoveVobHashTable(zCVob* vob);
 
 	void UnregisterPerFrameCallback(zCWorldPerFrameCallback *callback)
 	{
 		perFrameCallbackList.Remove(callback);
 	}
 
+	void UpdateZone(zCZone* zone)
+	{
+		zoneBoxSorter.Update(zone);
+	}
+
 	zCZone* SearchZoneDefaultByClass(zCClassDef* classDef);
+
+
+	int LightingTestRay(zVEC3 const& start, zVEC3 const& end, zVEC3& inters, zCPolygon*& hitPoly);
 
 private:
 	static unsigned GetVobHashIndex(zSTRING const& name)
@@ -461,6 +468,101 @@ int zCWorld::TraverseVobTree(zCVobCallback *callback, void *callbackData, zCTree
 	return callback->HandleVob(callback, vobNode->Data, callbackData);
 }
 
+void MoveVobs()
+{
+	/* walkList.Resize(activeVobList.GetNumInList());
+	for (unsigned i = 0; i < activeVobList.GetNumInList(); ++i)
+		walkList[i] = activeVobList[i];*/
+	walkList = activeVobList;
+
+	for (auto vob : walkList) {
+		if (vob)
+			vob->DoFrameActivity();
+	}
+
+	walkList.DeleteList();
+}
+
+int zCWorld::MergeVobSubtree(zSTRING const& fileName, zCVob* paramVob, zTWorldLoadMergeMode mergeMode)
+{
+	zCWorld::s_worldMergeMode = mergeMode;
+	if ( mergeMode ) {
+		if ( !paramVob )
+			return 0;
+		s_firstVobMergeVobSubtree = paramVob;
+		s_unarcTraverseVobsFirstParent = 0;
+	} else {
+		zCTree<zCVob>* tree = nullptr;
+		if (paramVob)
+			tree = paramVob->globalVobTreeNode;
+		if (!tree)
+			tree = &globalVobTree;
+
+		s_firstVobMergeVobSubtree = 0;
+		s_unarcTraverseVobsFirstParent = tree;
+	}
+
+	zCWorld::s_worldLoadMode = zWLD_LOAD_MERGE;
+	zoptions->ChangeDir(DIR_WORLD);
+
+	auto arc = zCArchiverFactory::CreateArchiverRead(fileName, 0);
+	if ( arc ) {
+		arc->ReadObject(this);
+		arc->Close();
+		Release(arc);
+	}
+
+	s_unarcTraverseVobsFirstParent = 0;
+	return std::exchange(s_firstVobMergeVobSubtree, 0);
+}
+
+int zCWorld::SaveVobSubtree(zSTRING *fileName, zCVob *vob, int writeBinary, int saveLevelMesh)
+{
+	if ( vob && vob->homeWorld == this ) {
+		zCWorld::s_worldSaveMode = 2;
+
+		s_saveLevelMesh = saveLevelMesh;
+		s_firstVobSaveWorld = vob->globalVobTreeNode;
+		s_saveWayNet = 0;
+
+		zoptions->ChangeDir(DIR_WORLD);
+
+		auto arc = zarcFactory.CreateArchiverWrite(fileName, writeBinary ? 3 : 1, 0, 0);
+		if ( arc ) {
+			arc->WriteObject(this);
+			arc->Close();
+			arc->Release();
+		}
+
+		s_firstVobSaveWorld = 0;
+
+		return arc != 0;
+	}
+
+	return 0;
+}
+
+void zCWorld::MoveVobSubtreeTo(zCVob *vob, zCTree<zCVob>* vobNode)
+{
+	if ( vob ) {
+		if ( vob->globalVobTreeNode )
+			vob->globalVobTreeNode->RemoveSubtree();
+		if ( vobNode )
+			vobNode->AddChild(vob->globalVobTreeNode);
+		else
+			vob->globalVobTreeNode->parent = 0;
+
+		auto inMovement = vob->isInMovementMode;
+		if ( !inMovement )
+			vob->BeginMovement();
+		vob->TouchMovement();
+		vob->Move(0.0, 0.0, 0.0);
+		if ( !inMovement )
+			vob->EndMovement(1);
+	}
+}
+
+
 void zCWorld::UpdateVobTreeBspDependencies(VobTree *vobNode)
 {
 	if ( !vobNode )
@@ -481,6 +583,8 @@ void zCWorld::UpdateVobTreeBspDependencies(VobTree *vobNode)
 		UpdateVobTreeBspDependencies(i);
 }
 
+
+// ---------- Dispose
 void zCWorld::ResetCutscenePlayer();
 {
 	if ( csPlayer )
@@ -564,19 +668,44 @@ int zCWorld::DisposeVobsDbg(zCTree<zCVob> *vobNode)
 	return 0;
 }
 
-void MoveVobs()
+void zCWorld::DisposeStaticWorld()
 {
-	/* walkList.Resize(activeVobList.GetNumInList());
-	for (unsigned i = 0; i < activeVobList.GetNumInList(); ++i)
-		walkList[i] = activeVobList[i];*/
-	walkList = activeVobList;
-
-	for (auto vob : walkList) {
-		if (vob)
-			vob->DoFrameActivity();
+	if ( bspTree.numPolys != 0 ) {
+		auto skyctrl = zDYNAMIC_CAST<zCSkyControler_Outdoor>(zCSkyControler::s_activeSkyControler);
+		if (skyctrl)
+			skyctrl->levelChanged = true;
 	}
 
-	walkList.DeleteList();
+	zCPolygon::S_DeleteMorphedVerts();
+	bspTree.DisposeTree();
+
+	compiled = 0;
+	compiledEditorMode = 0;
+	renderingFirstTime = 1;
+
+	UpdateVobTreeBspDependencies(&globalVobTree);
+}
+
+void zCWorld::DisposeWorld()
+{
+	zINFO(8, "D: WORLD: Disposing zCWorld.."); // 1674, _dieter\\zWorld.cpp
+
+	DisposeVobs(0);
+	DisposeStaticWorld();
+
+	zINFO(8, "D: WORLD: ..zCWorld disposed."); // 1682,
+}
+
+
+// ---------- Zones
+int zCWorld::ActiveZoneListCompare(const void* a1, const void *a2)
+{
+	auto zone1 = *static_cast<zCZone* const*>(a1);
+	auto zone2 = *static_cast<zCZone* const*>(a2);
+
+	if (zone1->GetZoneMotherClass() >= zone2->GetZoneMotherClass())
+		return zone2->GetZoneMotherClass() < zone1->GetZoneMotherClass();
+	return -1;
 }
 
 zCZone* SearchZoneDefaultByClass(zCClassDef* cd)
@@ -589,6 +718,16 @@ zCZone* SearchZoneDefaultByClass(zCClassDef* cd)
 	}
 
 	return nullptr;
+}
+
+// ---------- HashTable
+void zCWorld::RemoveVobHashTable(zCVob *vob)
+{
+	auto vobName = vob->GetObjectName();
+	if (vobName) {
+		auto bucket = vobHashTableStart[GetVobHashIndex(vob)];
+		bucket.Remove(vob);
+	}
 }
 
 // ---------- Render
@@ -675,6 +814,27 @@ void zCWorld::Render(zCCamera *cam)
 	++zCTexAniCtrl::masterFrameCtr;
 }
 
+// ----------- Lighting
+int zCWorld::LightingTestRay(zVEC3 const& start, zVEC3 const& end, zVEC3& inters, zCPolygon*& hitPoly)
+{
+	float junk;
+
+	if ( traceRayLastPoly ) {
+		zVEC3 ray = end = start;
+		if (traceRayLastPoly->CheckRayPolyIntersection(start, ray, inters, &junk)) {
+			*hitPoly = traceRayLastPoly;
+			return 1;
+		}
+		traceRayLastPoly = 0;
+	}
+
+	if ( bspTree.TraceRay(start, end, 0x120, inters, hitPoly, 0) ) {
+		traceRayLastPoly = *hitPoly;
+		return 1;
+	}
+
+	return 0;
+}
 
 // ----------- Archive
 
@@ -914,14 +1074,4 @@ void zCWorld::Unarchive(zCArchiver& arc)
 
 	if ( progressBar )
 		progressBar->SetPercent(100, "");
-}
-
-int zCWorld::ActiveZoneListCompare(const void* a1, const void *a2)
-{
-	auto zone1 = *static_cast<zCZone* const*>(a1);
-	auto zone2 = *static_cast<zCZone* const*>(a2);
-
-	if (zone1->GetZoneMotherClass() >= zone2->GetZoneMotherClass())
-		return zone2->GetZoneMotherClass() < zone1->GetZoneMotherClass();
-	return -1;
 }

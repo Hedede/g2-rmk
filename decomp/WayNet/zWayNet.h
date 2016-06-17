@@ -50,6 +50,9 @@ public:
 	void AddWays(zCWayPoint* wp1, zCWayPoint* wp2);
 
 
+	void DeleteWaypoint(zCWaypoint* wp)
+	void DeleteWay(zCWaypoint *wp1, zCWaypoint *wp2)
+
 	void CalcProperties(zCWorld* wld);
 
 	zCRoute* CreateRoute(zCWaypoint* to);
@@ -95,6 +98,13 @@ public:
 	}
 
 	void RemoveUnusedWPVobs();
+	void UpdateVobDependencies();
+	void ClearVobDependencies();
+	void CreateVobDependencies(zCWorld* wld);
+	zSTRING MergeWaypoints();
+	zSTRING CheckConsistency(bool isFault);
+
+	int AStar(zCWaypoint* from, zCWaypoint* to, zCVob const* vob);
 
 private:
 	void InsertInClosed(zCWaypoint* wp)
@@ -130,9 +140,15 @@ private:
 		return wp->routeCtr == this->routeCtr && (in(wp->curList, 1, 2));
 	}
 
-	static int SortOpenList(zCWaypoint* wp1, zCWaypoint wp2)
+	static int SortOpenList(zCWaypoint* wp1, zCWaypoint* wp2)
 	{
 		return 2 * (wp1->score >= wp2->score) - 1;
+	}
+
+	static int SortWpList(zCWaypoint* wp1, zCWaypoint* wp2)
+	{
+		// maybe other way around?
+		return wp1->GetName() < wp2->GetName() ? -1 : 1;
 	}
 
 	static void CreateWPVobList(zCList<zCVobWaypoint>& list, zCTree<zCVob>* tree)

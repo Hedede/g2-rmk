@@ -166,6 +166,173 @@ void zCWayNet::InsertWaypoint(zCWaypoint *wp1, zCWaypoint *wp2, zCWaypoint *wp3)
 	}
 }
 
+void zCWayNet::DeleteWaypoint(zCWaypoint* wp)
+{
+	zCWaypoint* wp1 = nullptr;
+	for (auto wp2 : wplist) {
+		if (wp2 == wp) {
+			wp1 = wp2;
+			break;
+		}
+	}
+	
+	if (!wp1)
+		return;
+
+	for (auto way : waylist) {
+		if (way->left == wp || way->right == wp) {
+			waylist.Remove(way);
+
+			if (way->left)
+				way->left->wayList.Remove(way);
+			if (way->right)
+				way->right->wayList.Remove(way);
+
+			delete way;
+		}
+	}
+
+	wplist.Remove(wp);
+	wp->Free();
+	Release(wp);
+}
+
+void zCWayNet::DeleteWay(zCWaypoint *wp1, zCWaypoint *wp2)
+{
+	zCWay* way = nullptr;
+	for (auto way1 : wp1->wayList) {
+		if (way1->GetGoalWaypoint(wp1) == wp2) {
+			way = way1;
+			break;
+		}
+	}
+
+	if (!way)
+		return;
+
+	wp1->wayList.Remove(way);
+	wp2->wayList.Remove(way);
+	this->wayList.Remove(way);
+	way->Free();
+	delete way;
+}
+
+void zCWayNet::GetWPList(zCList<zVEC3>& wpl, zVEC3& pos, float mindist, float maxdist)
+{
+	for (auto wp : wplist) {
+		float dist = (wp->GetPositionWorld() - pos).LengthApprox();
+		if (mindist <= dist && dist <= maxdist) {
+			if ( mindist <= v13 && v13 <= maxdist )
+				wpl.Insert(wp->pos);
+		}
+	}
+}
+
+void zCWayNet::UpdateVobDependencies()
+{
+	zINFO(5,"U: WAYNET: Updating VobDependencies..."); 412,
+
+	for (auto wp : wplist)
+		wp->UpdatePositionWorld();
+
+	zINFO(5,""); //424,
+}
+
+void zCWayNet::ClearVobDependencies()
+{
+	zINFO(5,"U: WAYNET: Clearing VobDependencies..."); // 432, zWaynet.cpp
+	for (auto wp : wplist) {
+		if (wp->wpvob) {
+			auto wld = wp->wpvob->homeWorld;
+			if (wld)
+				wld->RemoveVob(wp->wpvob);
+			Release(wp->wpvob);
+		}
+
+	}
+	zINFO(5, ""); // 448,
+}
+
+void zCWayNet::CreateVobDependencies(zCWorld* wld)
+{
+	if (!wld)
+		return;
+	zINFO(5,"U: WAYNET: Creating VobDependencies"); // 457,
+
+	for (auto wp : wplist) {
+		if (!wp->wpvob) {
+			wp->wpvob = new zCVobWaypoint;
+			wp->wpvob->name = wp->name;
+			wp->wpvob->SetPositionWorld(wp->GetPositionWorld());
+			wld->AddVob(wp->wpvob);
+			wp->wpvob->SetHeadingAtWorld(wp->dir);
+			
+		}
+	}
+	zINFO(5,""); // 477,
+}
+
+zSTRING zCWayNet::MergeWaypoints()
+{
+	zSTRING list;
+	// Не стал декодить 1в1, убрал лишние GetName()'ы
+	for (auto i = wplist->next; i; i = i->next) {
+		auto wp1 = i->get();
+		auto name1 = wp1->GetName();
+		for (auto j = i->next; j; j = j->next) {
+			auto wp2 = j->Get();
+			auto name2 = wp2->GetName();
+
+			if (name1 == name2) {
+				zWARNING("U: WAYNET: Two Waypoints with same name detected. Merging them : " + name1); // 501
+				if (!list.IsEmpty())
+					list += ", ";
+				list += name1;
+			}
+
+			AddWays(wp1, wp2); // for (auto way : wp2->wayList) CreateWay(wp1, way->GetGoalWaypoint(wp2));
+			DeleteWaypoint(wp2);
+		}
+	}
+
+	return list;
+}
+
+zSTRING zCWayNet::CheckConsistency(bool fault_on_fail)
+{
+	zINFO(5, "U: WAYNET: Checking consistency ..."); // 522
+
+	zSTRING list;
+	for (auto i = wplist->next; i; i = i->next) {
+		auto wp1 = i->get();
+		auto name1 = wp1->GetName();
+		for (auto j = i->next; j; j = j->next) {
+			auto wp2 = j->Get();
+			auto name2 = wp2->GetName();
+
+			if (name1 == name2) {
+				zWARNING("U: WAYNET: Two Waypoints with same name detected : " + name1); // 543
+				if (!list.IsEmpty())
+					list += ", ";
+				list += name1;
+			}
+		}
+	}
+
+	// was `bool check_failed`, but I'm lazy
+	if (!list.IsEmpty()) {
+		if (fault_on_fail) {
+			zFAULT("U: WAYNET: Waynet consistency check failed. Check zSpy-Messages."); // 555
+		} else {
+			zINFO(5,"U: WAYNET: Waynet consistency check failed. Check zSpy-Messages."); // 557
+		}
+	} else {
+		zINFO(5,"U: WAYNET: Consistency check ok."); // 562
+	}
+	zINFO(5,""); // 565,
+	return list;
+}
+
 void zCWayNet::ArchiveOldFormat(zCArchiver& arc)
 {
 	CheckConsistency(1);
@@ -198,6 +365,65 @@ void zCWayNet::ArchiveOldFormat(zCArchiver& arc)
 			wayr = way->right->GetName();
 
 		arc.WriteString("way"_s + i, wayl + "/" + wayr);
+	}
+}
+
+int zCWayNet::AStar(zCWaypoint* from, zCWaypoint* to, zCVob const* vob)
+{
+	++routeCtr;
+	from->curCost = 0;
+
+	zVEC3 frompos = from->pos;
+	zVEC3 topos   = to->pos;
+	zVEC3 diff = topos - frompos;
+	unsigned dist = abs(diff.x) + abs(diff.y) + abs(diff.z);
+
+	from->estCost = dist;
+	from->score   = dist;
+	from->parent = 0;
+
+	openlist.DeleteList();
+	InsertInOpen(from);
+
+	while ( 1 ) {
+		auto next = openlist.next;
+		if ( !next )
+			return 0;
+
+		if ( openlist.GetNumInList() <= 0 )
+			return 0;
+
+		auto wp = next->Get();
+		next->Remove(wp);
+
+		if ( wp == to )
+			return 1;
+
+		for (auto way : wp->wayList) {
+			if ( way->usedCtr != this->routeCtr ) {
+				auto wp2 = way->GetGoalWaypoint(wp);
+				if (!vob || wp2->CanBeUsed(vob) && wp->CanBeUsed(vob)) {
+					way->usedCtr = this->routeCtr;
+					auto cost = way->cost + wp->curCost;
+					if (wp2->curCost > cost || !IsInAnyList(wp2)) {
+						wp2->parent = way;
+						wp2->curCost = cost;
+
+						// I made this func up
+						unsigned dist2 = SquareDist(wp2->pos, to->pos);
+						wp2->estCost = dist2;
+						wp2->score = cost + dist2;
+
+						if (IsInClosed(wp2))
+							RemoveFromClosed(wp2);
+						if (!IsInOpen(wp2))
+							InsertInOpen(v15);
+					}
+				}
+			}
+		}
+
+		InsertInClosed(wp);
 	}
 }
 

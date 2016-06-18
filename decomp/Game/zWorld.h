@@ -28,46 +28,6 @@ class zTTraceRayReport  {
 };
 
 
-class zCBspTree {
-	zCBspNode* actNodePtr;  //nur beim Aufbau interessant
-	zCBspLeaf* actLeafPtr;  //nur beim Aufbau interessant
-
-	zCBspBase* bspRoot;
-	zCMesh*    mesh;
-	zCPolygon**treePolyList;
-	zCBspNode* nodeList;
-	zCBspLeaf* leafList;
-	int        numNodes;
-	int        numLeafs;
-	int        numPolys;
-
-	zCArray<zCVob*>         renderVobList;    //Im letzten Frame gerendert
-	zCArray<zCVobLight*>    renderLightList;  //Im letzten Frame gerendert
-
-	zCArray<zCBspSector*>   sectorList;       //im letzten Frame gerendert
-	zCArray<zCPolygon*>     portalList;
-
-	enum zTBspTreeMode      {
-		zBSP_MODE_INDOOR,
-		zBSP_MODE_OUTDOOR
-	};
-
-	zTBspTreeMode     bspTreeMode;
-	zTWld_RenderMode  worldRenderMode;
-	zREAL             vobFarClipZ;
-	zTPlane           vobFarPlane[4];
-	int               vobFarPlaneSignbits;
-	zBOOL             drawVobBBox3D;
-	int               leafsRendered;
-	int               vobsRendered;
-	zBOOL             renderedFirstTime;
-	zTFrameCtr        masterFrameCtr;
-
-	//nur beim Aufbau interessant
-	zCPolygon**   actPolyPtr;
-	zBOOL         compiled;
-};
-
 class zCWorld : zCObject {
 	Z_OBJECT(zCWorld);
 private:

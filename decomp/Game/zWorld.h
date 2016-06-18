@@ -4,11 +4,17 @@ const int VOB_HASHTABLE_SIZE = 2048;
 
 // preliminary analysis
 struct TraceFlags {
-	uint32_t requireDynamic   : 1; // 1
-	uint32_t requireStatic    : 1; // 2, disregardVobs
-	uint32_t traceOnlyVobs    : 1; // 0x10
+	uint32_t onlyDynamic      : 1; // 1
+	uint32_t ignoreVobs       : 1; // 2
+	uint32_t unk              : 2; // 4, 8
+	uint32_t ignoreStatPoly   : 1; // 0x10
+	uint32_t findStatic       : 1; // 0x20
+	uint32_t findPortals      : 1; // 0x40
+	uint32_t ignoreTranspPoly : 1; // 0x100
+	uint32_t findWaterPoly    : 1; // 0x200
+	uint32_t poly2Sided       : 1; // 0x400
 	uint32_t ignoreCharacter  : 1; // 0x800
-	uint32_t ignoreVisual     : 1; // 0x2000, (vis || 2000 && !vis)
+	uint32_t ignoreVisual     : 1; // 0x2000
 	uint32_t ignoreProjetiles : 1; // 0x4000
 };
 
@@ -1093,7 +1099,7 @@ int zCWorld::TraceRayFirstHit(zVEC3 const& start, zVEC3 const& ray, zCArray<zCVo
 	traceRayReport = zTTraceRayReport{};
 
 	zCArray<zCVob*>* traceRayList = nullptr;
-	if ( !(traceFlags & 2) )
+	if (!traceFlags.ignoreVobs)
 		traceRayList = &traceRayVobList;
 
 	traceRayReport.foundHit = bspTree.TraceRay(
@@ -1102,7 +1108,7 @@ int zCWorld::TraceRayFirstHit(zVEC3 const& start, zVEC3 const& ray, zCArray<zCVo
 	                &traceRayReport.foundPoly,
 	                &traceRayList);
 
-	if ( traceFlags & 0x10 )
+	if ( traceFlags.ignoreStatPoly )
 		traceRayReport.foundHit = 0;
 
 	if ( traceRayReport.foundHit ) {
@@ -1114,7 +1120,7 @@ int zCWorld::TraceRayFirstHit(zVEC3 const& start, zVEC3 const& ray, zCArray<zCVo
 		return 1;
 	}
 
-	if (traceFlags & 2)
+	if (traceFlags.ignoreVobs)
 		return 0;
 
 	for (auto vob : traceRayVobList) {

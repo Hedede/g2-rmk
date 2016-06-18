@@ -9,6 +9,52 @@ unsigned sysGetTime()
 	return = timeGetTime() - BeginTime;
 }
 
+void libExit()
+{
+	if ( !inSysExit ) {
+		inSysExit = 1;
+
+		if ( GetCurrentThreadId() != winMainThreadID )
+			SuspendThread(winMainThread);
+
+		sysStopProcessingMessages = 1;
+
+		TRACE("");
+		TRACE("---- Exiting program");
+
+		netExit();
+
+		UnhookWindowsHookEx(hhk);
+
+		while ( DeleteMenu(hMenu, 0, 0x400u) );
+
+		TRACE("WIN: Closing window");
+
+		if ( hWndApp )
+			DestroyWindow(hWndApp);
+		if ( hMenu )
+			DestroyMenu(hMenu);
+		if ( dcScreen )
+			DeleteDC(dcScreen);
+		if ( hKey )
+			RegCloseKey(hKey);
+		if ( sysInstLock )
+			CloseHandle(sysInstLock);
+
+		if ( sysCommandLine ) {
+			LocalFree(sysCommandLine);
+			sysCommandLine = 0;
+		}
+
+		sysKillWindowsKeys(0);
+
+		if ( zExHandler )
+			zCExceptionHandler::WalkReleaseCallbacks();
+
+		TRACE("WIN: All done! Have a nice day");
+	}
+}
+
 void [[noreturn]] sysExit()
 {
 	libExit();

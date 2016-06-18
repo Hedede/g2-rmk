@@ -3,7 +3,6 @@
 //------------------------------------------------
 
 /* Bedeutung von zCPolygon.portalPoly:*/
-
 enum zTPortalType   {
 	zPORTAL_TYPE_NONE         = 0, 
 	zPORTAL_TYPE_SMALL        = 1, 
@@ -11,41 +10,53 @@ enum zTPortalType   {
 	zPORTAL_TYPE_BIG_NOFADE   = 3 
 };
 
-class zCVertFeature {
-	zVEC3 vertNormal; 
-	zCOLOR lightStat;    
-	zCOLOR lightDyn;     
-	zVALUE texu;         
-	zVALUE texv;         
+struct zCVertFeature {
+	zVEC3 vertNormal;
+	zCOLOR lightStat;
+	zCOLOR lightDyn;
+	zVALUE texu;
+	zVALUE texv;
 };
 
 class zCPolygon {
-public:
-	static const int polyNumVert         = ((1 <<  8) - 1) <<  0;
-	static const int portalPoly          = ((1 <<  2) - 1) <<  8;
-	static const int occluder            = ((1 <<  1) - 1) << 10;
-	static const int sectorPoly          = ((1 <<  1) - 1) << 11;
-	static const int mustRelight         = ((1 <<  1) - 1) << 12;
-	static const int portalIndoorOutdoor = ((1 <<  1) - 1) << 13;
-	static const int ghostOccluder       = ((1 <<  1) - 1) << 14;
-	static const int noDynLightNear      = ((1 <<  1) - 1) << 15;
-	static const int sectorIndex         = ((1 << 16) - 1) << 16; //indoor only
-
 	static void* morphedPolysSavedValuesList;
+public:
+	void SetMaterial(zCMaterial* newMat);
 
-	zCVertex** vertex;                 // //array
-	lastTimeDrawn;          //int
+private:
+	zCVertex** vertex;
+	int lastTimeDrawn;
 
-	zTPlane               polyPlane;
+	zTPlane polyPlane;
 
-	zCMaterial*  material;               //
-	zCLightMap*  lightmap;               //
+	zCMaterial*  material;
+	zCLightMap*  lightmap;
 
-	zCVertex      **    clipVert;               //
-	zCVertFeature ** clipFeat;               //
-	int numClipVert;            //int
+	zCVertex**      clipVert;
+	zCVertFeature** clipFeat;
+	int numClipVert;
 
-	zCVertFeature ** feature;                ////array
-	int bitfield;
+	zCVertFeature** feature;     //array
 
+	uint8_t polyNumVert;
+	struct {
+		uint8_t portalPoly  : 2;
+		uint8_t occluder    : 1; // 4
+		uint8_t sectorPoly  : 1; // 8
+		uint8_t mustRelight : 1; // 0x10
+		uint8_t portalIndoorOutdoor : 1; // 0x20
+		uint8_t ghostOccluder       : 1; // 0x40
+		//indoor only
+		uint8_t noDynLightNear      : 1; // 0x80
+	} flags;
+	uint16_t sectorIndex;
 };
+
+void zCPolygon::SetMaterial(zCMaterial *newMat)
+{
+	if ( newMat != material ) {
+		Release(material);
+		AddRef(newMat);
+		material = newMat;
+	}
+}

@@ -4,9 +4,9 @@
 
 /* Bedeutung von zCPolygon.portalPoly:*/
 enum zTPortalType   {
-	zPORTAL_TYPE_NONE         = 0, 
-	zPORTAL_TYPE_SMALL        = 1, 
-	zPORTAL_TYPE_BIG          = 2, 
+	zPORTAL_TYPE_NONE         = 0,
+	zPORTAL_TYPE_SMALL        = 1,
+	zPORTAL_TYPE_BIG          = 2,
 	zPORTAL_TYPE_BIG_NOFADE   = 3 
 };
 
@@ -14,8 +14,7 @@ struct zCVertFeature {
 	zVEC3 vertNormal;
 	zCOLOR lightStat;
 	zCOLOR lightDyn;
-	zVALUE texu;
-	zVALUE texv;
+	zVEC2 texuv;
 };
 
 class zCPolygon {

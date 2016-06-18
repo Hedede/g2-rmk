@@ -2,6 +2,16 @@ const int zCWorld_DIMENSION = 3; //achwas
 const int zCWorld_VobHashTable_Offset = 600; //0x0258
 const int VOB_HASHTABLE_SIZE = 2048;
 
+// preliminary analysis
+struct TraceFlags {
+	uint32_t requireDynamic   : 1; // 1
+	uint32_t requireStatic    : 1; // 2, disregardVobs
+	uint32_t traceOnlyVobs    : 1; // 0x10
+	uint32_t ignoreCharacter  : 1; // 0x800
+	uint32_t ignoreVisual     : 1; // 0x2000, (vis || 2000 && !vis)
+	uint32_t ignoreProjetiles : 1; // 0x4000
+};
+
 class zTTraceRayReport  {
 	zBOOL      foundHit;
 	zCVob*     foundVob;
@@ -320,6 +330,8 @@ public:
 	zCZone* SearchZoneDefaultByClass(zCClassDef* classDef);
 	void SearchZoneListByClass(zCClassDef* classDef, zCArray<zCZone*>& result);
 
+	int TraceRayNearestHit(zVEC3 const& start, zVEC3 const& ray, zCArray<zCVob *> const* ignoreList, int traceFlags);
+	int TraceRayFirstHit(zVEC3 const& start, zVEC3 const& ray, zCArray<zCVob *> const* ignoreList, int traceFlags);
 
 	int TraceRayNearestHit(zVEC3 const& start, zVEC3 const& ray, zCVob* ignoreVob, int traceFlags);
 	int TraceRayFirstHit(zVEC3 const& start, zVEC3 const& ray, zCVob* ignoreVob, int traceFlags);
@@ -360,7 +372,6 @@ private:
 private:
 	//Jedes (?) Vob in der Welt ist hier drin.
 	zCTree<zCVob>     globalVobTree;
-
 
 	zTTraceRayReport  traceRayReport;
 
@@ -1071,6 +1082,88 @@ void zCWorld::Render(zCCamera *cam)
 }
 
 // ----------- Ray tracing
+int zCWorld::TraceRayFirstHit(zVEC3 const& start, zVEC3 const& ray, zCArray<zCVob *> const* ignoreList, int traceFlags)
+{
+	auto end = start + ray;
+	if ( showTraceRayLines )
+		zlineCache.Line3D(start, end, GFX_LBLUE, 0);
+
+	traceRayVobList.DeleteList();
+
+	traceRayReport = zTTraceRayReport{};
+
+	zCArray<zCVob*>* traceRayList = nullptr;
+	if ( !(traceFlags & 2) )
+		traceRayList = &traceRayVobList;
+
+	traceRayReport.foundHit = bspTree.TraceRay(
+	                start, end, traceFlags | 0x1000,
+	                &traceRayReport.foundIntersection,
+	                &traceRayReport.foundPoly,
+	                &traceRayList);
+
+	if ( traceFlags & 0x10 )
+		traceRayReport.foundHit = 0;
+
+	if ( traceRayReport.foundHit ) {
+		if ( traceFlags < 0 ) {
+			auto foundPoly = traceRayReport.foundPoly;
+			if ( foundPoly )
+				traceRayReport.foundPolyNormal = foundPoly.polyPlane.normal;
+		}
+		return 1;
+	}
+
+	if (traceFlags & 2)
+		return 0;
+
+	for (auto vob : traceRayVobList) {
+		bool hasVisual =  vob->visual && vob->flags1.showVisual;
+		bool ignVisual = !vob->visual && traceFlags.ignoreVisual;
+
+		if (!(hasVisual || ignVisual))
+			continue;
+		if (!traceRayIgnoreVobFlag && vob->flags1.ignoredByTraceRay)
+			continue;
+		if (ignoreList && ignoreList->IsInList(vob))
+			continue;
+		if (traceFlags.ignoreCharacter && vob->GetCharacterClass())
+			continue;
+		if (traceFlags.ignoreProjectiles && vob->GetIsProjectile())
+			continue;
+		if (traceFlags.requireDynamic && !vob->GetCollDetDyn())
+			continue;
+
+		return vob->TraceRay(start, ray, traceFlags, &traceRayReport);
+	}
+
+	return 0;
+}
+
+int zCWorld::TraceRayNearestHit(zVEC3 const& start, zVEC3 const& ray, zCVob* ignoreVob, int traceFlags)
+{
+	if ( !ignoreVob )
+		return TraceRayNearestHit(start, ray, (zCArray<zCVob>*)nullptr, traceFlags);
+
+	traceRayTempIgnoreVobList.Insert(ignoreVob);
+
+	auto result = TraceRayNearestHit(start, ray, &traceRayTempIgnoreVobList, traceFlags);
+	traceRayTempIgnoreVobList.DeleteList();
+	return result;
+}
+
+int zCWorld::TraceRayFirstHit(zVEC3 const& start, zVEC3 const& ray, zCVob* ignoreVob, int traceFlags)
+{
+	if ( !ignoreVob )
+		return TraceRayFirstHit(start, ray, (zCArray<zCVob>*)nullptr, traceFlags);
+
+	traceRayTempIgnoreVobList.Insert(ignoreVob);
+
+	auto result = TraceRayFirstHit(start, ray, &traceRayTempIgnoreVobList, traceFlags);
+	traceRayTempIgnoreVobList.DeleteList();
+	return result;
+}
+
 void ShowTraceRayLine(zVEC3 const& start, zVEC3 const& ray)
 {
 	// I made this function to reduce duplicate code
@@ -1084,30 +1177,6 @@ void ShowTraceRayLine(zVEC3 const& start, zVEC3 const& ray)
 		zVEC3 end = start + ray;
 		zlineCache.Line3D(start, end, color, 0);
 	}
-}
-
-int zCWorld::TraceRayNearestHit(zVEC3 const& start, zVEC3 const& ray, zCVob* ignoreVob, int traceFlags)
-{
-	if ( !ignoreVob )
-		return TraceRayNearestHit(start, ray, (zCTree<zCVob>*)nullptr, traceFlags);
-
-	traceRayTempIgnoreVobList.Insert(ignoreVob);
-
-	auto result = TraceRayNearestHit(start, ray, &traceRayTempIgnoreVobList, traceFlags);
-	traceRayTempIgnoreVobList.DeleteList();
-	return result;
-}
-
-int zCWorld::TraceRayFirstHit(zVEC3 const& start, zVEC3 const& ray, zCVob* ignoreVob, int traceFlags)
-{
-	if ( !ignoreVob )
-		return TraceRayFirstHit(start, ray, (zCTree<zCVob>*)nullptr, traceFlags);
-
-	traceRayTempIgnoreVobList.Insert(ignoreVob);
-
-	auto result = TraceRayFirstHit(start, ray, &traceRayTempIgnoreVobList, traceFlags);
-	traceRayTempIgnoreVobList.DeleteList();
-	return result;
 }
 
 int zCWorld::TraceRayNearestHitCache(zVEC3 const& start, zVEC3 const& ray, zCArray<zCVob *> const* ignoreList, unsigned traceFlags, zCRayCache* cache)

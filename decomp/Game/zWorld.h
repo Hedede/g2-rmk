@@ -97,6 +97,10 @@ public:
 	void ArcTraverseVobs(zCArchiver *arc, zCTree<zCVob>* node, int root);
 	void UnarcTraverseVobs(zCArchiver *arc, zCTree<zCVob>* node);
 
+
+	int LoadBspTree(zFILE* file, int isDyn);
+	void SaveBspTreeMesh3DS(zSTRING* filename);
+
 	virtual void LoadWorld(zSTRING const &,zCWorld::zTWorldLoadMode);
 	virtual void SaveWorld(zSTRING const &,zCWorld::zTWorldSaveMode,int,int);
 	virtual void MergeVobSubtree(zSTRING const& fileName, zCVob* paramVob, zTWorldLoadMergeMode mergeMode);
@@ -108,6 +112,7 @@ public:
 	virtual void DisposeStaticWorld();
 
 	virtual void AddVobAsChild(zCVob *,zCTree<zCVob> *);
+
 
 	virtual void RemoveVob(zCVob* vob)
 	{
@@ -122,6 +127,18 @@ public:
 			MoveVobSubtreeTo(vob, 0);
 			RemoveVobSubtree_r(vob->globalVobTreeNode, 1);
 		}
+	}
+
+	void RemoveVob(zCTree<zCVob>* node)
+	{
+		if (node)
+			RemoveVob(node->GetData());
+	}
+
+	void RemoveVobSubtree(zCTree<zCVob>* node)
+	{
+		if (node)
+			RemoveVobSubtree(node->GetData());
 	}
 
 	virtual void MoveVobSubtreeTo(zCVob *,zCTree<zCVob> *);
@@ -263,6 +280,15 @@ public:
 	void InsertVobHashTable(zCVob* vob);
 	void RemoveVobHashTable(zCVob* vob);
 
+	void RegisterPerFrameCallback(zCWorldPerFrameCallback* callback)
+	{
+		for (auto cb : perFrameCallbackList)
+			if (cb == callback)
+				return;
+
+		perFrameCallbackList.Insert(callback);
+	}
+
 	void UnregisterPerFrameCallback(zCWorldPerFrameCallback *callback)
 	{
 		perFrameCallbackList.Remove(callback);
@@ -274,7 +300,11 @@ public:
 	}
 
 	zCZone* SearchZoneDefaultByClass(zCClassDef* classDef);
+	void SearchZoneListByClass(zCClassDef* classDef, zCArray<zCZone*>& result);
 
+
+	int TraceRayNearestHit(zVEC3 const& start, zVEC3 const& ray, zCVob* ignoreVob, int traceFlags);
+	int TraceRayFirstHit(zVEC3 const& start, zVEC3 const& ray, zCVob* ignoreVob, int traceFlags);
 
 	int LightingTestRay(zVEC3 const& start, zVEC3 const& end, zVEC3& inters, zCPolygon*& hitPoly);
 
@@ -592,6 +622,48 @@ void MoveVobs()
 	walkList.DeleteList();
 }
 
+void zCWorld::MoveVobSubtreeTo(zCVob *vob, zCTree<zCVob>* vobNode)
+{
+	if ( vob ) {
+		if ( vob->globalVobTreeNode )
+			vob->globalVobTreeNode->RemoveSubtree();
+		if ( vobNode )
+			vobNode->AddChild(vob->globalVobTreeNode);
+		else
+			vob->globalVobTreeNode->parent = 0;
+
+		auto inMovement = vob->isInMovementMode;
+		if ( !inMovement )
+			vob->BeginMovement();
+		vob->TouchMovement();
+		vob->Move(0.0, 0.0, 0.0);
+		if ( !inMovement )
+			vob->EndMovement(1);
+	}
+}
+
+
+void zCWorld::UpdateVobTreeBspDependencies(VobTree *vobNode)
+{
+	if ( !vobNode )
+		vobNode = &this->globalVobTree;
+
+	auto vob = vobNode->data;
+	if ( vob ) {
+		vob->groundPoly = 0;
+		vob->CalcGroundPoly();
+
+		vob->vobLeafList.DeleteList();
+		vob->RemoveVobFromBspTree();
+
+		bspTree.AddVob(vob);
+	}
+
+	for (auto i = vobNode->firstChild; i; i = i->next)
+		UpdateVobTreeBspDependencies(i);
+}
+
+// --------- Save/Load
 int zCWorld::MergeVobSubtree(zSTRING const& fileName, zCVob* paramVob, zTWorldLoadMergeMode mergeMode)
 {
 	zCWorld::s_worldMergeMode = mergeMode;
@@ -651,45 +723,32 @@ int zCWorld::SaveVobSubtree(zSTRING *fileName, zCVob *vob, int writeBinary, int 
 	return 0;
 }
 
-void zCWorld::MoveVobSubtreeTo(zCVob *vob, zCTree<zCVob>* vobNode)
+int zCWorld::LoadBspTree(zFILE* file, int isDyn)
 {
-	if ( vob ) {
-		if ( vob->globalVobTreeNode )
-			vob->globalVobTreeNode->RemoveSubtree();
-		if ( vobNode )
-			vobNode->AddChild(vob->globalVobTreeNode);
-		else
-			vob->globalVobTreeNode->parent = 0;
+	zCFileBIN fileBin;
+	fileBin.BinSetFile(file);
 
-		auto inMovement = vob->isInMovementMode;
-		if ( !inMovement )
-			vob->BeginMovement();
-		vob->TouchMovement();
-		vob->Move(0.0, 0.0, 0.0);
-		if ( !inMovement )
-			vob->EndMovement(1);
+	auto load = bspTree.LoadBIN(fileBin, isDyn);
+
+	if ( !isDyn ) {
+		if ( bspTree.mesh ) {
+			if ( bspTree.mesh->hasLightmaps ) {
+				worldRenderMode = 1;
+				bspTree.worldRenderMode = 1;
+			} else {
+				worldRenderMode = 0;
+				bspTree.worldRenderMode = 0;
+			}
+		}
+		compiled = load;
 	}
+	return load;
 }
 
-
-void zCWorld::UpdateVobTreeBspDependencies(VobTree *vobNode)
+void zCWorld::SaveBspTreeMesh3DS(zSTRING *filename)
 {
-	if ( !vobNode )
-		vobNode = &this->globalVobTree;
-
-	auto vob = vobNode->data;
-	if ( vob ) {
-		vob->groundPoly = 0;
-		vob->CalcGroundPoly();
-
-		vob->vobLeafList.DeleteList();
-		vob->RemoveVobFromBspTree(v4);
-
-		bspTree.AddVob(vob);
-	}
-
-	for (auto i = vobNode->firstChild; i; i = i->next)
-		UpdateVobTreeBspDependencies(i);
+	zoptions->ChangeDir(DIR_MESHES);
+	zCFile3DS::Save3DS(filename, bspTree.mesh);
 }
 
 
@@ -829,6 +888,14 @@ zCZone* SearchZoneDefaultByClass(zCClassDef* cd)
 	return nullptr;
 }
 
+void zCWorld::SearchZoneListByClass(zCClassDef *classDef, zCArray<zCZone*>& results)
+{
+	for (auto zone : zoneGlobalList) {
+		if (zone->GetClassDef() == classDef)
+			results.Insert(zone);
+	}
+}
+
 
 // ---------- Render
 void zCWorld::RenderWaynet(zCCamera *cam)
@@ -934,6 +1001,31 @@ int zCWorld::LightingTestRay(zVEC3 const& start, zVEC3 const& end, zVEC3& inters
 	}
 
 	return 0;
+}
+
+// ----------- Ray tracing
+int zCWorld::TraceRayNearestHit(zVEC3 const& start, zVEC3 const& ray, zCVob* ignoreVob, int traceFlags)
+{
+	if ( !ignoreVob )
+		return TraceRayNearestHit(start, ray, (zCTree<zCVob>*)nullptr, traceFlags);
+
+	traceRayTempIgnoreVobList.Insert(ignoreVob);
+
+	auto result = TraceRayNearestHit(start, ray, &traceRayTempIgnoreVobList, traceFlags);
+	traceRayTempIgnoreVobList.DeleteList();
+	return result;
+}
+
+int zCWorld::TraceRayFirstHit(zVEC3 const& start, zVEC3 const& ray, zCVob* ignoreVob, int traceFlags)
+{
+	if ( !ignoreVob )
+		return TraceRayFirstHit(start, ray, (zCTree<zCVob>*)nullptr, traceFlags);
+
+	traceRayTempIgnoreVobList.Insert(ignoreVob);
+
+	auto result = TraceRayFirstHit(start, ray, &traceRayTempIgnoreVobList, traceFlags);
+	traceRayTempIgnoreVobList.DeleteList();
+	return result;
 }
 
 // ----------- Archive

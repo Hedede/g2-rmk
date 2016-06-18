@@ -363,10 +363,10 @@ private:
 		uint32_t staticVob                 : 1; // 0x10
 		uint32_t ignoredByTraceRay         : 1; // 0x20
 		uint32_t collDetectionStatic       : 1; // 0x40
-		uint32_t collDetectionDynamic      : 1;
-		uint32_t castDynShadow             : 2;
-		uint32_t lightColorStatDirty       : 1;
-		uint32_t lightColorDynDirty        : 1;
+		uint32_t collDetectionDynamic      : 1; // 0x80
+		uint32_t castDynShadow             : 2; // 0x100
+		uint32_t lightColorStatDirty       : 1; // 0x200 / 4
+		uint32_t lightColorDynDirty        : 1; // 0x400 / 8
 	} flags1;
 
 	uint8_t isInMovementMode : 2;

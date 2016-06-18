@@ -132,6 +132,11 @@ public:
 		return numInArray++;
 	}
 
+	int InsertFront(T const& val)
+	{
+		return InsertAtPos(val, 0);
+	}
+
 	int Insert(T const& val)
 	{
 		return InsertEnd(val);

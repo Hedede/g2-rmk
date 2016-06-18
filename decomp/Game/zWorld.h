@@ -98,8 +98,11 @@ public:
 	void UnarcTraverseVobs(zCArchiver *arc, zCTree<zCVob>* node);
 
 
-	int LoadBspTree(zFILE* file, int isDyn);
+	int LoadBspTree(zFILE& file, int isDyn);
+	void SaveBspTree(zFILE& file);
 	void SaveBspTreeMesh3DS(zSTRING* filename);
+
+	void DebugMarkOccluderPolys();
 
 	virtual void LoadWorld(zSTRING const &,zCWorld::zTWorldLoadMode);
 	virtual void SaveWorld(zSTRING const &,zCWorld::zTWorldSaveMode,int,int);
@@ -111,7 +114,7 @@ public:
 	virtual int DisposeVobsDbg(zCTree<zCVob>* vobNode);
 	virtual void DisposeStaticWorld();
 
-	virtual void AddVobAsChild(zCVob *,zCTree<zCVob> *);
+	virtual zCTree<zCVob>* AddVobAsChild(zCVob* vob, zCTree<zCVob>* tree);
 
 
 	virtual void RemoveVob(zCVob* vob)
@@ -141,6 +144,8 @@ public:
 			RemoveVobSubtree(node->GetData());
 	}
 
+	void RemoveVobFromLists(zCVob* vob);
+
 	virtual void MoveVobSubtreeTo(zCVob *,zCTree<zCVob> *);
 	virtual zCPlayerGroup* GetPlayerGroup()
 	{
@@ -154,12 +159,25 @@ public:
 		return SearchVobHashTable(name);
 	}
 
-	virtual void SearchVobListByName(zSTRING const& name, zCArray<zCVob*>& result);
+	virtual void SearchVobListByName(zSTRING const& name, zCArray<zCVob*>& result)
+	{
+		SearchVobListHashTable(name, result);
+	}
 	virtual void SearchVobListByClass(zCClassDef* classDef, zCArray<zCVob*>& result, zCTree<zCVob>* vobNode);
 	virtual void SearchVobListByBaseClass(zCClassDef* classDef, zCArray<zCVob*>& result, zCTree<zCVob>* vobNode);
 
-	virtual void VobAddedToWorld(zCVob *);
-	virtual void VobRemovedFromWorld(zCVob *);
+	virtual void VobAddedToWorld(zCVob* vob)
+	{
+		InsertVobHashTable(vob);
+		vob->ThisVobAddedToWorld(this);
+		++numVobsInWorld;
+	}
+
+	virtual void VobRemovedFromWorld(zCVob* vob)
+	{
+		RemoveVobFromLists(vob);
+		--numVobsInWorld;
+	}
 	virtual void RenderWaynet(zCCamera *cam);
 	void Render(zCCamera* cam);
 
@@ -306,6 +324,12 @@ public:
 	int TraceRayNearestHit(zVEC3 const& start, zVEC3 const& ray, zCVob* ignoreVob, int traceFlags);
 	int TraceRayFirstHit(zVEC3 const& start, zVEC3 const& ray, zCVob* ignoreVob, int traceFlags);
 
+	int TraceRayNearestHitCache(zVEC3 const& start, zVEC3 const& ray, zCArray<zCVob *> const* ignoreList, unsigned traceFlags, zCRayCache* cache);
+	int TraceRayFirstHitCache(zVEC3 const& start, zVEC3 const& ray, zCArray<zCVob *> const* ignoreList, unsigned traceFlags, zCRayCache* cache);
+
+	int TraceRayNearestHitCache(zVEC3 const& start, zVEC3 const& ray, zCVob* ignoreVob, unsigned traceFlags, zCRayCache* cache);
+	int TraceRayFirstHitCache(zVEC3 const& start, zVEC3 const& ray, zCVob* ignoreVob, unsigned traceFlags, zCRayCache* cache);
+
 	int LightingTestRay(zVEC3 const& start, zVEC3 const& end, zVEC3& inters, zCPolygon*& hitPoly);
 
 private:
@@ -320,12 +344,18 @@ private:
 	}
 
 	zCVob* SearchVobHashTable(zSTRING const& name);
+	void SearchVobListHashTable(zSTRING const& name, zCArray<zCVob *>& result);
+
+	void RemoveVobSubtree_r(zCTree<zCVob>* node, int firstVob);
+	void MakeVobLightingDirty();
 
 	static int ActiveZoneListCompare(const void* a1, const void *a2);
 
 	void ResetCutscenePlayer();
 
 	void RemoveAllZones();
+	void AddZone(zCZone* zone);
+	void RemoveZone(zCZone* zone);
 
 private:
 	//Jedes (?) Vob in der Welt ist hier drin.
@@ -475,6 +505,19 @@ zCVob* zCWorld::SearchVobHashTable(zSTRING const& name)
 			return vob;
 
 	return nullptr;
+}
+
+void zCWorld::SearchVobListHashTable(zSTRING const& name, zCArray<zCVob *>& result)
+{
+	if (name.IsEmpty())
+		return;
+
+	auto hash = GetVobHashIndex(name);
+	auto bucket = vobHashTable[hash];
+
+	for (auto vob : bucket)
+		if (vob->GetObjectName() == name)
+			result.Insert(vob);
 }
 
 void zCWorld::InsertVobHashTable(zCVob *vob)
@@ -723,7 +766,7 @@ int zCWorld::SaveVobSubtree(zSTRING *fileName, zCVob *vob, int writeBinary, int 
 	return 0;
 }
 
-int zCWorld::LoadBspTree(zFILE* file, int isDyn)
+int zCWorld::LoadBspTree(zFILE& file, int isDyn)
 {
 	zCFileBIN fileBin;
 	fileBin.BinSetFile(file);
@@ -743,6 +786,18 @@ int zCWorld::LoadBspTree(zFILE* file, int isDyn)
 		compiled = load;
 	}
 	return load;
+}
+
+void zCWorld::SaveBspTree(zCFile& file)
+{
+	zSTRING fileName = file.GetFilename();
+
+	zINFO(5, "D: WORLD: Saving BSP: " + fileName);
+
+	zCFileBIN fileBin;
+	fileBin.BinSetFile(arcFile);
+
+	bspTree.SaveBIN(fileBin);
 }
 
 void zCWorld::SaveBspTreeMesh3DS(zSTRING *filename)
@@ -896,6 +951,40 @@ void zCWorld::SearchZoneListByClass(zCClassDef *classDef, zCArray<zCZone*>& resu
 	}
 }
 
+void zCWorld::RemoveZone(zCZone *zone)
+{
+	if ( zone ) {
+		auto defclass = zone->GetDefaultZoneClass();
+		auto theclass = zone->GetClassDef();
+		if ( theclass == defclass); {
+			zoneGlobalList.RemoveOrder(zone);
+		} else {
+			zoneGlobalList.Remove(zone);
+			zoneBoxSorter.Remove(zone);
+		}
+	
+		zoneLastClassList.Remove(zone);
+		zoneActiveList.Remove(zone);
+	}
+}
+
+void zCWorld::AddZone(zCZone* zone)
+{
+	if ( zone ) {
+		if (!zoneGlobalList.IsInList(zone)) {
+			auto defclass = zone->GetDefaultZoneClass();
+			auto theclass = zone->GetClassDef();
+
+			if (defclass == theclass) {
+				zoneGlobalList.InsertFront(zone);
+			} else {
+				zoneGlobalList.InsertEnd(zone);
+				zoneBoxSorter.Insert(zone);
+			}
+		}
+	}
+}
+
 
 // ---------- Render
 void zCWorld::RenderWaynet(zCCamera *cam)
@@ -981,29 +1070,22 @@ void zCWorld::Render(zCCamera *cam)
 	++zCTexAniCtrl::masterFrameCtr;
 }
 
-// ----------- Lighting
-int zCWorld::LightingTestRay(zVEC3 const& start, zVEC3 const& end, zVEC3& inters, zCPolygon*& hitPoly)
+// ----------- Ray tracing
+void ShowTraceRayLine(zVEC3 const& start, zVEC3 const& ray)
 {
-	float junk;
+	// I made this function to reduce duplicate code
+	if ( showTraceRayLines ) {
+		int effort = zCRayCache::LastTraceRayEffort() * 512.0;
+		if ( effort > 255 )
+			effort = 255;
 
-	if ( traceRayLastPoly ) {
-		zVEC3 ray = end = start;
-		if (traceRayLastPoly->CheckRayPolyIntersection(start, ray, inters, &junk)) {
-			*hitPoly = traceRayLastPoly;
-			return 1;
-		}
-		traceRayLastPoly = 0;
+		zCOLOR color = (GFX_RED * effort) / 256 + GFX_DGREEN;
+
+		zVEC3 end = start + ray;
+		zlineCache.Line3D(start, end, color, 0);
 	}
-
-	if ( bspTree.TraceRay(start, end, 0x120, inters, hitPoly, 0) ) {
-		traceRayLastPoly = *hitPoly;
-		return 1;
-	}
-
-	return 0;
 }
 
-// ----------- Ray tracing
 int zCWorld::TraceRayNearestHit(zVEC3 const& start, zVEC3 const& ray, zCVob* ignoreVob, int traceFlags)
 {
 	if ( !ignoreVob )
@@ -1028,8 +1110,196 @@ int zCWorld::TraceRayFirstHit(zVEC3 const& start, zVEC3 const& ray, zCVob* ignor
 	return result;
 }
 
-// ----------- Archive
+int zCWorld::TraceRayNearestHitCache(zVEC3 const& start, zVEC3 const& ray, zCArray<zCVob *> const* ignoreList, unsigned traceFlags, zCRayCache* cache)
+{
+	zCBspTree::SetRayCache(cache);
 
+	auto result = TraceRayNearestHit(start, ray, ignoreList, traceFlags);
+
+	ShowTraceRayLine(start, ray);
+
+	return result;
+}
+
+int zCWorld::TraceRayFirstHitCache(zVEC3 const& start, zVEC3 const& ray, zCArray<zCVob *> const* ignoreList, unsigned traceFlags, zCRayCache* cache)
+{
+	zCBspTree::SetRayCache(cache);
+
+	auto result = TraceRayFirstHit(start, ray, ignoreList, traceFlags);
+
+	ShowTraceRayLine(start, ray);
+
+	return result;
+}
+
+int zCWorld::TraceRayNearestHitCache(zVEC3 const& start, zVEC3 const& ray, zCVob* ignoreVob, unsigned traceFlags, zCRayCache* cache)
+{
+	zCBspTree::SetRayCache(cache);
+
+	auto result = TraceRayNearestHit(start, ray, ignoreVob, traceFlags);
+
+	ShowTraceRayLine(start, ray);
+
+	return result;
+}
+
+int zCWorld::TraceRayFirstHitCache(zVEC3 const& start, zVEC3 const& ray, zCVob* ignoreVob, unsigned traceFlags, zCRayCache* cache)
+{
+	zCBspTree::SetRayCache(cache);
+
+	auto result = TraceRayFirstHit(start, ray, ignoreVob, traceFlags);
+
+	ShowTraceRayLine(start, ray);
+
+	return result;
+}
+
+// ----------- Lighting
+int zCWorld::LightingTestRay(zVEC3 const& start, zVEC3 const& end, zVEC3& inters, zCPolygon*& hitPoly)
+{
+	float junk;
+
+	if ( traceRayLastPoly ) {
+		zVEC3 ray = end = start;
+		if (traceRayLastPoly->CheckRayPolyIntersection(start, ray, inters, &junk)) {
+			*hitPoly = traceRayLastPoly;
+			return 1;
+		}
+		traceRayLastPoly = 0;
+	}
+
+	if ( bspTree.TraceRay(start, end, 0x120, inters, hitPoly, 0) ) {
+		traceRayLastPoly = *hitPoly;
+		return 1;
+	}
+
+	return 0;
+}
+
+void TraverseMakeVobLightingDirty(zCTree<zCVob>* tree)
+{
+	auto vob = tree->GetData();
+	if (vob) {
+		vob->flags1.lightColorStatDirty = true;
+		vob->flags1.lightColorDynDirty = true;
+	}
+
+	for (auto i = tree->firstChild; i; i = i->next)
+		TraverseMakeVobLightingDirty(i);
+}
+
+void zCWorld::MakeVobLightingDirty()
+{
+	zINFO(7,"D: WLD: Make Vob-Lighting dirty"); // 1922,
+
+	TraverseMakeVobLightingDirty(&globalVobTree);
+
+	zINFO("D: WLD: ... finished"); // 1924, _dieter\\zWorldLight.cpp
+}
+
+// ----------- Debug
+void zCWorld::DebugMarkOccluderPolys()
+{
+	if ( compiled ) {
+		auto mat = new zCMaterial("Occluder_Poly_Mat");
+
+		zCOLOR color{50,50,-1};
+		bspTree.mesh->CreateListsFromArrays();
+
+		// for here is pseudocode,
+		// range-based for is not possible, because
+		// polyList is jsut a pointer
+		for (auto poly : bspTree.mesh->polyList) {
+			if (poly->flags.occluder && !(poly.flags.portalPoly))
+				poly->SetMaterial(mat);
+		}
+	}
+}
+
+// ----------- Vob Subtree
+zCTree<zCVob>* zCWorld::AddVobAsChild(zCVob *vob, zCTree<zCVob> *tree)
+{
+	if ( vob && tree && !vob->homeWorld ) {
+		vob->homeWorld = this;
+		if (auto zone = zDYNAMIC_CAST<zCZone>(vob))
+			AddZone(zone);
+
+		auto vobNode = vob->globalVobTreeNode;
+		if ( vobNode ) {
+			if ( !vobNode->parent )
+				tree->AddChild(vobNode);
+
+			for (auto i = vobNode->firstChild; i; i = i->next )
+				AddVobAsChild(i->data, vobNode);
+		} else {
+			vob->globalVobTreeNode = tree->AddChild(vob);
+		}
+
+		vob->AddVobToWorld_CorrectParentDependencies();
+
+		auto stat = vob->GetCollDetStat();
+		auto dyn = vob->GetCollDetDyn();
+		vob->SetCollDetStat(0);
+		vob->SetCollDetDyn(0);
+		vob->BeginMovement();
+		vob->TouchMovement();
+		vob->EndMovement(1);
+		vob->SetCollDetDyn(dyn);
+		vob->SetCollDetStat(stat);
+		vob->AddRef();
+
+		if (!zDYNAMIC_CAST<zCZone>(vob) || addZonesToWorld )
+			bspTree.AddVob(vob);
+
+		if ( vob->flags2.sleepingMode ) {
+			if (!activeVobList.IsInList(vob))
+				activeVobList.Insert(vob);
+		}
+
+		if ( vob->callback_ai )
+			vob->callback_ai->HostVobAddedToWorld(vob, this);
+		if ( vob->visual )
+			vob->visual->HostVobAddedToWorld(v20, vob, this);
+		VobAddedToWorld(vob);
+		return vob->globalVobTreeNode;
+	}
+	return nullptr;
+}
+
+void zCWorld::RemoveVobSubtree_r(zCTree<zCVob>* node, int firstVob)
+{
+	if ( node ) {
+		auto vob = node->GetData();
+		if (vob) {
+			VobRemovedFromWorld(vob);
+			vob->AddRef();
+			bool b = !node->firstChild() && firstVob;
+			vob->RemoveWorldDependencies(b);
+		}
+
+		for (auto i = node->firstChild; i; i = i->next)
+			RemoveVobSubtree_r(i, 0);
+		if ( vob && vob->refCtr == 1 ) {
+			auto vnode = vob->globalVobTreeNode;
+			if (vnode && vnode->firstChild) {
+				zFAULT("D: WLD: zCVobs leaking, uneven refCtrs in vobSubTree! (Removing vobSubtree from world; Release() deletes parentVob but not children"); // 2016
+			}
+
+			Release(vob);
+		}
+	}
+}
+
+void RemoveVobFromLists(zCVob* vob)
+{
+	bspTree.renderVobList.Remove(vob);
+	walkList.Remove(vob);
+	if (auto zone = zDYNAMIC_CAST<zCZone>(vob))
+		RemoveZone(zone);
+	RemoveVobHashTable(vob);
+}
+
+// ----------- Archive
 void zCWorld::Archive(zCArchiver& arc)
 {
 	zCRenderLightContainer::S_ReleaseVobLightRefs(this);
@@ -1051,14 +1321,7 @@ void zCWorld::Archive(zCArchiver& arc)
 		if ( !dword_9A4428 ) // zCWorld::s_inUnarc
 			bspTree.mesh->ShareFeatures();
 
-		zSTRING fileName = arc.GetFile()->GetFilename();
-
-		zINFO(5, "D: WORLD: Saving BSP: " + fileName);
-
-		zCFileBIN fileBin;
-		fileBin.BinSetFile(arcFile);
-
-		bspTree.SaveBIN(fileBin);
+		SaveBspTree(arcFile);
 
 		arc.WriteChunkEnd();
 	}

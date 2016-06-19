@@ -2,11 +2,12 @@ class oCWorld : public zCWorld {
 	Z_OBJECT(oCWorld);
 public:
 	oCWorld();
-	virtual ~oCWorld();
-	virtual void Archive(zCArchiver& arc);
-	virtual void Unarchive(zCArchiver& arc);
+	~oCWorld() override;
 
-	virtual void LoadWorld(zSTRING const &,zCWorld::zTWorldLoadMode);
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
+
+	int LoadWorld(zSTRING const& fileName, zCWorld::zTWorldLoadMode loadMode) override;
 	void SaveWorld(zSTRING const& fileName, zCWorld::zTWorldSaveMode saveMode, int writeBinary, int saveLevelMesh) override;
 
 	void DisposeWorld() override
@@ -128,4 +129,33 @@ void oCWorld::SaveWorld(zSTRING const& fileName, zCWorld::zTWorldSaveMode saveMo
 	if ( wayNet )
 		wayNet->ClearVobDependencies();
 	return zCWorld::SaveWorld(fileName, saveMode, writeBinary, saveLevelMesh);
+}
+	
+int oCWorld::LoadWorld(zSTRING const& fileName, zCWorld::zTWorldLoadMode mode)
+{
+	zINFO(9,"U: (oCWorld::LoadWorld) " + fileName); // 420, _ulf/oWorld.cpp
+
+	auto fname = fileName;
+	fname.Upper();
+
+	if ( mode != 1 ) {
+		worldFilename = fname;
+
+		zFILE_FILE file(worldFilename);
+
+		worldName = file.GetFilename();
+	}
+
+	if ( fname.Search(0, ".3DS", 1u) <= 0 ) {
+		zoptions->ChangeDir(DIR_WORLD);
+		return zCWorld::LoadWorld(fname, mode);
+	}
+
+	auto compo = new zCVobLevelCompo();
+	compo->SetVobName("Level-Vob");
+	compo->SetVisual(fname);
+	AddVob(compo);
+	Release(compo);
+
+	return 1;
 }

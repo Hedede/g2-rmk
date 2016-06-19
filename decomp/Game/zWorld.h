@@ -10,10 +10,12 @@ struct TraceFlags {
 	uint32_t ignoreStatPoly   : 1; // 0x10
 	uint32_t findStatic       : 1; // 0x20
 	uint32_t findPortals      : 1; // 0x40
+	uint32_t polyNormal       : 1; // 0x80
 	uint32_t ignoreTranspPoly : 1; // 0x100
 	uint32_t findWaterPoly    : 1; // 0x200
 	uint32_t poly2Sided       : 1; // 0x400
 	uint32_t ignoreCharacter  : 1; // 0x800
+	uint32_t firstHit         : 1; // 0x1000
 	uint32_t ignoreVisual     : 1; // 0x2000
 	uint32_t ignoreProjetiles : 1; // 0x4000
 };
@@ -233,6 +235,7 @@ public:
 	void UpdateVobTreeBspDepencdencies(zCTree<zCVob>* vobNode);
 
 	void PrintActiveVobs();
+	void PrintGlobalVobTree(zCTree<zCVob>* node, int indent);
 
 	int ShouldAddThisVobToBsp(zCVob *vob)
 	{
@@ -328,9 +331,11 @@ private:
 	void SearchVobListHashTable(zSTRING const& name, zCArray<zCVob *>& result);
 
 	void RemoveVobSubtree_r(zCTree<zCVob>* node, int firstVob);
+
 	void MakeVobLightingDirty();
-	void GenerateStaticVertexLighting();
 	void GenerateLightmapsRadiosity(zTBBox3D* bbox);
+	void GenerateStaticVertexLighting();
+	void GenerateStaticWorldLighting(zTStaticWorldLightMode const& lightMode, zTBBox3D *updateBBox3D);
 
 	static int ActiveZoneListCompare(const void* a1, const void *a2);
 
@@ -698,6 +703,27 @@ void zCWorld::PrintActiveVobs()
 
 		zINFO("D: " + (i++) + ": " + info);
 	}
+}
+
+void zCWorld::PrintGlobalVobTree(zCTree<zCVob>* node, int indent)
+{
+	if ( !node ) {
+		zINFO("D: ****** ZoneList ********");
+
+		for (auto zone : zoneGlobalList)
+			zINFO("D: " + zone->GetVobInfo());
+
+		zINFO("D: ****** VobTree ********");
+	}
+
+	auto vob = node->GetData();
+	if ( vob ) {
+		auto info = vob->GetVobInfo();
+		zINFO("D: " + Spaces(2 * indent) + "- " + info);
+	}
+
+	for (auto i = node->firstChild; i; i = i->next )
+		PrintGlobalVobTree(i, indent + 1);
 }
 
 // --------- Save/Load
@@ -1152,7 +1178,139 @@ void zCWorld::Render(zCCamera *cam)
 	++zCTexAniCtrl::masterFrameCtr;
 }
 
+int zCWorld::PickScene(zCCamera *cam, int xscr, int yscr, float dist)
+{
+	cam->Activate();
+
+	auto invPos = cam->camMatrixInv.GetTranslation();
+
+	float xpos = (xscr - cam->xcenter) * cam->viewDistanceXInv * 600000.0;
+	float ypos = (cam->ycenter - yscr) * cam->viewDistanceYInv * 600000.0;
+	float zpos = 600000.0;
+
+	zVEC3 pos{xpos, ypos, zpos};
+	zVEC3 ray = pos * cam->camMatrixInv - invPos;
+
+
+	if ( dist > 0.0 ) {
+		float len = 1.0 / ray.Length();
+		ray *= len * dist;
+	}
+
+	memset(&traceRayReport, 0, sizeof(traceRayReport));
+
+	traceRayIgnoreVobFlag = 1;
+
+	unsigned flags = 0x220;
+	if ( zCVob::s_showHelperVisuals )
+		flags = 0x2220;
+
+	auto res = TraceRayNearestHit(invPos, ray, 0, flags);
+
+	traceRayIgnoreVobFlag = 0;
+
+	if ( res ) {
+		auto poly = traceRayReport.foundPoly;
+		if ( poly ) {
+			if ( !traceRayReport.foundVob ) {
+				unsigned i = 0;
+				float mindist = 3.4028235e38;
+				while (i ++< poly->numVerts) {
+					auto vert = poly->vertex[i];
+					auto vpos = poly->vertex[i]->position;
+					auto hpos = traceRayReport.foundIntersection;
+
+					float dist = (vpos - hpos).Length2();
+					if (dist < mindist) {
+						mindist = dist;
+						traceRayReport.foundVertex = vert;
+					}
+				}
+			}
+		}
+	}
+
+	return res;
+}
+
 // ----------- Ray tracing
+int zCWorld::TraceRayNearestHit(zVEC3 const& start, zVEC3 const& ray, zCArray<zCVob *> const* ignoreList, int traceFlags)
+{
+	zVEC3 end = start + ray;
+	if ( showTraceRayLines )
+		zlineCache.Line3D(start, end, GFX_LBLUE, 0);
+
+	traceRayVobList.DeleteList();
+
+	traceRayReport = zTTraceRayReport{};
+
+	zCArray<zCVob*>* traceRayList = nullptr;
+	if (!traceFlags.ignoreVobs)
+		traceRayList = &traceRayVobList;
+
+	traceRayReport.foundHit = bspTree.TraceRay(
+	                start, end, traceFlags,
+	                &traceRayReport.foundIntersection,
+	                &traceRayReport.foundPoly,
+	                &traceRayList);
+
+	if (traceFlags.ignoreVobs)
+		return 0;
+
+	if ( traceFlags.ignoreStatPoly )
+		traceRayReport.foundHit = 0;
+
+	float nearest = std::numeric_limits<float>::max();
+
+	if (traceRayVobList.foundHit) {
+		zVEC3 vec = traceRayReport.foundIntersection - start;
+		nearest = vec.Length2();
+	}
+
+	zTTraceRayReport result;
+	for (auto vob : traceRayVobList) {
+		bool hasVisual =  vob->visual && vob->flags1.showVisual;
+		bool ignVisual = !vob->visual && traceFlags.ignoreVisual;
+
+		if (!(hasVisual || ignVisual))
+			continue;
+		if (!traceRayIgnoreVobFlag && vob->flags1.ignoredByTraceRay)
+			continue;
+		if (ignoreList && ignoreList->IsInList(vob))
+			continue;
+		if (traceFlags.ignoreCharacter && vob->GetCharacterClass())
+			continue;
+		if (traceFlags.ignoreProjectiles && vob->GetIsProjectile())
+			continue;
+		if (traceFlags.requireDynamic && !vob->GetCollDetDyn())
+			continue;
+
+		zTTraceRayReport report;
+		if ( vob->TraceRay(start, ray, traceFlags, &report) ) {
+			float dist = (report.foundIntersection - start).Length2();
+
+			if (dist < nearest)
+				result = report;
+		}
+	}
+
+	if ( result.foundVob ) {
+		traceRayReport = result;
+		traceRayReport.foundHit  = 1;
+		traceRayReport.foundPoly = 0;
+
+	}
+
+	if (traceFlags.polyNormal && traceRayReport.foundHit) {
+		if ( traceRayReport.foundPoly && !traceRayReport.foundVob ) {
+			auto n = traceRayReport.foundPoly->polyPlane.normal;
+			traceRayReport.foundPolyNormal = n;
+		}
+	}
+
+	return traceRayReport.foundHit;
+}
+
 int zCWorld::TraceRayFirstHit(zVEC3 const& start, zVEC3 const& ray, zCArray<zCVob *> const* ignoreList, int traceFlags)
 {
 	auto end = start + ray;
@@ -1335,6 +1493,25 @@ void zCWorld::MakeVobLightingDirty()
 	TraverseMakeVobLightingDirty(&globalVobTree);
 
 	zINFO("D: WLD: ... finished"); // 1924, _dieter\\zWorldLight.cpp
+}
+
+void zCWorld::GenerateStaticWorldLighting(zTStaticWorldLightMode const& lightMode, zTBBox3D *updateBBox3D)
+{
+	if ( bspTree.mesh ) {
+		bspTree.mesh->ResetStaticLight();
+		zINFO(5,"C: WORLD: smoothing vertex normals for lightmap generation"); // 1874
+
+		bspTree.mesh->CalcVertexNormals(1, &bspTree);
+	}
+
+	g_bIsInCompileLightMode = 1;
+	if ( lightMode )
+		GenerateLightmaps(lightMode, updateBBox3D);
+	GenerateStaticVertexLighting();
+	bspTree.CalcStaticLeafLightData();
+
+	MakeVobLightingDirty();
+	g_bIsInCompileLightMode = 0;
 }
 
 void TraverseCollectLights(VobTree *node)

@@ -1,56 +1,151 @@
 class zCRnd_D3D : public zCRenderer {
 public:
-	virtual ~zCRnd_D3D();
+	~zCRnd_D3D() override;
 	virtual void BeginFrame();
 	virtual void EndFrame();
-	virtual void FlushPolys();
+
+	void FlushPolys() override
+	{
+		RenderAlphaSortList();
+	}
+
 	virtual void DrawPoly(zCPolygon *);
 	virtual void DrawLightmapList(zCPolygon * *,int);
 	virtual void DrawLine(float,float,float,float,zCOLOR);
 	virtual void DrawLineZ(float,float,float,float,float,float,zCOLOR);
 	virtual void SetPixel(float,float,zCOLOR);
 	virtual void DrawPolySimple(zCTexture *,zTRndSimpleVertex *,int);
-	virtual void SetFog(int);
-	virtual void GetFog();
-	virtual void SetRadialFog(int);
-	virtual void GetRadialFog();
-	virtual void SetFogColor(zCOLOR const &);
-	virtual void GetFogColor();
-	virtual void SetFogRange(float,float,zTRnd_FogMode);
-	virtual void GetFogRange(float &,float &,zTRnd_FogMode &);
-	virtual zTRnd_PolyDrawMode GetPolyDrawMode() const
+
+	void SetFog(int val) override
+	{
+		fogEnabled = val;
+	}
+	int GetFog() override
+	{
+		return fogEnabled;
+	}
+
+	void SetRadialFog(int val) override;
+	int GetRadialFog() override
+	{
+		return fogRadial && GetFog();
+	}
+
+	void SetFogColor(zCOLOR const& color) override;
+	zCOLOR GetFogColor() override
+	{
+		return fogColor;
+	}
+	void SetFogRange(float,float,zTRnd_FogMode) override
+	void GetFogRange(float& nearz, float& farz, zTRnd_FogMode& falloff) override
+	{
+		nearz  = fogNearZ;
+		fatz   = fogFarzZ;
+		faloff = fogMode;
+	}
+
+	zTRnd_PolyDrawMode GetPolyDrawMode() const override
 	{
 		return polyDrawMode;
 	}
-	virtual void SetPolyDrawMode(zTRnd_PolyDrawMode const &);
-	virtual void GetSurfaceLost();
-	virtual void SetSurfaceLost(int);
-	virtual void GetSyncOnAmbientCol();
-	virtual void SetSyncOnAmbientCol(int);
-	virtual void SetTextureWrapEnabled(int);
-	virtual void GetTextureWrapEnabled();
-	virtual void SetBilerpFilterEnabled(int);
-	virtual void GetBilerpFilterEnabled();
-	virtual void SetDitherEnabled(int);
-	virtual void GetDitherEnabled();
-	virtual zTRnd_PolySortMode GetPolySortMode() const
+	void SetPolyDrawMode(zTRnd_PolyDrawMode const& mode) override
+	{
+		polyDrawMode = mode;
+	}
+
+	int GetSurfaceLost() override
+	{
+		return surfaceLost;
+	}
+	void SetSurfaceLost(int val) override
+	{
+		surfaceLost = val;
+	}
+
+	int GetSyncOnAmbientCol() override
+	{
+		return syncAmbientCol;
+	}
+	void SetSyncOnAmbientCol(int val) override
+	{
+		syncAmbientCol = val;
+	}
+
+	void SetTextureWrapEnabled(int val) override
+	{
+		textureWrapEnabled = val;
+	}
+	int GetTextureWrapEnabled() override
+	{
+		return textureWrapEnabled;
+	}
+
+	void SetBilerpFilterEnabled(int val) override
+	{
+		bilerpFilterEnabled = val;
+	}
+	int GetBilerpFilterEnabled() override
+	{
+		return bilerpFilterEnabled;
+	}
+
+	void SetDitherEnabled(int val) override
+	{
+		ditherEnabled = val;
+	}
+	int GetDitherEnabled() override
+	{
+		return ditherEnabled;
+	}
+
+	zTRnd_PolySortMode GetPolySortMode() const override
 	{
 		return polySortMode;
 	}
-	virtual void SetPolySortMode(zTRnd_PolySortMode const &);
-	virtual void GetZBufferWriteEnabled();
-	virtual void SetZBufferWriteEnabled(int);
-	void SetZBias(int) override
+	void SetPolySortMode(zTRnd_PolySortMode const& mode) override
+	{
+		polySortMode = mode;
+	}
+
+	int GetZBufferWriteEnabled() override
+	{
+		return zBufferWriteEnabled;
+	}
+	void SetZBufferWriteEnabled(int enable) override;
+
+	void SetZBias(int bias) override;
 	int GetZBias() override
 	{
 		return zBias;
 	}
-	virtual void GetZBufferCompare();
-	virtual void SetZBufferCompare(zTRnd_ZBufferCmp const &);
-	virtual void GetPixelWriteEnabled();
-	virtual void SetPixelWriteEnabled(int);
-	virtual void SetAlphaBlendSource(zTRnd_AlphaBlendSource const &);
-	virtual void GetAlphaBlendSource();
+
+	zTRnd_ZBufferCmp GetZBufferCompare() override
+	{
+		return zBufferCompare;
+	}
+	void SetZBufferCompare(zTRnd_ZBufferCmp const& cmp) override
+	{
+		zBufferCompare = cmp
+	}
+
+	int GetPixelWriteEnabled() override
+	{
+		return pixelWriteEnabled;
+	}
+	void SetPixelWriteEnabled(int b) override
+	{
+		pixelWriteEnabled = 1;
+	}
+
+	void SetAlphaBlendSource(zTRnd_AlphaBlendSource const& src) override
+	{
+		alphaBlendSource = src;
+	}
+	zTRnd_AlphaBlendSource GetAlphaBlendSource() override
+	{
+		return alphaBlendSource;
+	}
+
 	void SetAlphaBlendFunc(zTRnd_AlphaBlendFunc const& func) override
 	{
 		alphaBlendFunc = func;
@@ -59,6 +154,7 @@ public:
 	{
 		return alphaBlendFunc;
 	}
+
 	float GetAlphaBlendFactor() override
 	{
 		return alphaBlendFactor;
@@ -67,14 +163,36 @@ public:
 	{
 		alphaBlendFactor = f;
 	}
-	virtual void SetAlphaReference(ulong);
-	virtual void GetAlphaReference();
-	virtual void GetCacheAlphaPolys();
-	virtual void SetCacheAlphaPolys(int);
-	virtual void GetAlphaLimitReached();
+
+	void SetAlphaReference(unsigned ref) override
+	{
+		alphaReference = ref;
+	}
+	unsigned GetAlphaReference() override
+	{
+		return alphaReference;
+	}
+
+	int GetCacheAlphaPolys() override
+	{
+		return cacheAlphaPolys;
+	}
+	void SetCacheAlphaPolys(int val) override
+	{
+		cacheAlphaPolys = val;
+	}
+
+	int GetAlphaLimitReached() override
+	{
+		return alphaLimitReached;
+	}
+
 	virtual void AddAlphaPoly(zCPolygon const *);
 	virtual void FlushAlphaPolys();
-	void SetRenderMode(zTRnd_RenderMode);
+
+	void SetRenderMode(zTRnd_RenderMode) override
+	{
+	}
 	zTRnd_RenderMode GetRenderMode() override
 	{
 		return renderMode;
@@ -86,25 +204,43 @@ public:
 	{
 		return false;
 	}
-	virtual void CreateTexture();
+
+	zCTexture* CreateTexture() override
+	{
+		return new zCTex_D3D();
+	}
+
 	virtual void CreateTextureConvert();
 	int GetTotalTextureMem() override
 	{
-		return totalTextureMem;
+		return hwinfo.totalTextureMem;
 	}
-	virtual void SupportsTextureFormat(zTRnd_TextureFormat);
-	virtual void SupportsTextureFormatHardware(zTRnd_TextureFormat);
+
+	bool SupportsTextureFormat(zTRnd_TextureFormat fmt) override;
+	bool SupportsTextureFormatHardware(zTRnd_TextureFormat fmt) override;
+
 	int GetMaxTextureSize() override
 	{
-		return maxTexSize;
+		return hwinfo.maxTexSize;
 	}
-	virtual void GetStatistics(zTRnd_Stats &);
-	virtual void ResetStatistics();
+
+	void GetStatistics(zTRnd_Stats& out) override
+	{
+		out = stats;
+	}
+	void ResetStatistics() override
+	{
+		memset(&stats, 0, sizeof(stats));
+	}
+
 	virtual void Vid_Blit(int,tagRECT *,tagRECT *);
 	void Vid_Clear(zCOLOR& color, int clearTarget) override;
 	virtual void Vid_Lock(zTRndSurfaceDesc &);
-	virtual void Vid_Unlock();
-	virtual void Vid_IsLocked();
+	bool Vid_Unlock() override;
+	bool Vid_IsLocked() override
+	{
+		return vid_isLocked;
+	}
 	virtual void Vid_GetFrontBufferCopy(zCTextureConvert &);
 	int Vid_GetNumDevices() override
 	{
@@ -116,7 +252,10 @@ public:
 	}
 	virtual void Vid_SetDevice(int);
 	virtual void Vid_GetDeviceInfo(zTRnd_DeviceInfo &,int);
-	virtual void Vid_GetNumModes();
+	unsigned Vid_GetNumModes() override
+	{
+		return dxDeviceModeNum[deviceNr];
+	}
 	virtual void Vid_GetModeInfo(zTRnd_VidModeInfo &,int);
 	int Vid_GetActiveModeNr() override
 	{
@@ -146,13 +285,96 @@ public:
 	virtual void SetTexture(ulong,zCTexture *);
 	virtual void SetTextureStageState(ulong,zTRnd_TextureStageState,ulong);
 	virtual void SetAlphaBlendFuncImmed(zTRnd_AlphaBlendFunc);
-	virtual void SetRenderState(zTRnd_RenderStateType,ulong);
-	virtual void GetRenderState(zTRnd_RenderStateType);
+	void SetRenderState(zTRnd_RenderStateType type, unsigned val) override
+	{
+		if (type == 0)
+			renderState[0] = val;
+		else if (type == 1)
+			renderState[1] = val;
+	}
+	void GetRenderState(zTRnd_RenderStateType type) override
+	{
+		if (type == 0)
+			return renderState[0];
+		else if (type == 1)
+			return renderState[1];
+		return 0;
+	}
+
 	virtual void AddAlphaSortObject(zCRndAlphaSortObject *);
 	virtual void RenderAlphaSortList();
 	virtual void DrawVertexBuffer(zCVertexBuffer *,int,int,ushort *,ulong);
 	virtual void CreateVertexBuffer();
+
+
+	int XD3D_InitPerDX(zTRnd_ScreenMode mode, unsigned x, unsigned y, int bpp, int id);
+	int XD3D_EnumerateModes();
+private:
+	int view_xdim;
+	int view_ydim;
 };
+
+void zCRnd_D3D::SetFogColor(zCOLOR const& color)
+{
+	fogColor = color;
+
+	int d3d_fogColor = color[0] | (color[1] << 8) | (color[2] << 16);
+	if ( xd3d_state.fogColor != d3d_fogColor ) {
+		auto res = zCRnd_D3D::xd3d_pd3dDevice7->SetRenderState(D3DRENDERSTATE_FOGCOLOR, d3d_fogColor);
+		if ( DXTryWarning(res, "X: [RND3D]XD3D_SetRenderState: Set render state failed!") )
+			xd3d_state.fogColor = d3d_fogColor;
+	}
+}
+
+void zCRnd_D3D::SetZBias(int bias)
+{
+	if ( bias == zBias )
+		return;
+
+	if ( xd3d_state.zBias != bias ) {
+		auto res = zCRnd_D3D::xd3d_pd3dDevice7->SetRenderState(D3DRENDERSTATE_ZBIAS, bias);
+		if ( DXTryWarning(res, "X: [RND3D]XD3D_SetRenderState: Set render state failed!") )
+			xd3d_state.zBias = bias;
+	}
+	zBias = bias;
+}
+
+void zCRnd_D3D::SetZBufferWriteEnabled(int enable)
+{
+	zBufferWriteEnabled = enable;
+	if ( xd3d_state.zWriteEnable != enable ) {
+		auto res = zCRnd_D3D::xd3d_pd3dDevice7->SetRenderState(D3DRENDERSTATE_ZWRITEENABLE, enable);
+		if ( DXTryWarning(res, "X: [RND3D]XD3D_SetRenderState: Set render state failed!") )
+			xd3d_state.zWriteEnable = enable;
+	}
+}
+
+int zCRnd_D3D::SupportsTextureFormatHardware(zTRnd_TextureFormat fmt)
+{
+	switch ( fmt ) {
+	case 6:
+	case 7:
+	case 8:
+		return 1;
+	case 10:
+		return supportDXTC;
+	case 12:
+		return val_9D2A90;
+	default:
+		return 0;
+	}
+}
+
+bool zCRnd_D3D::Vid_Unlock()
+{
+	if ( vid_isLocked ) {
+		xd3d_backBuffer->Unlock(0);
+		vid_isLocked = 0;
+		return 1;
+	}
+
+	return 0;
+}
 
 void zCRnd_D3D::Vid_Clear(zCOLOR& color, int clearTarget)
 {

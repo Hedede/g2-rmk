@@ -6,7 +6,7 @@
 //   - deep-nested ifs
 //   - non-linear flow (the for in beginning was at the very end of the function with jump to the top)
 //   - inlined code
-int zCRnd_D3D::XD3D_InitPerDX(zCRnd_D3D *this, zTRnd_ScreenMode mode, unsigned x, unsigned y, int bpp, int id)
+int zCRnd_D3D::XD3D_InitPerDX(zTRnd_ScreenMode mode, unsigned x, unsigned y, int bpp, int id)
 {
 	zINFO("X: XD3D_InitPerDX: D3DXInitialize done");
 
@@ -219,4 +219,14 @@ int XD3D_AppIDDEnumCallbackEx(GUID* guid, char* driverDescription, char* driverN
 int XD3D_AppIDDEnumCallback(GUID* guid, char* ggg, char* driverName, void* context)
 {
 	XD3D_AppIDDEnumCallbackEX(guid, ggg, driverName, context, NULL);
+}
+
+int zCRnd_D3D::XD3D_EnumerateModes()
+{
+	dxDeviceNum = 0;
+	dxDeviceNumber = 0;
+	dxSelectDevice = -1;
+	DirectDrawEnumerateExA(XD3D_AppIDDEnumCallbackEx, 0, 5u);
+	numDevices = dxDeviceNum;
+	return 0;
 }

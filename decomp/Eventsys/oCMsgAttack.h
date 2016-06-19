@@ -14,7 +14,9 @@ public:
 		EV_DEFEND = 9,
 	};
 
-	virtual void Archive(zCArchiver& arc)
+	virtual ~oCMsgAttack() = default;
+
+	void Archive(zCArchiver& arc) override
 	{
 		oCNpcMessage::Archive(arc);
 
@@ -22,7 +24,7 @@ public:
 		if ( !arc.InProperties() )
 			arc.WriteBool("enableNextHit", flags & 1);
 	}
-	virtual void Unarchive(zCArchiver& arc)
+	void Unarchive(zCArchiver& arc) override
 	{
 		oCNpcMessage::Unarchive(arc);
 
@@ -33,11 +35,22 @@ public:
 			flags ^= (flags ^ tmp) & 1;
 		}
 	}
-	virtual ~oCMsgAttack();
-	virtual void IsOverlay();
-	virtual void IsNetRelevant();
-	virtual void MD_GetNumOfSubTypes();
-	virtual void MD_GetSubTypeString(int);
+
+	bool IsOverlay() override
+	{
+		return subType == EV_AIMAT || subType == EV_DEFEND;
+	}
+	bool IsNetRelevant() override
+	{
+		return true;
+	}
+
+	int MD_GetNumOfSubTypes() override
+	{
+		return 12;
+	}
+	zSTRING MD_GetSubTypeString(int type) override;
+
 	virtual void Pack(zCBuffer &,zCEventManager *);
 	virtual void Unpack(zCBuffer &,zCEventManager *);
 

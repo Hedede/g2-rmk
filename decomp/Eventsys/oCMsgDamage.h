@@ -1,37 +1,52 @@
 struct oCMsgDamage : public oCNpcMessage {
 	Z_OBJECT(oCMsgDamage);
 public:
-	enum Type {
-		EV_DAMAGE_ONCE = 0,
-		EV_DAMAGE_PER_FRAME = 1,
+	enum TDamageSubType : uint16_t {
+		EV_DAMAGE_ONCE = 0x0,
+		EV_DAMAGE_PER_FRAME = 0x1,
+		NUM_SUBTYPES,
 	};
 
-	virtual void Archive(zCArchiver& archive)
+	void Archive(zCArchiver& archive) override
 	{
 		oCNpcMessage::Archive(archive);
 		archive.WriteRaw("damage_descriptor", &damDescriptor, sizeof(damDescriptor));
 	}
 
-	virtual void Unarchive(zCArchiver& archive)
+	void Unarchive(zCArchiver& archive) override
 	{
 		oCNpcMessage::Unarchive(archive);
 		archive.ReadRaw("damage_descriptor", &damDescriptor, sizeof(damDescriptor));
 	}
 	virtual ~oCMsgDamage();
-	virtual void IsOverlay();
-	virtual void IsNetRelevant();
-	virtual void IsHighPriority();
-	virtual void IsDeleteable();
-	virtual void MD_GetNumOfSubTypes();
-	virtual void MD_GetSubTypeString(int);
-	virtual void Pack(zCBuffer &,zCEventManager *);
-	virtual void Unpack(zCBuffer &,zCEventManager *);
 
-	enum oCMsgDamage::TDamageSubType : uint16_t
+	bool IsOverlay() override
 	{
-		EV_DAMAGE_ONCE = 0x0,
-		EV_DAMAGE_PER_FRAME = 0x1,
-	};
+		return subType == EV_DAMAGE_PER_FRAME;
+	}
+	bool IsNetRelevant() override
+	{
+		return true;
+	}
+	int IsHighPriority() override
+	{
+		flags.HIGH_PRIORITY = 1;
+		return -1;
+	}
+	bool IsDeleteable() override
+	{
+		return false;
+	}
+
+	int MD_GetNumOfSubTypes() override
+	{
+		return NUM_SUBTYPES;
+	}
+	zSTRING MD_GetSubTypeString(int type) override;
+
+	void Pack(zCBuffer &,zCEventManager *) override {}
+	void Unpack(zCBuffer &,zCEventManager *) override {}
+
 
 	oCNpc::oSDamageDescriptor damDescriptor;
 };

@@ -22,22 +22,43 @@ public:
 		EV_EQUIPITEM      = 0xE,
 	};
 
-	virtual void Archive(zCArchiver& arc);
-	virtual void Unarchive(zCArchiver& arc);
 	virtual ~oCMsgManipulate();
-	virtual void IsNetRelevant();
-	virtual void MD_GetNumOfSubTypes()
+
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
+
+	bool IsNetRelevant() override
+	{
+		return subType >= EV_INSERTINTERACTITEM && subType <= EV_EQUIPITEM;
+	}
+
+	int MD_GetNumOfSubTypes() override
 	{
 		return 18;
 	}
-	virtual void MD_GetSubTypeString(int);
+	zSTRING MD_GetSubTypeString(int type) override;
 	virtual void MD_GetVobRefName();
 	virtual void MD_SetVobRefName(zSTRING const &);
 	virtual void MD_SetVobParam(zCVob* vob)
 	{
 		paramVob = vob;
 	}
-	virtual void MD_GetTimeBehavior();
+	int MD_GetTimeBehavior() override
+	{
+		switch ( subType ) {
+		case EV_TAKEVOB:
+		case EV_DROPVOB:
+		case EV_THROWVOB:
+		case EV_USEMOB:
+		case EV_USEITEM:
+		case EV_USEITEMTOSTATE:
+		case EV_TAKEMOB:
+		case EV_DROPMOB:
+			return 2;
+		default:
+			return 0;
+		}
+	}
 	virtual float MD_GetMinTime()
 	{
 		return 6.0;

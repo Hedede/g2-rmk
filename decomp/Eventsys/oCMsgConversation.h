@@ -24,18 +24,30 @@ public:
 		EV_SNDPLAY = 0x13,
 	};
 
-	virtual void Archive(zCArchiver &);
-	virtual void Unarchive(zCArchiver	&);
 	virtual ~oCMsgConversation();
-	virtual void IsOverlay();
+
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
+
+	bool IsOverlay() override;
 	virtual void Delete();
-	virtual void MD_GetNumOfSubTypes();
-	virtual void MD_GetSubTypeString(int);
-	virtual void MD_GetVobRefName();
+
+	int MD_GetNumOfSubTypes() override
+	{
+		return 0x18;
+	}
+	zSTRING MD_GetSubTypeString(int type) override;
+	zSTRING MD_GetVobRefName() override
+	{
+		return targetVobName;
+	}
 	virtual void MD_SetVobRefName(zSTRING	const &);
-	virtual void MD_SetVobParam(zCVob*);
-	virtual void MD_GetTimeBehavior();
-	virtual void MD_GetMinTime();
+	void MD_SetVobParam(zCVob* vob) override
+	{
+		target = vob;
+	}
+	int MD_GetTimeBehavior() override;
+	float MD_GetMinTime() override;
 
 private:
 	zSTRING text;
@@ -94,6 +106,44 @@ void oCMsgConversation::Unarchive(zCArchiver& arc)
 		arc.ReadInt("number", number);
 }
 
+
+enum Type {
+	EV_OUTPUT = 0x4,
+	EV_OUTPUTSVM = 0x5,
+	EV_CUTSCENE = 0x6,
+	EV_WAITTILLEND = 0x7,
+	EV_ASK = 0x8,
+	EV_WAITFORQUESTION = 0x9,
+	EV_STOPLOOKAT = 0xA,
+	EV_STOPPOINTAT = 0xB,
+};
+
+int oCMsgConversation::IsOverlay()
+{
+	switch (subType) {
+	case EV_PLAYANI_NOOVERLAY:
+	case EV_SNDPLAY:
+	case EV_STOPPROCESSINFOS:
+	case 21:
+	case 22:
+	case 23:
+		return false;
+	case EV_PLAYANISOUND:
+	case EV_PLAYANI:
+	case EV_PLAYSOUND:
+	case EV_LOOKAT:
+	case EV_POINTAT:
+	case EV_QUICKLOOK:
+	case EV_PLAYANI_FACE:
+	case EV_PROCESSINFOS:
+	case EV_OUTPUTSVM_OVERLAY:
+		return true;
+	default:
+		return false;
+	}
+}
+
+
 zSTRING oCMsgConversation::MD_GetSubTypeString(int type)
 {
 	switch ( type ) {
@@ -118,5 +168,58 @@ zSTRING oCMsgConversation::MD_GetSubTypeString(int type)
 	case EV_OUTPUTSVM_OVERLAY: return "EV_OUTPUTSVM_OVERLAY";
 	case EV_SNDPLAY:           return "EV_SNDPLAY";
 	default:                   return "";
+	}
+}
+
+int oCMsgConversation::MD_GetTimeBehavior()
+{
+	switch ( subType ) {
+	case EV_PLAYANISOUND:
+	case EV_PLAYANI:
+	case EV_PLAYSOUND:
+	case EV_QUICKLOOK:
+		return 1;
+	case EV_LOOKAT:
+	case EV_STOPLOOKAT:
+	case EV_STOPPOINTAT:
+	case EV_POINTAT:
+		return 3;
+	case EV_OUTPUT:
+	case EV_OUTPUTSVM:
+	case EV_CUTSCENE:
+	case EV_WAITTILLEND:
+	case EV_ASK:
+	case EV_WAITFORQUESTION:
+		return 2;
+	default:
+		return 0;
+	}
+}
+
+float oCMsgConversation::MD_GetMinTime()
+{
+	switch ( subType ) {
+	case EV_PLAYANI:
+		auto ani = talkingWith; // probably its union?
+		if ( ani )
+			return ani->heh[0] / ani->flr * 1000.0 * 0.001;
+		return 3.0;
+	case EV_PLAYANISOUND:
+	case EV_PLAYSOUND:
+	case EV_SNDPLAY:
+		auto sndTime = zsound->GetPlayingTimeMSEC(name);
+		sndTime *= 0.001;
+		if ( sndTime <= 0.0 )
+			sndTime = text.Length() * 0.16666667 + 1.0;
+		return sndTime;
+	case EV_OUTPUT:
+	case EV_OUTPUTSVM:
+		return 2.0;
+	case EV_LOOKAT:
+	case EV_CUTSCENE:
+	case EV_POINTAT:
+		return 1.0;
+	default:
+		return 0.0;
 	}
 }

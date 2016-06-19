@@ -18,6 +18,8 @@ public:
 		EV_EQUIPARMOR,
 	};
 
+	virtual ~oCMsgWeapon() = default;
+
 	virtual void Archive(zCArchiver& arc)
 	{
 		arc.WriteInt("targetMode", targetMode);
@@ -38,7 +40,7 @@ public:
 			flags.firstTime = arc.ReadBool("firstTime", tmp);
 		}
 	}
-	virtual ~oCMsgWeapon();
+
 	virtual int MD_GetNumOfSubTypes()
 	{
 		return 14;

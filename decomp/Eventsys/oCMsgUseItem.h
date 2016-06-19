@@ -1,24 +1,37 @@
 class oCMsgUseItem : public oCNpcMessage {
 	Z_OBJECT(oCMsgUseItem);
 public:
-	virtual void _GetClassDef();
-	virtual void Archive(zCArchiver& arc)
+	virtual ~oCMsgUseItem() = default;
+
+	void Archive(zCArchiver& arc) override
 	{
 		oCMsgState::Archive(arc);
 		arc.WriteObject("item", item);
 	}
-	virtual void Unarchive(zCArchiver& arc)
+	void Unarchive(zCArchiver& arc) override
 	{
 		oCMsgState::Unarchive(arc);
 		item = arc.ReadObject("item", 0);
 	}
-	virtual ~oCMsgUseItem();
+
 	virtual bool IsNetRelevant()
 	{
 		return true;
 	}
-	virtual void Pack(zCBuffer&,zCEventManager*);
-	virtual void Unpack(zCBuffer&,zCEventManager *);
+
+	void Pack(zCBuffer& buf,zCEventManager*) override
+	{
+		zBOOL hasItem = !!item;
+		buf.Write(&hasItem, 4);
+		bug.Write(&status, 4);
+	}
+	void Unpack(zCBuffer& buf,zCEventManager *) override
+	{
+		zBOOL hasItem; // бред
+		buf.Read(&hasItem, 4);
+		item = ogame->GetWorld()->SearchVobByID(hasItem);
+		buf.Read(&status, 4);
+	}
 
 private:
 	oCItem* item;

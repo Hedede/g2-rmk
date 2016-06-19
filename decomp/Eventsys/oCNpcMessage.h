@@ -1,17 +1,11 @@
 class oCNpcMessage : public zCEventMessage {
 	Z_OBJECT(oCNpcMessage);
 public:
-	enum oCNpcMessage::Flags {
-		HIGH_PRIORITY = 0x1,
-		IN_USE = 0x4,
-		DELETED = 0x2,
-	};
-
-	virtual void Archive(zCArchiver &);
-	virtual void Unarchive(zCArchiver &);
-
 	oCNpcMessage() = default;
 	virtual ~oCNpcMessage() = default;
+
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
 
 	virtual bool IsOverlay()
 	{
@@ -35,7 +29,7 @@ public:
 
 	virtual void Delete()
 	{
-		bitfield |= DELETED;
+		flags.DELETED = true;
 	}
 
 	virtual bool IsDeleteable()
@@ -45,25 +39,30 @@ public:
 
 	virtual bool IsDeleted()
 	{
-		return bitfield & DELETED;
+		return flags.DELETED;
 	}
 
 	virtual void SetInUse(bool inuse)
 	{
-		bitfield ^= (bitfield ^ inuse * IN_USE) & IN_USE;
+		flags.IN_USE = inuse;
 	}
 	virtual bool IsInUse()
 	{
-		return bitfield & IN_USE;
+		return flags.IN_USE;
 	}
 
 	virtual void SetHighPriority(bool ishp)
 	{
-		bitfield ^= (bitfield ^ ishp * HIGH_PRIORITY) & HIGH_PRIORITY;
+		flags.HIGH_PRIORITY = ishp;
 	}
+
 private:
 	zSTRING targetVobName;
-	int bitfield = 0;
+	struct {
+		unsigned HIGH_PRIORITY : 1; // 0x1,
+		unsigned DELETED       : 1; // 0x2,
+		unsigned IN_USE        : 1; // 0x4,
+	} flags;
 };
 
 void oCNpcMessage::Archive(zCArchiver &archiver)

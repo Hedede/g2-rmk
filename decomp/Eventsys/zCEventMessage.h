@@ -1,8 +1,8 @@
 class zCEventMessage : public zCObject {
 	Z_OBJECT(zCEventMessage);
 public:
-	virtual void Archive(zCArchiver &);
-	virtual void Unarchive(zCArchiver & archive)
+	void Archive(zCArchiver&) override;
+	void Unarchive(zCArchiver& archive) override
 	{
 		subType = archive->ReadEnum("subType");
 	}
@@ -80,12 +80,8 @@ public:
 		return 0.0;
 	}
 
-	virtual void Pack(zCBuffer &,zCEventManager *)
-	{
-	}
-	virtual void Unpack(zCBuffer &,zCEventManager *)
-	{
-	}
+	virtual void Pack(zCBuffer &,zCEventManager *) { }
+	virtual void Unpack(zCBuffer &,zCEventManager *) { }
 
 	void PackToBuffer(zCBuffer& buffer, zCEventManager* evman)
 	{
@@ -110,6 +106,7 @@ public:
 	{
 		return subType;
 	}
+
 private:
 	uint16_t subType = 0;
 	int csMode = 0;

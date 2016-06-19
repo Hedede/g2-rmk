@@ -7,21 +7,44 @@ public:
 		EV_SETNPCSTOSTATE,
 		EV_SETTIME,
 		EV_APPLYTIMEDOVERLAY,
+		NUM_SUBTYPES,
 	};
 
-	virtual void Archive(zCArchiver& arc);
-	virtual void Unarchive(zCArchiver& arc);
-	virtual ~oCMsgState();
+	virtual ~oCMsgState() = default;
+
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
+
 	virtual void IsOverlay();
-	virtual void MD_GetNumOfSubTypes();
-	virtual void MD_GetSubTypeString(int);
-	virtual void MD_GetTimeBehavior();
-	virtual void MD_GetMinTime();
+
+	int MD_GetNumOfSubTypes() override
+	{
+		return NUM_SUBTYPES;
+	}
+	zSTRING MD_GetSubTypeString(int type) override;
+	int MD_GetTimeBehavior() override
+	{
+		return 1;
+	}
+	float MD_GetMinTime() override
+	{
+		switch ( this->subType ) {
+		case EV_STARTSTATE:
+		case EV_SETNPCSTOSTATE:
+		case EV_SETTIME:
+			return 0.0;
+		case EV_WAIT:
+			return time * 0.001;
+		default:
+			return 3.0;
+		}
+	}
 
 	bool IsOverlay() const
 	{
 		return subType == EV_APPLYTIMEDOVERLAY;
 	}
+
 private:
 	union {
 		int hour, func;

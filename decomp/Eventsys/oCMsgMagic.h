@@ -1,7 +1,8 @@
 class oCMsgMagic : public oCNpcMessage {
 	Z_OBJECT(oCMsgMagic);
 public:
-	enum Type {
+	// TMsgConversationSubType // typo in original code
+	enum TMsgMagicSubType {
 		EV_OPEN = 0,
 		EV_CLOSE = 1,
 		EV_MOVE = 2,
@@ -13,9 +14,19 @@ public:
 		EV_CASTSPELL = 8,
 		EV_READY = 9,
 		EV_UNREADY = 10,
+		NUM_SUBTYPES,
 	};
 
-	virtual void Archive(zCArchiver& arc)
+	oCMsgMagic() = default;
+	oCMsgMagic(TMsgMagicSubType type)
+		: oCMsgMagic()
+	{
+		subType = type;
+	}
+
+	virtual ~oCMsgMagic() = default;
+
+	void Archive(zCArchiver& arc) override
 	{
 		oCNpcMessage::Archive(arc);
 
@@ -24,7 +35,7 @@ public:
 		arc.WriteBool("removeSymbol", removeSymbol);
 	}
 
-	virtual void Unarchive(zCArchiver& arc)
+	void Unarchive(zCArchiver& arc) override
 	{
 		oCNpcMessage::Unarchive(arc);
 
@@ -33,24 +44,73 @@ public:
 		arc.ReadBool("removeSymbol", removeSymbol);
 	}
 
-	virtual ~oCMsgMagic();
-	virtual void IsNetRelevant();
-	virtual void IsHighPriority();
-	virtual void IsJob();
-	virtual void MD_GetNumOfSubTypes();
-	virtual void MD_GetSubTypeString(int);
-	virtual void Pack(zCBuffer &,zCEventManager*);
-	virtual void Unpack(zCBuffer &,zCEventManager *);
+	bool IsNetRelevant() override
+	{
+		return false;
+	}
+	bool IsHighPriority() override
+	{
+		return subType != EV_CASTSPELL;
+	}
+	bool IsJob() override
+	{
+		return subType == EV_CASTSPELL;
+	}
+
+	int MD_GetNumOfSubTypes()
+	{
+		return NUM_SUBTYPES;
+	}
+	zSTRING MD_GetSubTypeString(int type) override;
+
+	void Pack(zCBuffer& buf,zCEventManager*) override
+	{
+		buf.Write(&subType, 2u);
+		buf.Write(&unk1, 4u);
+		buf.Write(&removeSymbol, 4u);
+		buf.Write(&level, 4u);
+		buf.Write(&investMana, 4u);
+		buf.Write(&unk2, 4u);
+		buf.Write(&spellId, 4u);
+
+		zBOOL hasTarget = !!targetVob;
+
+		vuf.Write(&hasTarget, 4u);
+		vuf.Write(&targetPos, 0xCu);
+	}
+
+	void Unpack(zCBuffer& buf,zCEventManager *) override
+	{
+		buf.Read(&subType, 2u);
+		buf.Read(&unk1, 4u);
+		buf.Read(&removeSymbol, 4u);
+		buf.Read(&level, 4u);
+		buf.Read(&investMana, 4u);
+		buf.Read(&unk2, 4u);
+		buf.Read(&spellId, 4u);
+
+		targetVob = nullptr;
+
+		int id;
+		buf.Read(id, 4u);
+
+		if ( id )
+			targetVob = ogame->GetWorld()->SearchVobByID(buf, 0);
+
+		buf.Read(&targetPos, 0xCu);
+	}
 
 private:
-	int unk1;
-	int level;
-	zBOOL removeSymbol;
-	int investMana;
-	int unk2;
-	zCVob *targetVob;
-	zVEC3 targetPos;
-	int spellId;
+	int unk1  = 0;
+	int level = 0;
+	zBOOL removeSymbol = false;
+	int investMana = 0;
+	int unk2 = 0;
+
+	zCVob* targetVob = 0;
+	zVEC3  targetPos;
+
+	int spellId = 0;
 };
 
 zSTRING oCMsgMagic::MD_GetSubTypeString(int type)

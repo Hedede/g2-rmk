@@ -1,7 +1,7 @@
 class oCMsgManipulate : public oCNpcMessage {
 	Z_OBJECT(oCMsgManipulate);
 public:
-	enum Type {
+	enum TManipulateSubType {
 		EV_TAKEVOB  = 0x0,
 		EV_DROPVOB  = 0x1,
 		EV_THROWVOB = 0x2,
@@ -22,7 +22,41 @@ public:
 		EV_EQUIPITEM      = 0xE,
 	};
 
-	virtual ~oCMsgManipulate();
+	oCMsgManipulate() = default;
+	oCMsgManipulate(TManipulateSubType type)
+		: oCMsgManipulate()
+	{
+		subType = type;
+	}
+	oCMsgManipulate(TManipulateSubType type, int slot)
+		: oCMsgManipulate(type)
+	{
+		targetState = slot;
+	}
+	oCMsgManipulate(TManipulateSubType type, zCVob* vob)
+		: oCMsgManipulate(type)
+	{
+		paramVob = vob;
+	}
+	oCMsgManipulate(TManipulateSubType type, zCVob* vob, int target)
+		: oCMsgManipulate(type, vob)
+	{
+		targetState = target;
+	}
+	oCMsgManipulate(TManipulateSubType type, zSTRING const& mobScheme, int target)
+		: oCMsgManipulate(type)
+	{
+		targetState = target;
+		schemeName = mobScheme;
+	}
+	oCMsgManipulate(TManipulateSubType type, zSTRING const& mobScheme, zSTRING const& slotName)
+		: oCMsgManipulate(type)
+	{
+		targetState = target;
+		itemSlot = slotName;
+	}
+
+	virtual ~oCMsgManipulate() = default;
 
 	void Archive(zCArchiver& arc) override;
 	void Unarchive(zCArchiver& arc) override;
@@ -37,9 +71,12 @@ public:
 		return 18;
 	}
 	zSTRING MD_GetSubTypeString(int type) override;
-	virtual void MD_GetVobRefName();
-	virtual void MD_SetVobRefName(zSTRING const &);
-	virtual void MD_SetVobParam(zCVob* vob)
+	zSTRING MD_GetVobRefName() override;
+	void MD_SetVobRefName(zSTRING const& name) override;
+	{
+		targetVobName = name;
+	}
+	void MD_SetVobParam(zCVob* vob) override
 	{
 		paramVob = vob;
 	}
@@ -59,20 +96,21 @@ public:
 			return 0;
 		}
 	}
-	virtual float MD_GetMinTime()
+	float MD_GetMinTime() override
 	{
 		return 6.0;
 	}
-	virtual void Pack(zCBuffer &,zCEventManager *);
-	virtual void Unpack(zCBuffer &,zCEventManager *);
+
+	void Pack(zCBuffer& buf,zCEventManager *) override;
+	void Unpack(zCBuffer& buf,zCEventManager *) override;
 
 private:
 	zSTRING schemeName;
 	zSTRING itemSlot;
-	zCVob *paramVob;
-	int inState; // unsure
-	float distance; // unsure
-	int targetState;
+	zCVob *paramVob = nullptr;
+	int inState     = 0; // unsure
+	float distance  = 0.5; // unsure
+	int targetState = -1;
 };
 
 zSTRING oCMsgManipulate::MD_GetSubTypeString(int type)
@@ -98,6 +136,13 @@ zSTRING oCMsgManipulate::MD_GetSubTypeString(int type)
 	case EV_EQUIPITEM:            return "EV_EQUIPITEM";
 	default:                      return "";
 	}
+}
+
+zSTRING oCMsgManipulate::MD_GetVobRefName()
+{
+	if (in(subType, EV_TAKEMOB, EV_DROPMOB, EV_DROPVOB, EV_USEITEM, EV_USEITEMTOSTATE, EV_EQUIPITEM))
+		return "";
+	return targetVobName;
 }
 
 void oCMsgManipulate::Archive(zCArchiver& arc)
@@ -128,4 +173,31 @@ void oCMsgManipulate::Unarchive(zCArchiver& arc)
 
 	if (subType == EV_USEMOB || subType == EV_USEITEMTOSTATE)
 		arc.ReadInt("targetState", targetState);
+}
+
+void oCMsgManipulate::Pack(zCBuffer& buf, zCEventManager*)
+{
+	buf.Write(&subType,2);
+	buf.WriteString(schemeName);
+	buf.WriteString(itemSlot);
+	unsigned tmp = !!paramVob;
+	buf.Write(&tmp, 4);
+	buf.Write(&targetState, 4);
+	buf.WriteBool(inState, 32);
+}
+
+void oCMsgManipulate::Unpack(zCBuffer& buf, zCEventManager*)
+{
+	buf.Read(&subType,2);
+	schemeName = buf.ReadString();
+	itemSlot = buf.ReadString();
+
+	paramVob = nullptr;
+	unsigned tmp;
+	buf.Write(&tmp, 4);
+	if (tmp > 0)
+		paramVob = ogame->GetWorld()->SearchVobByID(tmp, 0);
+
+	buf.Read(&targetState, 4);
+	inState = buf.ReadBool(32);
 }

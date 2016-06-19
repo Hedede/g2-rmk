@@ -1,7 +1,7 @@
 class oCMsgMovement : public oCNpcMessage {
 	Z_OBJECT(oCMsgMovement);
 public:
-	enum Type : uint16_t {
+	enum TMovementSubType : uint16_t {
 		EV_ROBUSTTRACE = 0x0,
 		EV_GOTOPOS = 0x1,
 		EV_GOTOVOB = 0x2,
@@ -23,7 +23,35 @@ public:
 		NUM_SUBTYPES,
 	};
 
-	virtual ~oCMsgMovement();
+	oCMsgMovement() = default;
+	oCMsgMovement(TMovementSubType type, int tmode)
+		: oCMsgMovement()
+	{
+		subType = type;
+		targetMode = tmode;
+	}
+	oCMsgMovement(TMovementSubType type, float angle)
+		: oCMsgMovement(type)
+	{
+		this->angle = angle;
+	}
+	oCMsgMovement(TMovementSubType type, zCVob* target)
+		: oCMsgMovement(type)
+	{
+		targetVob = target;
+		if (target)
+			targetPos = target->GetPositionWorld();
+	}
+	oCMsgMovement(TMovementSubType type, zSTRING const& target)
+		: oCMsgMovement(type)
+	{
+		targetName = target;
+	}
+
+	virtual ~oCMsgMovement()
+	{
+		Delete(unk1);
+	}
 
 	void Archive(zCArchiver& arc) override;
 	void Unarchive(zCArchiver& arc) override;
@@ -47,13 +75,16 @@ public:
 
 		return targetVobName;
 	}
-	virtual void MD_SetVobRefName(zSTRING const&);
+	void MD_SetVobRefName(zSTRING const& name) override;
+	{
+		targetVobName = name;
+	}
 	void MD_SetVobParam(zCVob* vob) override
 	{
 		targetName = vob;
 	}
-	virtual int MD_GetTimeBehavior();
-	virtual float MD_GetMinTime()
+	int MD_GetTimeBehavior() override;
+	float MD_GetMinTime() override
 	{
 		return 3.0;
 	}
@@ -69,14 +100,14 @@ public:
 
 private:
 	zSTRING targetName;
-	int unk1;
-	zCVob* targetVob;
+	int unk1 = 0;
+	zCVob* targetVob = nullptr;
 	zVEC3  targetPos;
 
-	float angle;
+	float angle = 0.0;
 	float progressPercent;
-	int targetMode;
-	int aniId;
+	int targetMode = 0;
+	int aniId = -1;
 };
 
 zSTRING oCMsgMovement::MD_GetSubTypeString(int type)

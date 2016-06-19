@@ -1,7 +1,7 @@
 class oCMsgAttack : public oCNpcMessage {
 	Z_OBJECT(oCMsgAttack);
 public:
-	enum Type {
+	enum TAttackSubType {
 		EV_ATTACKFORWARD = 0,
 		EV_ATTACKLEFT = 1,
 		EV_ATTACKRIGHT = 2,
@@ -13,6 +13,20 @@ public:
 		EV_STOPAIM = 8,
 		EV_DEFEND = 9,
 	};
+
+	oCMsgAttack() = default;
+	oCMsgAttack(TAttackSubType type, int ani, int combo)
+		: oCMsgAttack()
+	{
+		aniId = ani;
+		this->combo = combo;
+	}
+	oCMsgAttack(TAttackSubType type, zCVob* target, float frame)
+		: oCMsgAttack()
+	{
+		paramVob = target;
+		startFrame = frame;
+	}
 
 	virtual ~oCMsgAttack() = default;
 
@@ -51,16 +65,20 @@ public:
 	}
 	zSTRING MD_GetSubTypeString(int type) override;
 
-	virtual void Pack(zCBuffer &,zCEventManager *);
-	virtual void Unpack(zCBuffer &,zCEventManager *);
+	void Pack(zCBuffer& buf,zCEventManager *) override;
+	void Unpack(zCBuffer& buf,zCEventManager *) override;
 
 private:
-	zBOOL combo;
-	zCVob* paramVob;
+	zBOOL combo = false;
+	zCVob* paramVob = nullptr;
 
-	int unk2,unk3;
+	int aniId = -1;
+	float startFrame = 0;
 
-	int flags;
+	struct {
+		unsigned f1 : 1;
+		unsigned f2 : 1;
+	} atk_flags;
 };
 
 zSTRING oCMsgAttack::MD_GetSubTypeString(int type)
@@ -80,3 +98,43 @@ zSTRING oCMsgAttack::MD_GetSubTypeString(int type)
 	}
 }
 
+void oCMsgAttack::Pack(zCBuffer& buf, zCEventManager*)
+{
+	buf.Write(&combo,4);
+	unsigned tmp = flags.f1;
+	buf.Write(&tmp,4);
+	buf.Write(&startFrame,4);
+
+
+	zSTRING name;
+	if (auto npc = dynamic_cast<oCNpc*>(paramVob)) {
+		auto model = npc->GetModel();
+
+		for (auto proto : model->prototypes) {
+			if (proto->anis[aniId]) {
+				name = proto->anis[aniId]->aniName;
+			}
+		}
+	}
+
+	buf.WriteString(name);
+}
+
+void oCMsgAttack::Unpack(zCBuffer& buf, zCEventManager*)
+{
+	unsigned tmp;
+	buf.Read(&combo, 4);
+	buf.Read(&tmp, 4);
+	flags.f1 = tmp;
+	
+	buf.Read(&startFrame,4);
+	auto name = buf.ReadString();
+	if (auto npc = dynamic_cast<oCNpc*>(paramVob)) {
+		auto model = npc->GetModel();
+		auto ani = model->prototypes[0]->SearchAni(name);
+		if (ani)
+			aniId = ani->aniId;
+		else
+			aniId = -1;
+	}
+}

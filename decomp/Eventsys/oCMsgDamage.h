@@ -7,6 +7,15 @@ public:
 		NUM_SUBTYPES,
 	};
 
+	oCMsgDamage() = default;
+	oCMsgDamage(TDamageSubType type)
+		: oCMsgDamage()
+	{
+		subType = type;
+	}
+
+	virtual ~oCMsgDamage() = default;
+
 	void Archive(zCArchiver& archive) override
 	{
 		oCNpcMessage::Archive(archive);
@@ -18,7 +27,6 @@ public:
 		oCNpcMessage::Unarchive(archive);
 		archive.ReadRaw("damage_descriptor", &damDescriptor, sizeof(damDescriptor));
 	}
-	virtual ~oCMsgDamage();
 
 	bool IsOverlay() override
 	{
@@ -47,7 +55,7 @@ public:
 	void Pack(zCBuffer &,zCEventManager *) override {}
 	void Unpack(zCBuffer &,zCEventManager *) override {}
 
-
+private:
 	oCNpc::oSDamageDescriptor damDescriptor;
 };
 

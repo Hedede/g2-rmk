@@ -23,6 +23,12 @@ public:
 	{
 		subType = type;
 	}
+	oCMsgMagic(TMsgMagicSubType type, int what, int removeSymbol)
+		: oCMsgMagic(type)
+	{
+		unk1 = what;
+		this->removeSymbol = removeSymbol;
+	}
 
 	virtual ~oCMsgMagic() = default;
 

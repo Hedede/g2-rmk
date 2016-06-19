@@ -1,7 +1,7 @@
 class oCMsgConversation : public oCNpcMessage {
 	Z_OBJECT(oCMsgConversation);
 public:
-	enum Type {
+	enum TConversationSubType {
 		EV_PLAYANISOUND = 0x0,
 		EV_PLAYANI = 0x1,
 		EV_PLAYSOUND = 0x2,
@@ -24,13 +24,39 @@ public:
 		EV_SNDPLAY = 0x13,
 	};
 
-	virtual ~oCMsgConversation();
+	oCMsgConversation() = default;
+	oCMsgConversation(TConversationSubType type)
+		: oCMsgConversation()
+	{
+		subType = type;
+	}
+	oCMsgConversation(TConversationSubType type, int nr)
+		: oCMsgConversation(type)
+	{ }
+	oCMsgConversation(TConversationSubType type, zCVob* vob)
+		: oCMsgConversation(type)
+	{
+		target = vob;
+	}
+	oCMsgConversation(TConversationSubType type, zSTRING const& aniName)
+		: oCMsgConversation(type)
+	{
+		name = aniName;
+	}
+	oCMsgConversation(TConversationSubType type, zSTRING const& sndName, zSTRING const& _text)
+		: oCMsgConversation(type)
+	{
+		name = sndName;
+		text = _text;
+	}
+
+	virtual ~oCMsgConversation() = default;
 
 	void Archive(zCArchiver& arc) override;
 	void Unarchive(zCArchiver& arc) override;
 
 	bool IsOverlay() override;
-	virtual void Delete();
+	void Delete() override;
 
 	int MD_GetNumOfSubTypes() override
 	{
@@ -41,7 +67,10 @@ public:
 	{
 		return targetVobName;
 	}
-	virtual void MD_SetVobRefName(zSTRING	const &);
+	void MD_SetVobRefName(zSTRING const& name) override;
+	{
+		targetVobName = name;
+	}
 	void MD_SetVobParam(zCVob* vob) override
 	{
 		target = vob;
@@ -52,13 +81,13 @@ public:
 private:
 	zSTRING text;
 	zSTRING name;
-	oCNpc *target;
+	oCNpc *target = nullptr;
 	zVEC3 positionWorld;
-	int aniId;
-	zCEventMessage *talkingWith;
-	zCActiveSnd *voiceHandle;
-	float timeSec;
-	int number;
+	int aniId = -1;
+	zCEventMessage* talkingWith = nullptr;
+	zCActiveSnd* voiceHandle = nullptr;
+	float timeSec = 0.0;
+	int number = -1;
 	int posX;
 	int posY;
 };
@@ -222,4 +251,23 @@ float oCMsgConversation::MD_GetMinTime()
 	default:
 		return 0.0;
 	}
+}
+
+void oCMsgConversation::Delete()
+{
+	static auto& infoMan = oCInformationManager::GetInformationManager();
+
+	if (subType != EV_PROCESSINFOS) {
+		oCNpcMessage::Delete();
+		return;
+	}
+
+	if ( infoMan.HasFinished() ) {
+		zINFO(1,"R: Deleting EV_PROCESSINFOS message [OK]");// 1283, _ulf/oNpcMessages.cpp
+
+		oCNpcMessage::Delete();
+		return;
+	}
+
+	zINFO(1,"R: Deleting EV_PROCESSINFOS message [FAILED]"); // 1277,
 }

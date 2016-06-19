@@ -1,6 +1,15 @@
 class oCMsgUseItem : public oCNpcMessage {
 	Z_OBJECT(oCMsgUseItem);
 public:
+	enum TUseItemSubType : uint16_t { };
+
+	oCMsgUseItem() = default;
+	oCMsgUseItem(TUseItemSubType type)
+		: oCMsgUseItem()
+	{
+		subType = type;
+	}
+
 	virtual ~oCMsgUseItem() = default;
 
 	void Archive(zCArchiver& arc) override
@@ -34,7 +43,7 @@ public:
 	}
 
 private:
-	oCItem* item;
-	int aniId;
-	int status; // unsure, probably linked to .MDS
+	oCItem* item = nullptr;
+	int aniId  = -1;
+	int status = 0; // unsure, probably linked to .MDS
 };

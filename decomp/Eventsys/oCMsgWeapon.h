@@ -1,7 +1,7 @@
 class oCMsgWeapon : public oCNpcMessage {
 	Z_OBJECT(oCMsgWeapon);
 public:
-	enum Type {
+	enum TWeaponSubType {
 		EV_DRAWWEAPON,
 		EV_DRAWWEAPON1,
 		EV_DRAWWEAPON2,
@@ -18,9 +18,22 @@ public:
 		EV_EQUIPARMOR,
 	};
 
+	oCMsgWeapon()
+		: oCNpcMessage()
+	{
+		mw_flags.firstTime = true;
+	}
+	oCMsgWeapon(TWeaponSubType type, int tmode, int useFist)
+		: oCMsgWeapon()
+	{
+		subType = type;
+		targetMode = tmode;
+		mw_flags.useFist = useFist;
+	}
+
 	virtual ~oCMsgWeapon() = default;
 
-	virtual void Archive(zCArchiver& arc)
+	void Archive(zCArchiver& arc) override
 	{
 		arc.WriteInt("targetMode", targetMode);
 		if ( !arc.InProperties() ) {
@@ -29,7 +42,7 @@ public:
 			arc.WriteBool("firstTime", flags << 29 >> 31);
 		}
 	}
-	virtual void Unarchive(zCArchiver& arc)
+	void Unarchive(zCArchiver& arc) override
 	{
 		arc.ReadInt("targetMode", targetMode);
 		if ( !arc.InProperties() ) {
@@ -41,29 +54,29 @@ public:
 		}
 	}
 
-	virtual int MD_GetNumOfSubTypes()
+	int MD_GetNumOfSubTypes() override
 	{
 		return 14;
 	}
-	virtual void MD_GetSubTypeString(int);
-	virtual int MD_GetTimeBehavior()
+	zSTRING MD_GetSubTypeString(int type) override;
+	int MD_GetTimeBehavior() override
 	{
 		return 0;
 	}
-	virtual float MD_GetMinTime()
+	float MD_GetMinTime() override
 	{
 		return 0.0;
 	}
 
 private:
-	int targetMode;
+	int targetMode = 0;
 	struct {
-		unsigned duringRun  : 1;
-		unsigned initDone   : 1;
-		unsigned firstTime  : 1;
-		unsigned useFist    : 1;
-	} flags;
-	int aniId
+		unsigned duringRun  : 1; // 1
+		unsigned initDone   : 1; // 2
+		unsigned firstTime  : 1; // 4
+		unsigned useFist    : 1; // 8
+	} mw_flags;
+	int aniId = -1;
 };
 
 zSTRING oCMsgWeapon::MD_GetSubTypeString(int type);

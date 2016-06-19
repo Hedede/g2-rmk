@@ -1,7 +1,7 @@
 class oCMsgState : public oCNpcMessage {
 	Z_OBJECT(oCMsgState);
 public:
-	enum Type {
+	enum TStateSubType {
 		EV_STARTSTATE,
 		EV_WAIT,
 		EV_SETNPCSTOSTATE,
@@ -10,12 +10,38 @@ public:
 		NUM_SUBTYPES,
 	};
 
+	oCMsgState() = default;
+	oCMsgState(TStateSubType type)
+		: oCMsgState()
+	{
+		subType = type;
+	}
+	oCMsgState(TStateSubType type, int func)
+		: oCMsgState(type)
+	{
+		param = func;
+	}
+	oCMsgState(TStateSubType type, float time)
+		: oCMsgState(type)
+	{
+		this->time = time;
+	}
+	oCMsgState(TStateSubType type, int func, int flags, zSTRING const& wp)
+		: oCMsgState(type, func)
+	{
+		st_flags = flags;
+		waypoint = wp;
+	}
+
 	virtual ~oCMsgState() = default;
 
 	void Archive(zCArchiver& arc) override;
 	void Unarchive(zCArchiver& arc) override;
 
-	virtual void IsOverlay();
+	bool IsOverlay() override
+	{
+		return subType == EV_APPLYTIMEDOVERLAY;
+	}
 
 	int MD_GetNumOfSubTypes() override
 	{
@@ -46,16 +72,20 @@ public:
 	}
 
 private:
-	union {
-		int hour, func;
-	};
-	int minute;
-	int state;
+	//union { int hour, func; };
+	int param  = -1;
+	int minute = 0;
+	int state  = -1;
 	zSTRING waypoint;
-	float time;
-	oCNpc* other;
-	oCNpc* victim;
-	int flags;
+	float time = 0.0;
+
+	oCNpc* other  = nullptr;
+	oCNpc* victim = nullptr;
+
+	struct {
+		unsigned f1 : 1;
+		unsigned f2 : 2;
+	} st_flags;
 };
 
 zSTRING oCMsgState::MD_GetSubTypeString(int type)

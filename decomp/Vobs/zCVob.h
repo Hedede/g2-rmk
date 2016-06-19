@@ -238,6 +238,11 @@ public:
 
 	void SetAI(zCAIBase* newai);
 
+	bool GetDontWriteIntoArchive() const
+	{
+		return flags1.dontWriteIntoArchive;
+	}
+
 	bool GetIsProjectile() const
 	{
 		if (callback_ai)

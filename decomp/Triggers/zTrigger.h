@@ -1,7 +1,16 @@
 class zCTrigger : public zCTriggerBase {
 	Z_OBJECT(zCTrigger);
 public:
-	virtual ~zCTrigger();
+	zCTrigger()
+		: zCTriggerBase()
+	{
+		ClearStateInternals();
+	}
+
+	virtual ~zCTrigger()
+	{
+		Release(savedOtherVob);
+	}
 
 	void Archive(zCArchiver& arc) override;
 	void Unarchive(zCArchiver& arc) override;
@@ -22,51 +31,130 @@ public:
 		}
 	}
 
-	virtual void OnTouch(zCVob *);
-	virtual void OnUntouch(zCVob *);
-	virtual void OnDamage(zCVob *,zCVob *,float,int,zVEC3 const &);
-	virtual void OnMessage(zCEventMessage *,zCVob *);
-	virtual void OnTimer();
-	virtual void TriggerTarget(zCVob *);
-	virtual void UntriggerTarget(zCVob *);
-	virtual void CanBeActivatedNow(zCVob *);
+	void OnTouch(zCVob* vob) override
+	{
+		if (filterFlags.reactToOnTouch)
+			ActivateTrigger(vob);
+	}
+
+	void OnUntouch(zCVob* vob) override
+	{
+		if (filterFlags.reactToOnTouch)
+			DeactivateTrigger(vob);
+	}
+
+	void OnDamage(zCVob*, zCVob* inflictor, float damage, int,zVEC3 const &) override
+	{
+		if (filterFlags.reactToOnDamage && damage > 0.0 && damage > damageThreshold)
+			ActivateTrigger(inflictor);
+	}
+
+	void OnMessage(zCEventMessage* msg, zCVob* source) override
+	{
+		if (auto common = dynamic_cast<zCEventCommon*>(msg)) {
+			if (common->subType == 0)
+				trg_flags.isEnabled = true;
+			else if (common->subType == 1)
+				trg_flags.isEnabled = false;
+			else if (common->subType == 2)
+				trg_flags.isEnabled = !trg_flags.isEnabled;
+		}
+	}
+
+	void OnTimer() override
+	{
+		SetSleeping(1);
+		if ( fireDelaySec > 0.0 ) {
+			TriggerTarget(savedOtherVob);
+			TriggerTargetPost();
+			Release(savedOtherVob);
+		}
+	}
+
+	virtual void TriggerTarget(zCVob* target)
+	{
+		if (triggerTarget)
+			zCTriggerBase::OnTrigger(this, target);
+	}
+	virtual void UntriggerTarget(zCVob* target)
+	{
+		if (triggerTarget)
+			zCTriggerBase::OnUnrigger(this, target);
+	}
+
+	virtual bool CanBeActivatedNow(zCVob* vob);
+
+	zSTRING GetTriggerTarget() const
+	{
+		return triggerTarget;
+	}
 
 private:
 	void ClearStateInternals()
 	{
-		flags.isEnabled = 0; //? flags = flags ^ (flags ^ 2 * flags) & 2
+		trg_flags.isEnabled = trg_flags.startEnabled;
 
 		nextTimeTriggerable = 0;
 
 		Release(savedOtherVob);
 	}
 
+	void zCTrigger::ActivateTrigger(zCVob *vob)
+	{
+		if ( !IsOnTimer() && CanBeActivatedNow(vob) && trg_flags.isEnabled ) {
+			if ( fireDelaySec <= 0.0 ) {
+				TriggerTarget(vob);
+				TriggerTargetPost();
+			} else {
+				Release(savedOtherVob);
+				savedOtherVob = vob;
+				AddRef(vob);
+				SetOnTimer(fireDelaySec * 1000.0);
+			}
+		}
+	}
+
+	void DeactivateTrigger(zCVob *vob)
+	{
+		if ( !IsOnTimer() ) {
+			if (trg_flags.isEnabled && trg_flags.sendUntrigger)
+				UntriggerTarget(vob);
+		}
+	}
+
+	void TriggerTargetPost()
+	{
+		if ( countCanBeActivated > 0 )
+			--countCanBeActivated;
+		nextTimeTriggerable = retriggerWaitSec * 1000.0 + ztimer.totalTimeFloat;
+	}
+
 private:
 	//Eigenschaften sollten weitgehend klar sein
 
 	struct {
-		zUINT8          reactToOnTrigger: 1;
-		zUINT8          reactToOnTouch  : 1;
+		zUINT8          reactToOnTrigger: 1; // 1
+		zUINT8          reactToOnTouch  : 1; // 2
 		zUINT8          reactToOnDamage : 1;
 		zUINT8          respondToObject : 1;
 		zUINT8          respondToPC     : 1;
 		zUINT8          respondToNPC    : 1;
 	} filterFlags;
 	struct {
-		zUINT8          startEnabled    : 1;
-		zUINT8          isEnabled       : 1;
-		zUINT8          sendUntrigger   : 1;
-	} flags;
+		zUINT8          startEnabled    : 1; // 1
+		zUINT8          isEnabled       : 1; // 2
+		zUINT8          sendUntrigger   : 1; // 4
+	} trg_flags;
 
 	zSTRING respondToVobName;
 	zSWORD  numCanBeActivated;
-	zREAL  retriggerWaitSec;
-	zREAL  damageThreshold;
-	zREAL  fireDelaySec;
+	zREAL  retriggerWaitSec = 0.0;
+	zREAL  damageThreshold  = 0.0;
+	zREAL  fireDelaySec = 0;
 	//vgl. Eigenschaft retriggerWaitSec
-	zREAL  nextTimeTriggerable;
-	zCVob* savedOtherVob;
-	zSWORD countCanBeActivated;
+	zREAL  nextTimeTriggerable = 0.0;
+	zCVob* savedOtherVob = nullptr;
+	zSWORD countCanBeActivated = -1;
 };
 
 void zCTrigger::Archive(zCArchiver& arc)
@@ -170,4 +258,27 @@ void zCTrigger::Unarchive(zCArchiver& arc)
 		flags.isEnabled = _bool;
 	}
 #endif
+}
+
+bool zCTrigger::CanBeActivatedNow(zCVob *vob)
+{
+	if (!trg_flags.isEnabled)
+		return false;
+	if (!countCanBeActivated)
+		return false;
+	if (IsOnTimer())
+		return false;
+	if ( ztimer.totalTimeFloat < nextTimeTriggerable )
+		return false;
+
+	if ( !vob )
+		return true;
+
+	if (filterFlags.respondToObject && vob->vtbl->GetCharacterClass() == 0 ||
+	    filterFlags.respondToPC     && vob->vtbl->GetCharacterClass() == 1 ||
+	    filterFlags.respondToNPC    && vob->vtbl->GetCharacterClass() == 2 )
+		return true;
+	if (!respondToVobName)
+		return false;
+	return respondToVobName == vob->GetObjectName();
 }

@@ -231,6 +231,8 @@ public:
 
 	void UpdateVobTreeBspDepencdencies(zCTree<zCVob>* vobNode);
 
+	void PrintActiveVobs();
+
 	int ShouldAddThisVobToBsp(zCVob *vob)
 	{
 		if (zDYNAMIC_CAST<zCZone>(vob))
@@ -326,6 +328,7 @@ private:
 
 	void RemoveVobSubtree_r(zCTree<zCVob>* node, int firstVob);
 	void MakeVobLightingDirty();
+	void GenerateStaticVertexLighting();
 
 	static int ActiveZoneListCompare(const void* a1, const void *a2);
 
@@ -681,6 +684,18 @@ void zCWorld::UpdateVobTreeBspDependencies(VobTree *vobNode)
 
 	for (auto i = vobNode->firstChild; i; i = i->next)
 		UpdateVobTreeBspDependencies(i);
+}
+
+void zCWorld::PrintActiveVobs()
+{
+	zINFO("D: *** World: ActiveVobList ************************************");
+
+	unsigned i = 0;
+	for (auto vob : activeVobList) {
+		auto info = vob->GetVobInfo();
+
+		zINFO("D: " + (i++) + ": " + info);
+	}
 }
 
 // --------- Save/Load
@@ -1230,6 +1245,39 @@ void zCWorld::MakeVobLightingDirty()
 	TraverseMakeVobLightingDirty(&globalVobTree);
 
 	zINFO("D: WLD: ... finished"); // 1924, _dieter\\zWorldLight.cpp
+}
+
+void TraverseCollectLights(VobTree *node)
+{
+	auto vob = node->GetData();
+
+	if (vob && vob->type == VOB_TYPE_LIGHT)
+		if (static_cast<zCVobLight*>(vob)->lightData.flags.isStatic)
+			lightVobList.Insert(vob);
+	for (auto i = node->firstChild; i; i = i->next )
+		TraverseCollectLights(i);
+}
+
+void zCWorld::GenerateStaticVertexLighting()
+{
+	zINFO("D: WORLD: Calculating static Vertex Light for world ...");
+
+	bspTree.mesh->CreateListsFromArrays();
+
+	TraverseCollectLights(&globalVobTree);
+
+	int numLights = lightVobList.GetNumInList();
+
+	zINFO("D: WORLD: NumLights: "_s + numLights);
+
+	if ( compiled )
+		LightWorldStaticCompiled();
+	else
+		LightWorldStaticUncompiled(&globalVobTree);
+
+	lightVobList.DeleteList();
+
+	zINFO("D: WORLD: ... Finished.");
 }
 
 // ----------- Debug

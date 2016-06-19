@@ -80,8 +80,9 @@ public:
 
 	void DebugMarkOccluderPolys();
 
-	virtual void LoadWorld(zSTRING const &,zCWorld::zTWorldLoadMode);
-	virtual void SaveWorld(zSTRING const &,zCWorld::zTWorldSaveMode,int,int);
+	virtual int LoadWorld(zSTRING const& filename, zTWorldLoadMode mode);
+	virtual int SaveWorld(zSTRING const& filename, zTWorldSaveMode mode, int writeBinary, int saveLevelMesh);
+
 	virtual void MergeVobSubtree(zSTRING const& fileName, zCVob* paramVob, zTWorldLoadMergeMode mergeMode);
 	virtual void SaveVobSubtree(zSTRING const& fileName, zCVob* vob, int writeBinary, int saveLevelMesh);
 
@@ -329,6 +330,7 @@ private:
 	void RemoveVobSubtree_r(zCTree<zCVob>* node, int firstVob);
 	void MakeVobLightingDirty();
 	void GenerateStaticVertexLighting();
+	void GenerateLightmapsRadiosity(zTBBox3D* bbox);
 
 	static int ActiveZoneListCompare(const void* a1, const void *a2);
 
@@ -798,6 +800,94 @@ void zCWorld::SaveBspTreeMesh3DS(zSTRING *filename)
 	zCFile3DS::Save3DS(filename, bspTree.mesh);
 }
 
+int zCWorld::SaveWorld(zSTRING const& fileName, zTWorldSaveMode mode, int writeBinary, int saveLevelMesh)
+{
+	zCPolygon::S_ResetMorphedVerts();
+	zINFO(5,"D: WORLD: Saving World: \"" + fileName + "\""); // 2937, zWorld.cpp
+
+	zCVob* camVob = nullptr;
+	if ( zCCamera::activeCam ) {
+		camVob = zCCamera::activeCam->connectedVob;
+		if ( camVob ) {
+			++camVob->refCtr;
+			RemoveVob(camVob);
+		}
+	}
+
+	s_saveLevelMesh = saveLevelMesh;
+	zCWorld::s_worldSaveMode = mode;
+	s_firstVobSaveWorld = &globalVobTree;
+	s_saveWayNet = mode != 3;
+
+	auto arcMode = writeBinary ? 3 : 1;
+	if ( writeBinary && mode == 0 ) {
+		if (zoptions->ReadBool("INTERNAL", "zFastSaveGames", 1))
+			arcMode = 0;
+	}
+
+	zoptions->ChangeDir(DIR_WORLD);
+
+	auto arc = zarcFactory.CreateArchiverWrite(fileName, arcMode, mode == 0, 0);
+	bool ret = arc != nullptr;
+
+	if ( arc ) {
+		arc->WriteObject(this);
+		arc->Close();
+		arc->Release();
+	}
+	if ( camVob ) {
+		AddVobAsChild(camVob, &globalVobTree);
+		camVob->Release();
+		s_firstVobSaveWorld = 0;
+	}
+
+	return ret;
+}
+
+int zCWorld::LoadWorld(zSTRING const& filename, zTWorldLoadMode mode)
+{
+	zINFO(1, "D: WORLD: Loading WorldFile.. " + fileName); // 2604
+
+	zCWorld::s_worldLoadMode = mode;
+
+	DisposeVobs(0);
+	zCVob::ResetIDCtr();
+
+	if (in(mode,0,2,3,4))
+		DisposeStaticWorld();
+
+	zvertexBufferMan.StartChangeWorld();
+
+	zoptions->ChangeDir(DIR_WORLD);
+
+	auto arc = zCArchiverFactory::CreateArchiverRead(fileName, 0);
+	bool ret = arc != nullptr;
+
+	if ( arc ) {
+		arc->ReadObject(this);
+		arc->Close();
+		arc->Release();
+	}
+
+	zvertexBufferMan.EndChangeWorld();
+
+	zCWorld::s_bFadeOutFarVerts = zoptions->ReadBool("ENGINE", "zFarClipAlphaFade", 1);
+
+	if (compiled && bspTree.bspTreeMode == 0)
+		zCWorld::s_bFadeOutFarVerts = 0;
+
+	zINFO(1,""); // 2662, zWorld.cpp
+
+	if ( ret ) {
+		zFILE_FILE file(fileName);
+
+		levelName = file.GetFilename();
+
+		bspTree.renderedFirstTime = 1;
+	}
+
+	return ret;
+};
 
 // ---------- Dispose
 void zCWorld::ResetCutscenePlayer();
@@ -1278,6 +1368,35 @@ void zCWorld::GenerateStaticVertexLighting()
 	lightVobList.DeleteList();
 
 	zINFO("D: WORLD: ... Finished.");
+}
+
+void zCWorld::GenerateLightmapsRadiosity(zTBBox3D* bbox)
+{
+	GenerateSurfaces( 0, bbox);
+	MakeTransfers();
+
+	zINFO("D: WORLD: LM: Iterating...");
+
+	unsigned i = 7;
+	while (i --> 0) {
+		for (auto pm : patchMapList) {
+			for (auto patch : pm->patches)
+				patch->DoTransfers();
+		}
+	}
+
+	zINFO("D: WORLD: LM: Finished.");
+
+	while (patchMapList.GetNum() > 0) {
+		auto* pm = patchMapList[0];
+
+		GenerateLightmapFromPatchMap(pm);
+
+		delete pm;
+		patchMapList.Remove(pm);
+	}
+
+	patchMapList.DeleteList();
 }
 
 // ----------- Debug

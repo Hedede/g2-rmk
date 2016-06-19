@@ -3,6 +3,8 @@
  * PatchMap used to calculate lightning.
  */
 struct zCPatch {
+	zCPatch() = default;
+
 	zVEC3 vec0;
 	zVEC3 vec1;
 	zVEC3 vec2;
@@ -25,7 +27,8 @@ struct zCPatchMap {
 			}
 		}
 
-		unk = 0;
+		poly0 = 0;
+		// also implicit deletings of arrays
 	}
 
 	char unk0;

@@ -69,14 +69,10 @@ public:
 	}
 
 	virtual ~zCObject() = default;
-	virtual void Archive(zCArchiver& archiver)
-	{
-	}
-	virtual void Unrchive(zCArchiver& archiver)
-	{
-	}
+	virtual void Archive(zCArchiver& arc) { }
+	virtual void Unarchive(zCArchiver& arc) { }
 
-	virtual int Release()
+	int Release()
 	{
 		--refCtr;
 		if ( refCtr <= 0 )
@@ -84,7 +80,7 @@ public:
 		return refCtr;
 	}
 
-	virtual int AddRef()
+	int AddRef()
 	{
 		++refCtr;
 	}

@@ -27,9 +27,25 @@ struct zCRenderer {
 	{
 		return texFormatInfoList[idx]; // 0x24
 	}
-	virtual ~zCRenderer();
+
+	zSTRING AlphaBlendFuncTypeToString(zTRnd_AlphaBlendFunc func)
+	{
+		switch ( func ) {
+		case zRND_ALPHA_FUNC_MAT_DEFAULT: return "MAT_DEFAULT";
+		case zRND_ALPHA_FUNC_NONE:        return "NONE";
+		case zRND_ALPHA_FUNC_BLEND:       return "BLEND";
+		case zRND_ALPHA_FUNC_ADD:         return "ADD";
+		case zRND_ALPHA_FUNC_SUB:         return "SUB";
+		case zRND_ALPHA_FUNC_MUL:         return "MUL";
+		default:                          return "NONE";
+		}
+	}
+
+	virtual ~zCRenderer() = default;
+
 	virtual void BeginFrame() = 0;
 	virtual void EndFrame() = 0;
+
 	virtual void FlushPolys() = 0;
 	virtual void DrawPoly(zCPolygon *) = 0;
 	virtual void DrawLightmapList(zCPolygon**, int) { }

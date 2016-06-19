@@ -1,6 +1,6 @@
 class zCRnd_D3D : public zCRenderer {
 public:
-	virtual ~zCRnd_D3D(uint);
+	virtual ~zCRnd_D3D();
 	virtual void BeginFrame();
 	virtual void EndFrame();
 	virtual void FlushPolys();
@@ -51,10 +51,22 @@ public:
 	virtual void SetPixelWriteEnabled(int);
 	virtual void SetAlphaBlendSource(zTRnd_AlphaBlendSource const &);
 	virtual void GetAlphaBlendSource();
-	virtual void SetAlphaBlendFunc(zTRnd_AlphaBlendFunc const &);
-	virtual void GetAlphaBlendFunc();
-	virtual void GetAlphaBlendFactor();
-	virtual void SetAlphaBlendFactor(float const &);
+	void SetAlphaBlendFunc(zTRnd_AlphaBlendFunc const& func) override
+	{
+		alphaBlendFunc = func;
+	}
+	zTRnd_AlphaBlendFunc GetAlphaBlendFunc() override
+	{
+		return alphaBlendFunc;
+	}
+	float GetAlphaBlendFactor() override
+	{
+		return alphaBlendFactor;
+	}
+	void SetAlphaBlendFactor(float const& f) override
+	{
+		alphaBlendFactor = f;
+	}
 	virtual void SetAlphaReference(ulong);
 	virtual void GetAlphaReference();
 	virtual void GetCacheAlphaPolys();
@@ -89,7 +101,7 @@ public:
 	virtual void GetStatistics(zTRnd_Stats &);
 	virtual void ResetStatistics();
 	virtual void Vid_Blit(int,tagRECT *,tagRECT *);
-	virtual void Vid_Clear(zCOLOR &,int);
+	void Vid_Clear(zCOLOR& color, int clearTarget) override;
 	virtual void Vid_Lock(zTRndSurfaceDesc &);
 	virtual void Vid_Unlock();
 	virtual void Vid_IsLocked();
@@ -125,6 +137,7 @@ public:
 	virtual void Vid_EndLfbAccess() {}
 	void Vid_SetLfbAlpha(int) override {}
 	void Vid_SetLfbAlphaFunc(zTRnd_AlphaBlendFunc const &) override {}
+
 	virtual void SetTransform(zTRnd_TrafoType,zMAT4 const &);
 	virtual void SetViewport(int,int,int,int);
 	virtual void SetLight(ulong,zCRenderLight *);
@@ -140,3 +153,17 @@ public:
 	virtual void DrawVertexBuffer(zCVertexBuffer *,int,int,ushort *,ulong);
 	virtual void CreateVertexBuffer();
 };
+
+void zCRnd_D3D::Vid_Clear(zCOLOR& color, int clearTarget)
+{
+	int res;
+	zClamp(clearTarget,1,3);
+	if ( zCRnd_D3D::xd3d_pd3dx ) {
+		res = zCRnd_D3D::xd3d_pd3dx->SetClearDepth(1.0);
+		DXTryWarning(res, "X: [RND3D]Vid_Clear: Can't set clear depth !");
+		res = zCRnd_D3D::xd3d_pd3dx->SetClearColor(&color);
+		DXTryWarning(res, "X: [RND3D]Vid_Clear: Can't set clear color !");
+		res = zCRnd_D3D::xd3d_pd3dx->Clear(clearTarget);
+		DXTryWarning(res, "X: [RND3D]Vid_Clear: Can't clear render target !");
+	}
+}

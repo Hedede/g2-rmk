@@ -1,5 +1,4 @@
-enum zTRnd_ScreenMode
-{
+enum zTRnd_ScreenMode {
 	zRND_SCREEN_MODE_FULLSCREEN = 0x0,
 	zRND_SCREEN_MODE_WINDOWED = 0x1,
 };
@@ -136,7 +135,7 @@ struct zCRenderer {
 	{
 		return 0;
 	}
-	virtual void GetAlphaBlendFactor()
+	virtual float GetAlphaBlendFactor()
 	{
 		return 1.0;
 	}

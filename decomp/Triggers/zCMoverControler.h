@@ -1,13 +1,20 @@
 class zCMoverControler : public zCTriggerBase {
 	Z_OBJECT(zCMoverControler);
 public:
-	virtual ~zCMoverControler();
-	virtual void Archive(zCArchiver& arc);
-	virtual void Unarchive(zCArchiver& arc);
-	virtual void OnTrigger(zCVob *,zCVob *);
-	virtual void OnUntrigger(zCVob *,zCVob *);
-	virtual void OnTouch(zCVob*);
-	virtual void OnUntouch(zCVob *);
+	virtual ~zCMoverControler() = default;
+
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
+
+	void OnTrigger(zCVob *,zCVob *) override;
+	void OnUntrigger(zCVob *,zCVob *) override {}
+
+	void OnTouch(zCVob*) override {}
+	void OnUntouch(zCVob *) override {}
+
+private:
+	int moverMessage;
+	int gotoFixedKey;
 };
 
 void zCMoverControler::Archive(zCArchiver& arc)
@@ -40,4 +47,17 @@ void zCMoverControler::Unarchive(zCArchiver& arc)
 	zCTriggerBase::Unarchive(arc);
 	moverMessage = arc.ReadEnum("moverMessage");
 	arc.ReadInt("gotoFixedKey", gotoFixedKey);
+}
+
+void zCMoverControler::OnTrigger(zCVob *other, struct zCVob *instigator)
+{
+	auto msg = new zCEventMover{moverMessage};
+	msg->gotoFixedKey = gotoFixedKey;
+
+	zCArray<zCVob*> list;
+
+	homeWorld->SearchVobListByName(triggerTarget, &list);
+
+	for (auto vob : list)
+		vob->GetEM()->OnMessage(msg, this);
 }

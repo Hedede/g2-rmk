@@ -1,19 +1,6 @@
 class zCTriggerBase : public zCVob {
 	Z_OBJECT(zCTriggerBase);
 public:
-	virtual void Archive(zCArchiver& arc);
-	{
-		zCVob::Archive(arc);
-		arc.WriteString("triggerTarget", triggerTarget);
-	}
-
-	virtual void Unarchive(zCArchiver& arc)
-	{
-		zCVob::Unarchive(arc);
-		arc.ReadString("triggerTarget", triggerTarget);
-		triggerTarget.Upper();
-	}
-
 	zCTriggerBase()
 		: zCVob()
 	{
@@ -25,6 +12,20 @@ public:
 		flags1.showVisual = 1;
 		flags1.ignoredByTraceRay = 1;
 	}
+
+	void Archive(zCArchiver& arc) override
+	{
+		zCVob::Archive(arc);
+		arc.WriteString("triggerTarget", triggerTarget);
+	}
+
+	void Unarchive(zCArchiver& arc) override
+	{
+		zCVob::Unarchive(arc);
+		arc.ReadString("triggerTarget", triggerTarget);
+		triggerTarget.Upper();
+	}
+
 
 	virtual ~zCTriggerBase() = default;
 

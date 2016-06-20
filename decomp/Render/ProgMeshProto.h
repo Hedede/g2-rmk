@@ -1,3 +1,19 @@
+struct zTPMEdge {
+	short unk[2];
+};
+struct zTPMWedge {
+	int unk[6];
+};
+struct zTPMVertexUpdate {
+	int unk;
+};
+struct zTPMTriangle {
+	short unk[3];
+};
+struct zTPMTriangleEdges {
+	short unk[3];
+};
+
 // Empty class (no fields)
 struct zCProgMeshBuilder {
 	int BuildProgMeshProto(zCMesh *sourceMesh, zCProgMeshProto* destProgMesh, zCArray<int>* posListRemap, int buildFlags);
@@ -13,7 +29,21 @@ public:
 	}
 
 	struct zCSubMesh {
-		char data[88];
+		  zCMaterial* material;
+		  int unk1;
+
+		  int numVerts;
+
+		  zCArrayAdapt<zTPMWedge> wedges;
+		  zCArrayAdapt<float> unk2;
+		  zCArrayAdapt<uint16_t> unk3;
+		  zCArrayAdapt<zTPlane> unk4;
+		  zCArrayAdapt<uint16_t> unk5;
+		  zCArrayAdapt<zTPMVertexUpdate> vertexUpdates;
+		  zCArrayAdapt<zTPMTriangleEdges> triangleEdges;
+		  zCArrayAdapt<float> unk6;
+
+		  int unk7;
 	};
 
 	~zCProgMeshProto();

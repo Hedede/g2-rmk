@@ -1,3 +1,6 @@
+float zLIGHTMAP_GRID = 25.0;
+float zLIGHTMAP_GRID_HALF = zLIGHTMAP_GRID * 0.5;
+
 class zCLightMap : public zCObject {
 	Z_OBJECT(zCLightMap);
 public:

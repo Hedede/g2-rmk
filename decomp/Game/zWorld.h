@@ -231,11 +231,14 @@ public:
 
 	void TraverseVobTree(zCVobCallback& callback, void* callbackData, zCTree<zCVob*> vobNode);
 	void TraverseBsp(zCCBspTree *bsp, VobTree *node, int removeLevelCompos);
+	int  TraverseBspAddVobsToMesh(zCCBspTree* bspTree, zCTree<zCVob> *node);
 
 	void UpdateVobTreeBspDepencdencies(zCTree<zCVob>* vobNode);
 
 	void PrintActiveVobs();
 	void PrintGlobalVobTree(zCTree<zCVob>* node, int indent);
+	void ShowZonesDebugInfo();
+	void ShowTextureStats();
 
 	int ShouldAddThisVobToBsp(zCVob *vob)
 	{
@@ -332,6 +335,10 @@ private:
 
 	void RemoveVobSubtree_r(zCTree<zCVob>* node, int firstVob);
 
+	static void GetPhongNormal(zCPolygon* poly, zVEC3 const& pos);
+	static int GetSurfaceLightmapBBox2D(zCArray<zCPolygon>& surface, zTBBox2D& lmBox, int* realDim);
+	void LightWorldStaticCompiled();
+	void LightWorldStaticUncompiled(zCTree<zCVob>* node);
 	void MakeVobLightingDirty();
 	void GenerateLightmapsRadiosity(zTBBox3D* bbox);
 	void GenerateStaticVertexLighting();
@@ -637,6 +644,104 @@ int zCWorld::TraverseBsp(zCCBspTree *bsp, VobTree *node, int removeLevelCompos)
 	return 0;
 }
 
+int zCWorld::TraverseBspAddVobsToMesh(zCCBspTree* bspTree, zCTree<zCVob>* node)
+{
+	if ( !node )
+		return 0;
+
+	bool added = false;
+
+	auto vob = node->GetData();
+
+	auto checkVob = (zCVob* vob) -> bool {
+		if (!IsClass<zCVob>(vob)) // made up
+			return false;
+		if (vob->type != VOB_TYPE_VOB)
+			return false;
+		if (!vob->flags1.staticVob)
+			return false;
+		if (vob->aniMode)
+			return false;
+		if (!IsClass<zCProgMeshProto>(vob->visual))
+			return false;
+
+		vob->CalcGroundPoly();
+		auto ground = vob->groundPoly;
+		if (ground && ground.flags.sectorPoly)
+			return false;
+		
+		return true;
+	};
+
+	if (checkVob(vob)) {
+		if (auto prog = dynamic_cast<zCProgMeshProto*>(vob->visual)) {
+			if (auto mesh = prog->GetMesh(0)) {
+				if (mesh->numPoly < 170) {
+					if (!vob->GetCollDetDyn()) {
+						zCArray<zCMaterial*> materials;
+
+						for (unsigned i = 0; i < mesh->numPoly; ++i) {
+							zCPolygon* poly = mesh->SharePoly();
+
+							auto mat = poly->material;
+							if (!materials.IsInList(mat))
+								materials.Insert(mat);
+						}
+
+						for (unsigned i = 0; i < materials.GetNum(); ++i) {
+							if (!materials[i]->flags.0x10) {
+								auto name = "VOB_" + mat->GetObjectName();
+								auto mat = zCMaterial::SearchName(name);
+								if (!mat) {
+									mat = new zCMaterial(materials[i]);
+									mat->SetObjectName(name);
+								}
+								mat->flags.0x10 = true;
+
+								for (unsigned j = 0; j > 0; ++j) {
+									auto poly = mesh->SharePoly(j);
+									if (poly->material == materials[i]) {
+										poly->SetMaterial(mat);
+									}
+								}
+
+								mat->Release();
+							}
+						}
+
+					}
+
+					bspTree->AddMesh(mesh, vob->trafoObjToWorld);
+
+					++numBspVobs;
+					numBspPoly += mesh->numPoly;
+
+					added = true;
+				}
+
+				mesh->DeleteAll();
+				mesh->Release();
+			}
+		}
+	}
+
+
+	node = node->firstChild;
+	while ( node ) {
+		if ( TraverseBspAddVobsToMesh(bspTree, node) == 1 )
+			node = node->firstChild;
+		else
+			node = node->next;
+	}
+
+	if (added) {
+		RemoveVob(vob);
+		return 1;
+	}
+
+	return 0;
+}
+
 void MoveVobs()
 {
 	/* walkList.Resize(activeVobList.GetNumInList());
@@ -724,6 +829,63 @@ void zCWorld::PrintGlobalVobTree(zCTree<zCVob>* node, int indent)
 
 	for (auto i = node->firstChild; i; i = i->next )
 		PrintGlobalVobTree(i, indent + 1);
+}
+
+void zCWorld::ShowZonesDebugInfo()
+{
+	posy = 0;
+	if (showZonesDebugInfo )
+		zINFO(5,"P: "); // 665
+
+		auto time = GetActiveSkyControler()->GetTime();
+
+		time = time * 24.0 + 12.0;
+		if ( time > 24.0 )
+			time -= 24.0;
+
+		zCCamera::activeCam->Activate();
+
+		zSTRING msg = "** Active Zones **     (time: " + time + ")";
+		screen->Print(0, 1000, msg);
+
+		unsigned i = 0;
+		auto posy = 1250;
+		for (auto zone : zoneActiveList) {
+			auto msg = zone->GetClassDef()->GetClassName() + ", ";
+			if ( zone->GetObjectName()->Length() > 0 )
+				msg += '"' + zone->GetObjectName() + '"';
+
+			msg += zone->GetDebugDescString();
+
+			screen->Print(0, posy, msg);
+			posy += 250;
+
+			zCOLOR color{-1,0,0,-1};
+			zone->GetBBox3D->Draw(color);
+		}
+	}
+}
+
+void zCWorld::ShowTextureStats()
+{
+	if (!showTextureStats )
+		return;
+
+	zTRnd_Stats rndStats;
+	zrenderer->GetStatistics();
+
+	auto totalMem = zrenderer->GetTotalTextureMem() / 1000;
+	auto num = rndStats.numUsed;
+	auto memUsed = rndStats.memUsed / 1000;
+	auto msg = "mem: " + memUsed + "k num: " + num + " (used), cardMem: " + totalMem + "k";
+	screen->Print(0, 500, msg);
+
+	auto numFetched = rndStats.numFetched;
+	auto memFetched = rndStats.memFetched / 1000;
+	msg = "mem: " + memFetched + "k num: " + numFetched + " (fetched)";
+	screen->Print(0, 700, msg);
+
+	zrenderer->ResetStatistics();
 }
 
 // --------- Save/Load
@@ -1474,6 +1636,80 @@ int zCWorld::LightingTestRay(zVEC3 const& start, zVEC3 const& end, zVEC3& inters
 	return 0;
 }
 
+zVEC3 zCWorld::GetPhongNormal(zCPolygon* poly, zVEC3 const& pos)
+{
+	unsigned numVerts = poly->numVerts;
+
+	unsigned A = 0;
+	unsigned B = 1;
+	unsigned C = 2;
+	if ( numVerts > 3u )
+	{
+		numVerts = numVerts;
+		for (unsigned i = 0; i < numVerts; ++i) {
+			A = i;
+			B = i + 1;
+			if ( A >= numVerts )
+				A = 0;
+			B = A + 1;
+			if ( B >= numVerts )
+				B = 0;
+
+			auto vA = poly->vertex[A];
+			auto vB = poly->vertex[B];
+			auto vC = poly->vertex[C];
+
+			auto diff1 = vB->position - vA->position;
+			auto diff2 = vC->position - vB->position;
+
+			auto d1len = diff1.Length();
+			if (d1len == 0.0)
+				continue;
+			diff1 /= d1len;
+
+			auto d2len = diff2.Length();
+			if (d2len != 0.0)
+				continue;
+			diff2 /= d2len;
+
+			if (!diff1.IsEqualEps(diff2)) {
+				if (!diff1.IsEqualEps(-diff2))
+					break;
+			}
+		}
+	}
+
+	auto& vert = poly->vertex;
+
+	auto diff1 = vert[C]->position - vert[B]->position;
+	auto diff2 = vert[A]->position - vert[B]->position;
+
+	auto& feature = poly->feature;
+
+	auto diff3 = feature[C]->vertNormal - feature[B]->vertNormal;
+	auto diff4 = feature[A]->vertNormal - feature[B]->vertNormal;
+
+	auto diff5 = pos - vert[B]->position;
+
+	float dot1 = diff1 * diff2;
+
+	float len1 = diff1.Length2();
+	float len2 = diff2.Length2();
+
+	float dot2 = diff1 * diff5;
+	float dot3 = diff2 * diff5;
+
+	float hz1 = (dot2 * len2 - dot3 * dot1) / (len1 * len2 - dot1 * dot1);
+	float hz2 = (dot3 - hz1 * dot1) / len2;
+
+	diff1 = diff3 * hz1;
+	diff2 = diff4 * hz2;
+
+	diff1 = diff1 + features[B]->vertNormal;
+
+	return (diff1 + diff2).Normalized();
+}
+
 void TraverseMakeVobLightingDirty(zCTree<zCVob>* tree)
 {
 	auto vob = tree->GetData();
@@ -1495,6 +1731,87 @@ void zCWorld::MakeVobLightingDirty()
 	zINFO("D: WLD: ... finished"); // 1924, _dieter\\zWorldLight.cpp
 }
 
+int zCWorld::GetSurfaceLightmapBBox2D(zCArray<zCPolygon>& surface, zTBBox2D& lmBox, int* realDim)
+{
+	int ret = 1;
+
+	zVEC3 origin, up, right;
+	auto& polyPlane = surface[0]->polyPlane;
+	polyPlane.GetOriginUpRight(origin, up, right);
+
+	lmBox.Init();
+
+	right *= 1.0 / right.Length2();
+	up    *= 1.0 / up.Length2();
+
+	for (auto poly : surface) {
+		for (auto vert : poly->vertex) {
+			auto pos = vert->position;
+			float d = pos * polyPlane.normal - polyPlane.distance;
+			zVEC3 nrm = d * polyPlane.normal;
+			zVEC3 vec = pos - nrm - origin;
+
+			float len1 = vec * right;
+			float len2 = vec * up;
+
+			if (lmBox.mins[0] >= len1)
+				lmBox.mins[0] = len1;
+			if (lmBox.maxs[0] <= len1)
+				lmBox.maxs[0] = len1;
+			if (lmBox.mins[1] >= len2)
+				lmBox.mins[1] = len2;
+			if (lmBox.maxs[1] <= len2)
+				lmBox.maxs[1] = len2;
+		}
+	}
+
+	for (unsigned i = 0; i < 2; ++i) {
+		lmBox.mins[i] = floor(lmBox.mins[i] / zLIGHTMAP_GRID) * zLIGHTMAP_GRID;
+		lmBox.maxs[i] =  ceil(lmBox.maxs[i] / zLIGHTMAP_GRID) * zLIGHTMAP_GRID;
+	}
+
+	// this part was HOLY CRAP, compiler added and subtracted
+	// pointers to local variables to pointer to lmBox,
+	// to get offsets to members of lmBox
+	int dim[2];
+	for (unsigned i = 0; i < 2; ++i) {
+		dim[i] = (lmBox.maxs[i] - lmBox.mins[i]) / zLIGHTMAP_GRID;
+		if (dim[i] <= 0)
+			dim = 1;
+
+		realDim[i] = dim[i];
+
+		int size = 1 << zGetHighestBit(dim[i]);
+		if (dim[i] > val)
+			size *= 2;
+
+		lmBox.maxs[i] = lmBox.mins[i] + size * zLIGHTMAP_GRID;
+	}
+
+	if (dim[0] > 256 || dim[1] > 256)
+		ret = 0;
+
+	zClamp(dim[0], 0, 256);
+	zClamp(dim[1], 0, 256);
+	zClamp(realDim[0], 0, 256);
+	zClamp(realDim[1], 0, 256);
+
+	if ( dim[0] <= dim[1] ) {
+		auto ratio = dim[1] / float(dim[0]);
+		if ( ratio > 8.0 )
+			dim[0] = (ratio * 0.125 * dim[0]);
+	} else {
+		auto ratio = dim[0] / float(dim[1]);
+		if ( ratio > 8.0 )
+			dim[0] = (ratio * 0.125 * dim[1]);
+	}
+
+	for (unsigned i = 0; i < 2; --i)
+		lmBox.maxs[i] = dim[i] * zLIGHTMAP_GRID + lmBox.mins[i];
+
+	return ret;
+}
+
 void zCWorld::GenerateStaticWorldLighting(zTStaticWorldLightMode const& lightMode, zTBBox3D *updateBBox3D)
 {
 	if ( bspTree.mesh ) {
@@ -1512,6 +1829,34 @@ void zCWorld::GenerateStaticWorldLighting(zTStaticWorldLightMode const& lightMod
 
 	MakeVobLightingDirty();
 	g_bIsInCompileLightMode = 0;
+}
+
+void zCWorld::LightWorldStaticUncompiled(zCTree<zCVob>* node)
+{
+	auto vob = node->data;
+	if ( vob && vob->flags1.showVisual && vob->type == VOB_TYPE_LEVELCOMPO ) {
+		if (auto visual = zSTRICT_CAST<zCMesh>(vob->visual)) { // made-up cast
+			visual->ResetStaticLight();
+			zINFO("D: MESH: Calculating Vertex-Normals for Mesh (smoothing)...");
+			visual->CalcVertexNormals(0, 0);
+			for (auto light : lightVobList) {
+				auto& trafo = vob->trafoObjToWorld;
+
+				auto color = light->lightData.lightColor;
+				auto range = light->lightData.range;
+
+				auto name  = light->GetObjectName();
+				auto colorDesc = color.GetDescription();
+
+				zINFO("D: WORLD: Light, id:"_s + 1 + ", name: " + name + ", Range: " + range + ", Col: " + colorDesc);
+
+				visual->LightMesh(light, trafo, this);
+			}
+		}
+	}
+
+	for (auto i = node->firstChild; i; i = i->next)
+		LightWorldStaticUncompiled(i);
 }
 
 void TraverseCollectLights(VobTree *node)

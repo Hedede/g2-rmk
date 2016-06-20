@@ -1,4 +1,29 @@
-class zCMesh : zCVisual {
+class zCMesh : public zCVisual {
+	Z_OBJECT(zCMesh);
+public:
+	virtual ~zCMesh();
+	virtual void Render(zTRenderContext &);
+	virtual void GetBBox3D();
+	virtual void GetOBBox3D();
+	virtual void GetVisualName();
+	virtual void DynLightVisual(zCArray<zCVobLight *>	const &,zMAT4 *);
+	virtual void CanTraceRay();
+	virtual void TraceRay(zVEC3 const &,zVEC3 const &,int,zTTraceRayReport	&);
+	virtual void GetFileExtension(int);
+	virtual void GetAlphaTestingEnabled();
+	virtual void SetAlphaTestingEnabled(int);
+	virtual void LoadVisualVirtual(zSTRING	const &);
+
+	zCPolygon* SharePoly(int i)
+	{
+		if (polyArray)
+			return &polyArray[i];
+
+		return polyList[i];
+	}
+
+	void LightMesh(zCVobLight& light, zMAT4& meshTrafoObjToWorld, zCWorld* wld);
+
 private:
 	int numPoly;
 	int numVert;
@@ -12,9 +37,9 @@ private:
 	zCPolygon*     polyArray;
 	zCVertFeature* featArray;
 
-	zTBBox3D        bbox3D;
+	zTBBox3D    bbox3D;
 
-	zCOBBox3D        obbox3D;
+	zCOBBox3D   obbox3D;
 
 	int masterFrameCtr;
 
@@ -28,3 +53,13 @@ private:
 	int    numVertAlloc;
 	int    numPolyAlloc;
 };
+
+void zCMesh::LightMesh(zCVobLight *light, zMAT4 *meshTrafoObjToWorld, zCWorld *world)
+{
+	auto lpos = light.GetPositionWorld() * meshTrafoObjToWorld.InverseLinTrafo();
+
+	for (unsigned i = 0; i < numVert; ++i)
+		vertList[i]->MyIndex = 0;
+	for (unsigned i = 0; i < numPoly; ++i)
+		polyList[i]->LightStatic(light, lpos, meshTrafoObjToWorld, world);
+}

@@ -75,7 +75,11 @@ private:
 
 class zCVobLight : public zCVob {
 	Z_OBJECT(zCVobLight);
+private:
+	static zCArray<zCVobLightPreset*> lightPresetList;
 public:
+	static void CleanupVobLight();
+
 	zCVobLight()
 		: zCVob()
 	{
@@ -119,6 +123,14 @@ private:
 	zTRayTurboValMap<zCPolygon *, int> lightMap;
 	zSTRING lightPreset;
 };
+
+void zCVobLight::CleanupVobLight()
+{
+	for (auto preset : lightPresetList)
+		preset->Release();
+
+	lightPresetList.DeleteList();
+}
 
 void zCVobLight::SetRange(float r, int doBackup)
 {

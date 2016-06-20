@@ -98,6 +98,11 @@ public:
 		return numInArray;
 	}
 
+	int GetNum() const
+	{
+		return GetNumInList();
+	}
+
 	void Resize(int newSize)
 	{
 		AllocAbs(newSize);

@@ -104,6 +104,11 @@ public:
 		return numInArray;
 	}
 
+	int GetNum() const
+	{
+		return GetNumInList();
+	}
+
 	int InsertEnd(T& val)
 	{
 		if (numAlloc < numInArray + 1) {

@@ -181,6 +181,8 @@ public:
 		zWLD_LOAD_MERGE_REPLACE_ROOT_VISUAL
 	};
 
+	void CompileWorld(zTBspTreeMode const& bspMode, float optimize, int removeLevelCompos, int editorMode, zCArray<zCPolygon *>* leakPolyList);
+
 	zCBspTree& GetBspTree()
 	{
 		return bspTree;
@@ -239,6 +241,7 @@ public:
 	void PrintGlobalVobTree(zCTree<zCVob>* node, int indent);
 	void ShowZonesDebugInfo();
 	void ShowTextureStats();
+	void PrintStatus();
 
 	int ShouldAddThisVobToBsp(zCVob *vob)
 	{
@@ -342,6 +345,7 @@ private:
 	void LightWorldStaticUncompiled(zCTree<zCVob>* node);
 	void MakeVobLightingDirty();
 	void GenerateLightmapsRadiosity(zTBBox3D* bbox);
+	void GenerateLightmaps(zTStaticWorldLightMode const& lightMode, zTBBox3D* updateBBox3D);
 	void GenerateStaticVertexLighting();
 	void GenerateStaticWorldLighting(zTStaticWorldLightMode const& lightMode, zTBBox3D *updateBBox3D);
 
@@ -887,6 +891,41 @@ void zCWorld::ShowTextureStats()
 	screen->Print(0, 700, msg);
 
 	zrenderer->ResetStatistics();
+}
+
+void zCWorld::PrintStatus()
+{
+	zINFO("D: *** World-Status ************************************");
+	zINFO("D: Engine, Date: " + zSTRING() + ", " + build_date);
+	zINFO("D: Objects in Main-Mem, shared between worlds:");
+	zINFO("D: - Num Meshes      : "_s + zCMesh::s_numMeshes);
+	zINFO("D: - Num Materials   : "_s + zCMaterial::classDef.objectList.GetNum());
+	zINFO("D: - Num Textures    : "_s + zCTexture::classDef.objectList.GetNum())
+	zINFO("D: - Num LightPresets: "_s + zCVobLight::lightPresetList.GetNum());
+	zINFO("D: - Num ParticleFX  : " + zCParticleFX::s_emitterPresetList.GetNum());
+	zINFO("D: World:");
+	zINFO("D: - Num Vobs        : "_s + globalVobTree.CountNodes());
+	zINFO("D: - Num activeVobs  : "_s + activeVobList.GetNum());
+	zINFO("D: - vobFarClipZ     : "_s + vobFarClipZScalability * vobFarClipZ);
+	zINFO("D: - perFrameCallback: "_s + perFrameCallbackList.GetNum());
+
+	if ( compiled ) {
+		zINFO("D: BSP: ");
+		if ( bspTree.bspTreeMode ) {
+			zINFO("D: - Mode            : outdoor");
+		} else {
+			zINFO("D: - Mode            : indoor");
+		}
+
+		zINFO("D: - Num meshPolys   : "_s + bspTree.mesh->numPoly);
+		zINFO("D: - Num treePolys   : "_s + bspTree.numPolys);
+		zINFO("D: - Num Leafs       : "_s + bspTree.numLeafs);
+		zINFO("D: - Num Nodes       : "_s + bspTree.numNodes);
+	} else {
+		zINFO("D: uncompiled world");
+	}
+
+	zINFO("D: *****************************************************");
 }
 
 // --------- Save/Load
@@ -1912,6 +1951,64 @@ void zCWorld::LightPatchMap(zCPatchMap* patchMap)
 	}
 }
 
+void zCWorld::LightWorldStaticCompiled()
+{
+	auto temp_light = new zCVobLight();
+
+	if ( bspTree.bspTreeMode == 1 ) {
+		temp_light->lightData.flags.lightType = 8;
+		temp_light->SetRange(100.0, 1);
+		AddVob(temp_light);
+
+		lightData.lightData.SetRGB(-1,-1,-1);
+
+		zVEC3 vec{0.4495, -0.866, -0.2181};
+
+		vec.Normalize();
+
+		temp_light->SetHeadingAtWorld(&vec);
+
+		lightVobList.DeleteList();
+		lightVobList.Insert(temp_light);
+	}
+
+	auto mesh = bspTree.mesh;
+	mesh->ResetStaticLight();
+	mesh->CalcVertexNormals(0, &bspTree);
+
+	zMAT4 mat;
+	Alg_Identity3D(mat);
+
+	for (auto light : lightVobList) {
+		auto color = light->lightData.lightColor;
+		auto range = light->lightData.range;
+
+		auto name  = light->GetObjectName();
+		auto colorDesc = color.GetDescription();
+
+		zINFO(9, "D: WORLD: Light, id:"_s + 1 + ", name: " + name + ", Range: " + range + ", Col: " + colorDesc); // 573
+
+		auto inv = mat.InverseLinTrafo();
+		auto lpos = light->GetPositionWorld() * inv;
+
+		for (auto i : range(0, mesh->numVert))
+			mesh->vertList[i]->MyIndex = 0;
+
+		for (auto i : range(0, mesh->numPoly))
+			mesh->polyList[i]->LightStatic(light, lpos, mat, this);
+	}
+
+	zINFO(5,"C: now smoothing sector border colors..."); // 578, zWorldLight.cpp
+
+	for (auto i : range(0, mesh->numPoly))
+		mesh->SharePoly(i)->SmoothSectorBorder(mesh, this);
+
+	zINFO(5,"C: ...done"); // 582
+
+	RemoveVob(temp_light);
+	Release(temp_light);
+}
+
 void zCWorld::LightWorldStaticUncompiled(zCTree<zCVob>* node)
 {
 	auto vob = node->data;
@@ -2000,6 +2097,175 @@ void zCWorld::GenerateLightmapsRadiosity(zTBBox3D* bbox)
 	}
 
 	patchMapList.DeleteList();
+}
+
+void zCWorld::GenerateLightmaps(zTStaticWorldLightMode const& lightMode, zTBBox3D *updateBBox3D)
+{
+	if ( !compiled )
+		return;
+
+	bspTree.mesh->CreateListsFromArrays();
+
+	auto curFPword = zCFPUControler::GetCurrentControlWord();
+	zfpuControler.SetPrecision_53();
+
+	zINFO(3,"D: WORLD: LM: Generating Lightmaps.. ("_s + lightMode + ")"); // 1812, _dieter/zWorldLight.cpp
+
+	lightVobList.DeleteList();
+	TraverseCollectLights(&globalVobTree);
+
+	numLightmaps = 0;
+	numLightmapTexel = 0;
+	numLightmapsRejected = 0;
+	traceRayLastPoly = 0;
+
+	zLIGHTMAP_GRID = 25.0;
+	if ( lightMode < 2 ) {
+		zLIGHTMAP_GRID *= 2.5;
+	} else if ( lightMode == 2 ) {
+		zLIGHTMAP_GRID += 25.0;
+	}
+	zLIGHTMAP_GRID_HALF = zLIGHTMAP_GRID * 0.5;
+
+	if ( !updateBBox3D ) {
+		auto mesh = bspTree.mesh;
+		for (unsigned i = 0; i < mesh->numPoly; ++i)
+			Release(mesh->polyList[i]->lightmap);
+		bspTree.mesh->hasLightmaps = false;
+	}
+
+	GenerateSurfaces(1, updateBBox3D);
+
+	bspTree.mesh->hasLightmaps = numLightmaps > 0;
+
+	lightVobList.DeleteList();
+
+	worldRenderMode = 1;
+	bspTree.worldRenderMode = 1;
+
+	zINFO(3,"D: WORLD: LM: ok. numLightmaps: "_s + numLightmaps + ", numLMReject: " + numLightmapsRejected + ", numTexel: " + numLightmapTexel +  ", mem: " + numLightmapTexel / 1024 + "k"); // 1850
+
+	zCFPUControler::SetControlWord(curFPword);
+}
+
+void zCWorld::CompileWorld(zTBspTreeMode const& bspMode, float optimize, int removeLevelCompos, int editorMode, zCArray<zCPolygon *>* leakPolyList)
+{
+	if ( compiled ) {
+		zWARNING("D: zWorld(zCWorld::CompileWorld): World already compiled !"); // 1382, zWorld.cpp
+		return;
+	}
+
+	s_compilingWorld = 1;
+	curFPword = zCFPUControler::GetCurrentControlWord();
+	zfpuControler.SetPrecision_53();
+
+	zINFO(2,"D: WORLD: *** STARTING BSP-TREE COMPILING ***"); // 1394
+
+	cbspTree = new zCCBspTree();
+	cbspTree->SetBspTreeMode(bspMode);
+
+	TraverseBsp(cbspTree, &globalVobTree, removeLevelCompos);
+
+	bool hasPortals = false;
+	if ( cbspTree->bspMode ) {
+		zINFO("D: WORLD: BspMode: OUTDOOR");
+
+		for (auto material : zCMaterial::classDef.objectList) {
+			if ( material->IsPortalMaterial() ) {
+				hasPortals = true;
+				break;
+			}
+		}
+
+		if ( editorMode )
+			hasPortals = 0;
+
+		numBspVobs = 0;
+		numBspPoly = 0;
+
+		if ( hasPortals ) {
+			zINFO("D: WORLD: Building Sector-BSP...");
+
+			cbspTree->BuildTree(cbspTree, optimize);
+			cbspTree->CreateBspSectors();
+
+			if ( zoptions->Parm("MERGEVOBSWITHLEVEL") ) {
+				bspTree.Build(cbspTree);
+
+				s_bAddVobsToMesh = 1;
+				TraverseBspAddVobsToMesh(cbspTree, &globalVobTree);
+				s_bAddVobsToMesh = 0;
+
+				bspTree.DisposeTree();
+
+				UpdateVobTreeBspDependencies(&globalVobTree);
+
+				cbspTree->CreateBspSectors();
+			}
+
+			cbspTree->DeleteTree();
+
+			if ( !editorMode ) {
+				auto mesh = cbspTree->mesh;
+				cbspTree->ArraysToLists();
+				cbspTree->ConvertTrisToNPolys(mesh->numPoly, mesh, 1);
+			}
+		} else {
+			if ( zoptions->Parm("MERGEVOBSWITHLEVEL") ) {
+				bspTree.Build(cbspTree);
+
+				s_bAddVobsToMesh = 1;
+				TraverseBspAddVobsToMesh(cbspTree, &globalVobTree);
+				s_bAddVobsToMesh = 0;
+
+				bspTree.DisposeTree();
+
+				UpdateVobTreeBspDependencies(&globalVobTree);
+
+				cbspTree->CreateBspSectors();
+			}
+		}
+
+		zINFO("D: WORLD: Building real BSP...");
+
+		cbspTree->MarkGhostOccluder();
+		cbspTree->BuildTree(optimize);
+
+		bspTree.Build(cbspTree);
+	} else {
+		zINFO("D: WORLD: BspMode: INDOOR");
+
+		if ( !editorMode ) {
+			auto mesh = cbspTree->mesh;
+			cbspTree->ArraysToLists();
+			cbspTree->ConvertTrisToNPolys(mesh->numPoly, mesh, 1);
+			editorMode = 0;
+		}
+
+		zCArray<zCPolygon*> portalList;
+		if ( !editorMode )
+			bspTree.PreprocessIndoorPortals(cbspTree->mesh, &portalList);
+
+		cbspTree->BuildTree(optimize);
+		bspTree.Build(cbspTree);
+
+		if ( !editorMode )
+			bspTree.PostprocessIndoorPortals(&portalList);
+
+		if ( leakPolyList )
+			bspTree.FindLeaks(eakPolyList);
+	}
+
+	Delete(cbspTree);
+
+	compiled = 1;
+	compiledEditorMode = editorMode;
+
+	zCFPUControler::SetControlWord(curFPword);
+
+	zINFO(2,"C: WORLD: vobs removed: "_s + numBspVobs + " , polys added: " + numBspPoly); // 1504
+
+	zINFO(2,"D: WORLD: *** FINISHED BSP-TREE COMPILING ***"); // 1505
 }
 
 // ----------- Debug
@@ -2123,7 +2389,7 @@ void zCWorld::Archive(zCArchiver& arc)
 	if (s_firstVobSaveWorld == &this->globalVobTree && compiled) {
 		arc.WriteChunkStart("MeshAndBsp", 0);
 
-		if ( !dword_9A4428 ) // zCWorld::s_inUnarc
+		if ( !s_compilingWorld ) // zCWorld::s_compilingWorld
 			bspTree.mesh->ShareFeatures();
 
 		SaveBspTree(arcFile);
@@ -2188,7 +2454,7 @@ void zCWorld::Archive(zCArchiver& arc)
 
 void zCWorld::Unarchive(zCArchiver& arc)
 {
-	dword_9A4428 = 0;
+	s_compilingWorld = 0;
 
 	auto arcFile = arc.GetFile();
 	auto progressBar = GetProgressBar();

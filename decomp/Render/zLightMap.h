@@ -30,6 +30,19 @@ private:
 	zCTexture* texture = nullptr;
 };
 
+#pragma pack(push, 2)
+struct zCTransfer {
+	zCPatch *parent;
+	short val;
+};
+#pragma pack(pop)
+
+struct zCTransferConstr {
+	zCPatch *parent;
+	float val;
+};
+
+
 /*
  * As far as I see,
  * PatchMap used to calculate lightning.
@@ -45,7 +58,9 @@ struct zCPatch {
 	zVEC3 vec4;
 	__int16 unk3;
 	__int16 unk4;
-	zCArray arr0;
+
+	zCArray<zCTransfer> transfers;
+
 	zVEC3 vec6;
 };
 

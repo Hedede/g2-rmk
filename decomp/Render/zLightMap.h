@@ -63,9 +63,8 @@ struct zCPatchMap {
 		// also implicit deletings of arrays
 	}
 
-	char unk0;
-	__int16 unk1;
-	__int16 unk2;
+	bool lit;
+	short dim[2];
 
 	zCArray<zCPatch*>   patches;
 	zCArray<zCPolygon*> surface;

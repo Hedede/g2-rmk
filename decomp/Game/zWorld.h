@@ -337,6 +337,7 @@ private:
 
 	static void GetPhongNormal(zCPolygon* poly, zVEC3 const& pos);
 	static int GetSurfaceLightmapBBox2D(zCArray<zCPolygon>& surface, zTBBox2D& lmBox, int* realDim);
+	void LightPatchMap(zCPatchMap* patchMap);
 	void LightWorldStaticCompiled();
 	void LightWorldStaticUncompiled(zCTree<zCVob>* node);
 	void MakeVobLightingDirty();
@@ -1829,6 +1830,86 @@ void zCWorld::GenerateStaticWorldLighting(zTStaticWorldLightMode const& lightMod
 
 	MakeVobLightingDirty();
 	g_bIsInCompileLightMode = 0;
+}
+
+void zCWorld::LightPatchMap(zCPatchMap* patchMap)
+{
+	auto poly = patchMap->surface[0];
+
+	for (auto light : lightVobList) {
+		zVEC3 lpos = light->GetPositionWorld();
+
+		float outside = 0.0;
+		for (unsigned i = 0; i < 3; ++i) {
+			if (lpos[i] < bbox.mins[i]) {
+				float f = (lpos[i] - bbox.mins[0]);
+				outside += f * f;
+			} else if (lpos[i] > bbox.maxs[i]) {
+				float f = (lpos[i] - bbox.maxs[0]);
+				outside += f * f;
+			}
+		}
+
+		float range = light->lightData.range;
+		float rangeSq = range * range;
+
+		if ( outside > rangeSq )
+			continue;
+
+		auto color = light->lightData.lightColor;
+		zVEC3 colorVec{color[2], color[1], color[0]};
+
+		auto rangeInv = light->lightData.rangeInv;
+		auto spotCone = cos(light->lightData.spotConeAngleDeg / 180.0 * Pi);
+
+		for (auto patch : patchMap->patches) {
+			auto diff = patch - lpos;
+
+			if (diff.Length2() > rangeSq)
+				continue;
+
+			diff.Normalize();
+
+			float dot = -(diff * patch->vec2);
+			if ( dot < 0.0 )
+				continue;
+
+			// (BYTE1(light->lightData.flags) & 0xF0) == 16
+			if (light->lightData.flags.lightType == 4) {
+				auto atvec = light->trafoObjToWorld.GetAtVector();
+				if (atvec * diff < spotCone)
+					continue;
+			}
+
+			float rng = diff.Length() * rangeInv;
+			float val = 1.0 - rng * rng;
+
+			zClamp(val, 0.0, 1.0);
+
+			float val2 = dot * val;
+
+			zVEC3 ray = patch->vec1 - lpos;
+
+			if (TraceRayNearestHit(lpos, ray, light, 0x10))
+				continue;
+
+			auto vob = traceRayReport.foundVob;
+			if (!vob && !vob->flags1.staticVob)
+				continue;
+
+			auto normal = poly->polyPlane.normal * 11.0;
+			auto end = normal + patch->vec0;
+
+			zVEC3 inters;
+			zCPolygon* dummy;
+			if (bspTree.TraceRay(lpos, end, 0x120, inters, &dummy, 0))
+				continue;
+
+			patch->vec3 = colorVec * val2;
+			patch->vec4 += patch->vec3;
+			patchMap->lit = 1;
+		}
+	}
 }
 
 void zCWorld::LightWorldStaticUncompiled(zCTree<zCVob>* node)

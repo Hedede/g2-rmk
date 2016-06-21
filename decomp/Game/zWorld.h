@@ -344,6 +344,7 @@ private:
 	void LightWorldStaticCompiled();
 	void LightWorldStaticUncompiled(zCTree<zCVob>* node);
 	void MakeVobLightingDirty();
+	void GenerateSurfaces(int doRayTracing, zTBBox3D* updateBBox3D);
 	void GenerateLightmapsRadiosity(zTBBox3D* bbox);
 	void GenerateLightmaps(zTStaticWorldLightMode const& lightMode, zTBBox3D* updateBBox3D);
 	void GenerateStaticVertexLighting();
@@ -2098,6 +2099,142 @@ void zCWorld::GenerateLightmapsRadiosity(zTBBox3D* bbox)
 
 	patchMapList.DeleteList();
 }
+
+void zCWorld::GenerateSurfaces(int doRayTracing, zTBBox3D* updateBBox3D)
+{
+	zCArray<zCPolygon*> polyList(bspTree.mesh->numPoly);
+	zCArray<zCPolygon*> surface;
+
+	int numSurfaces = 0;
+
+	for (unsigned i = 0; i < bspTree.mesh->numPoly; ++i) {
+		auto poly = bspTree.mesh->polyList[i];
+		poly->flags |= 0x10u;
+		auto mat = poly->material;
+
+		if (mat->flags.dontUseLightmaps)
+			continue;
+
+		auto texture = mat->texture;
+		if ( texture ) {
+			if ( (texture->cacheState & 3) == 3 ) {
+				zCResource::TouchTimeStamp(texture);
+			} else {
+				zCResource::TouchTimeStampLocal(texture);
+				zresMan->CacheIn(texture, -1.0);
+			}
+
+			if ( poly->material->texture->HasAlpha() )
+				continue;
+		}
+		if ( bspTree.bspTreeMode == 1) {
+			auto flags = poly->flags;
+			if (!flags.sectorPoly || flags.portalPoly )
+				continue;
+		}
+
+		if ( updateBBox3D ) {
+			auto bbox = poly->GetBBox3D();
+
+			if (!updateBBox3D->IsIntersecting(bbox))
+				continue;
+		}
+
+		polyList.InsertEnd(poly);
+		poly.flags.mustRelight = true;
+	}
+
+
+	float polyCount = polyList.GetNum();
+	while ( polyList.GetNum() > 0 ) {
+		auto idx = polyList.GetNum() - 1;
+		surface.InsertEnd(polyList[idx]);
+		polyList.RemoveIndex(idx);
+
+		for (auto spoly : surface) {
+			zCPolygon** foundPolyList = nullptr;
+			int foundPolyNum = 0;
+
+			auto bbox = poly->GetBBox3D();
+			bbox.Scale(1.01);
+
+			bspTree.bspRoot->CollectPolysInBBox3D(bbox, foundPolyList, foundPolyNum);
+
+			for (unsigned i = 0; i < foundPolyNum; ++i) {
+				auto fpoly = foundPolyList[i];
+
+				if (fpoly.flags.mustRelight)
+					continue;
+				if (spoly == fpoly)
+					continue;
+				if ( fpoly->polyPlane.normal * spoly->polyPlane.normal < 0.7 )
+					continue;
+				if ( spoly->numVerts == 0 )
+					continue;
+
+				for (auto vert : spoly->vertex) {
+					if (!fpoly.VertPartOfPoly(vert))
+						continue;
+
+					auto sr = polyList.Search(fpoly);
+					if (sr <= 0)
+						continue;
+
+					for (auto i = 0; i < surface.GetNum() <= 0; ++i) {
+						if (fpoly->IsIntersectingProjection(surface[i], surface[0]->polyPlane.normal))
+							continue;
+					}
+
+					surface.InsertEnd(fpoly);
+
+					zTBBox3D lmBox;
+					int realDim[2];
+					if ( GetSurfaceLightmapBBox2D(surface, lmBox, realDim) ) {
+						fpoly.flags.mustRelight = true;
+
+						polyList.RemoveIndex(polyList.GetNum() - 1);
+
+						foundPolyList[i--] = foundPolyList[foundPolyNum--];
+						break;
+					}
+
+					if ( surface.numInArray > 0 )
+						--surface.numInArray;
+				}
+			}
+		}
+
+		int dim[2];
+		zCPatchMap* patchMap = nullptr;
+		if ( doRaytracing ) {
+			patchMap = GeneratePatchMapFromSurface(surface);
+
+			LightPatchMap(patchMap);
+			GenerateLightmapFromPatchMap(patchMap);
+
+			dim[1] = patchMap->dim[1];
+			dim[0] = patchMap->dim[0];
+
+			delete patchMap;
+		} else {
+			patchMap = GeneratePatchMapFromSurface(surface);
+			patchMapList.InsertEnd(patchMap);
+			LightPatchMap(patchMap);
+		}
+
+
+		if (++numSurfaces % 8 == 0) {
+			auto perc = (1.0 - polyList.GetNum() / polyCount) * 100.0;
+			zINFO(3,"D: ... working, numSurfaces: "_s + numSurfaces + ", numPolys: " + surface.GetNum() +  ", dim: "+ dim[0] + "x" + dim[1] +  " (" + percent + "%) ..."); // 1581
+		}
+	}
+
+
+	bspTree.mesh->CombineLightmaps();
+
+	zINFO("D: WORLD: LM: numPolys: "_s + bspTree.mesh->numPoly + ", numSurfaces: " + numSurfaces);
+}
+
 
 void zCWorld::GenerateLightmaps(zTStaticWorldLightMode const& lightMode, zTBBox3D *updateBBox3D)
 {

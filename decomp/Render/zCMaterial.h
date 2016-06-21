@@ -118,14 +118,16 @@ private:
 
 	float environmentalMappingStrength;
 
-	uint8_t smooth : 1;
-	uint8_t dontUseLightmaps : 1;
-	uint8_t texAniMap : 1;
-	uint8_t lodDontCollapse : 1;
-	uint8_t noCollDet : 1;
-	uint8_t forceOccluder : 1;
-	uint8_t environmentalMapping: 1;
-	uint8_t polyListNeedsSort : 1;
+	struct {
+		uint8_t smooth : 1;
+		uint8_t dontUseLightmaps : 1;
+		uint8_t texAniMap : 1;
+		uint8_t lodDontCollapse : 1;
+		uint8_t noCollDet : 1;
+		uint8_t forceOccluder : 1;
+		uint8_t environmentalMapping: 1;
+		uint8_t polyListNeedsSort : 1;
+	} flags;
 
 	uint8_t matUsage;
 	uint8_t libFlag;

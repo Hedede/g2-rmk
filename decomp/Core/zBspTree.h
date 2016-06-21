@@ -41,6 +41,19 @@ private:
 	zBOOL         compiled;
 };
 
+zTBBox3D ctestbbox3D;
+zCArray<zCPolygon*> cfoundPolyList{2048};
+
+bool zCBspBase::CollectPolysInBBox3D(zTBBox3D& bbox, zCPolygon **& foundPolyList, int & foundPolyNum)
+{
+	ctestbbox3D = bbox;
+	CollectPolysInBBox3DRec();
+
+	foundPolyList = cfoundPolyList.array;
+	foundPolyNum  = cfoundPolyList.GetNum();
+	return cfoundPolyList.GetNum() != 0;
+}
+
 int zCBspTree::TraceRay(zVEC3 const& start, zVEC3 const& end, int traceFlags, zVEC3& inters, zCPolygon*& hitPoly, zCArray<zCVob *>* vobList)
 {
 	if ( vobList )

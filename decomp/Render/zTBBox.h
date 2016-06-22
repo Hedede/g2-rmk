@@ -7,15 +7,14 @@ class zTBBox3D {
 	zTBBox3D() = default;
 	zTBBox3D(zTBBox3D const& other) = default;
 
-
-	void SetMaximumBox()
+	void Init()
 	{
-		mins[0] = std::numeric_limits<float>::min();
-		mins[1] = std::numeric_limits<float>::min();
-		mins[2] = std::numeric_limits<float>::min();
-		maxs[0] = std::numeric_limits<float>::max();
-		maxs[1] = std::numeric_limits<float>::max();
-		maxs[2] = std::numeric_limits<float>::max();
+		mins[0] = std::numeric_limits<float>::max();
+		mins[1] = std::numeric_limits<float>::max();
+		mins[2] = std::numeric_limits<float>::max();
+		maxs[0] = std::numeric_limits<float>::min();
+		maxs[1] = std::numeric_limits<float>::min();
+		maxs[2] = std::numeric_limits<float>::min();
 	}
 
 	void SetMaximumBox()
@@ -37,6 +36,13 @@ class zTBBox3D {
 	{
 		auto dim = maxs - mins;
 		return dim.x * dim.y * dim.z;
+	}
+
+	bool IsIntersecting(zTBBox3D const& other)
+	{
+		return other.maxs[0] >= mins[0] && other.mins[0] <= maxs[0] &&
+		return other.maxs[1] >= mins[1] && other.mins[1] <= maxs[1] &&
+		return other.maxs[2] >= mins[2] && other.mins[2] <= maxs[2];
 	}
 
 	void SaveBIN(zCFileBIN& bin)

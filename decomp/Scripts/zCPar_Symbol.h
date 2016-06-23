@@ -13,13 +13,18 @@ enum zPAR_TYPE {
 	zPAR_TYPE_INT,
 	zPAR_TYPE_STRING,
 	zPAR_TYPE_CLASS,
-	zPAR_TYPE_FUNC,	
+	zPAR_TYPE_FUNC,
 	zPAR_TYPE_PROTOTYPE,
 	zPAR_TYPE_INSTANCE
 };
 
 struct zCPar_Symbol {
 	zCPar_Symbol() = default;
+
+	zPAR_TYPE GetType() const
+	{
+		return type;
+	}
 
 private:
 	zSTRING name;
@@ -40,10 +45,8 @@ private:
 	// Rückgabewert bei Funktionen
 	int offset = 0;
 
-	static const int bitfield_ele         = ((1 << 12) - 1) <<  0;
-	static const int bitfield_type        = ((1 <<  4) - 1) << 12;
-
-	uint16_t bitfield = 0;
+	uint16_t ele  : 12;
+	uint16_t type : 4;
 	zPAR_FLAGS flags  = 0;
 
 	int filenr   = 0;

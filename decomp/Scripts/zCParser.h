@@ -1,3 +1,5 @@
+uint8_t tree_version = 50;
+
 class zCParser {
 public:
 	typedef void (*MessageFunc) (zSTRING);
@@ -5,6 +7,11 @@ public:
 	static uint8_t GetVersion()
 	{
 		return tree_version;
+	}
+
+	static void SetVerssion(uint8_t ver)
+	{
+		tree_version = ver;
 	}
 
 	int SaveDat(zSTRING& fileName);
@@ -19,10 +26,20 @@ public:
 	{
 		msgfunc = func;
 	}
-
-	int GetLastInstance()
+	
+	int GetLastErrorLine() const
 	{
-		return this->instance;
+		return errorline;
+	}
+
+	int GetCurrentFunc() const
+	{
+		return labelcount;
+	}
+
+	int GetLastInstance() const
+	{
+		return instance;
 	}
 
 	void SetStopOnError(int stop)
@@ -30,14 +47,47 @@ public:
 		stop_on_error = stop;
 	}
 
+	void EnableDatSave(zBOOL enable)
+	{
+		datsave = enable;
+	}
+
 	void EnableTreeSave(zBOOL enable)
 	{
-		this->treesave = enable;
+		treesave = enable;
 	}
 
 	void EnableTreeLoad(zBOOL enable)
 	{
-		this->treeload = enable;
+		treeload = enable;
+
+	}
+
+	int GetNumFiles() const
+	{
+		return files.GetNumInList();
+	}
+
+	zSTRING GetFileName(int idx)
+	{
+		if (idx > file.GetNum()) {
+			return "";
+		}
+		return files[idx]->GetName();
+	}
+
+
+	bool IsStackFull() const
+	{
+		return stack.ReachedEnd();
+	}
+
+	void PrevWord();
+
+	zCPar_TreeNode* ParseExpression()
+	{
+		auto tok = GetNextToken();
+		return ParseExpression(tok, -1);
 	}
 
 	int* CallFunc(int funcIndex, ...);
@@ -47,18 +97,91 @@ public:
 		return CallFunc(index);
 	}
 
-	int GetNumFiles()
+	void GetParameter(zSTRING& out);
+	void GetParameter(float& out);
+	void GetParameter(int& out);
+
+	int CheckClassSize(zSTRING& className, int size)
+
+	zCPar_Symbol* GetSymbol(zSTRING const& name);
+	zCPar_Symbol* GetSymbol(int index);
+	zCPar_Symbol* GetSymbolInfo(int index)
 	{
-		return files.GetNumInList();
+		return GetSymbol(index);
 	}
+	zSTRING GetSymbolInfo(int nr, int& typ, int& ele);
+
+	int GetBaseClass(zCPar_Symbol* symbol)
+
+	int GetBase(int index);
+
+	void* GetInstance();
+	void* GetInstanceAndIndex(int& index);
+
+	int GetInstance(int classId, int pos);
+	int GetPrototype(int classId, int pos);
+
+	int SaveInstance(zSTRING& name, void *adr)
+	{
+		name.Upper();
+		auto idx = symtab.GetIndex(name);
+		return SaveInstance(idx, adr);
+	}
+
+	int SetInstance(int instanceId, void* newAddr);
+	int SetInstance(zSTRING const& name, void* newAddr);
+
+	zBOOL CreatePrototype(int index, void* new_offset);
+	zBOOL CreateInstance(int instanceId, void* mem);
+
+	zBOOL CreatePrototype(zSTRING& name, void* adr)
+	{
+		auto idx = symtab.GetIndex(name);
+		return CreatePrototype(idx, adr);
+	}
+	zBOOL CreateInstance(zSTRING& name, void* adr)
+	{
+		name.Upper();
+		auto idx = symtab.GetIndex(name);
+		return CreateInstance(idx, adr);
+	}
+
+	zSTRING GetText(int symidx, int idx);
+	zSTRING GetText(zSTRING& name, int array);
+
+	void ShowSymbols()
+	{
+		symtab.Show();
+	}
+
+	void CloseViews()
+	{
+		if ( win_code )
+			screen->RemoveItem(win_code);
+		debugmode = 0;
+	}
+
+	void Reset();
+	int ResetGlobalVars();
+	int ClearAllInstanceRefs();
+	int ClearInstanceRefs(void* adr);
+
+private:
+	zCPar_TreeNode* PushTree(zCPar_TreeNode *node);
+
+
+	zCPar_TreeNode* ParseExpressionEx(zSTRING& tok);
+
+
+	zCPar_Symbol* SearchFuncWithStartAddress(int startAddress);
 
 private:
 	void Error(zSTRING& errmsg, int);
 
-	MessageFunc msgfunc;
+	MessageFunc msgfunc = nullptr;
 
 	// Liste von eingebundenen Files
-	zCArray <zCPar_File *> files;
+	zCArray<zCPar_File*> files;
 
 	// Symboltable
 	zCPar_SymbolTable     symtab;
@@ -67,50 +190,66 @@ private:
 
 	zCPar_DataStack datastack;
 
+	zCPar_Symbol* self = nullptr;
 
-	zCPar_Symbol* self;
 
-	//Ab hier uninteressant, passiert beim Parsen selbst:
 	zSTRING fname;
-	zString mainfile;
-	zBOOL compiled;
-	zBOOL treesave;
-	zBOOL datsave;
-	zBOOL parse_changed;
-	zBOOL treeload;
-	zBOOL mergemode;
-	int linkingnr;   
-	int linec;
-	int line_start;
-	zBOOL ext_parse;
-	char* pc_start;
-	char* pc;
-	char* oldpc;
-	char* pc_stop;
-	char* oldpc_stop;
-	zBOOL params;
-	int in_funcnr;
-	int in_classnr;
-	int stringcount;
-	zCPar_Symbol*  in_func;
-	zCPar_Symbol*  in_class;
-	zBOOL  error;
-	zBOOL  stop_on_error;
-	int errorline;
+	zSTRING mainfile;
+
+	zBOOL compiled = false;
+	zBOOL treesave = false;
+	zBOOL datsave  = true;
+	zBOOL parse_changed = false;
+	zBOOL treeload  = false;
+	zBOOL mergemode = false;
+
+	int linkingnr = -1;
+
+	int linec      = 0;
+	int line_start = 0;
+
+	zBOOL ext_parse = false;
+
+	char* pc_start   = nullptr;
+	char* pc         = nullptr;
+	char* oldpc      = nullptr;
+	char* pc_stop    = nullptr;
+	char* oldpc_stop = nullptr;
+
+	zBOOL params = false;
+
+	int in_funcnr   = -1;
+	int in_classnr  = -1;
+
+	int stringcount = 10000;
+
+	zCPar_Symbol*  in_func  = nullptr;
+	zCPar_Symbol*  in_class = nullptr;
+
+	zBOOL error = false;
+	zBOOL stop_on_error = true;
+	int errorline = 0;
+
 	char* prevword_index[16];
 	int prevline_index[16];
-	int prevword_nr;
+
+	int prevword_nr = 0;
 	zSTRING aword;
-	int _instance;
-	int instance_help;
-	zCViewProgressBar* progressBar;
-	zCPar_TreeNode*  tree;
-	zCPar_TreeNode*  treenode;
-	zCView* win_code;
-	zBOOL debugmode;
+
+	int instance = -1;
+	int instance_help = -1;
+
+	zCViewProgressBar* progressBar = nullptr;
+
+	zCPar_TreeNode* tree = nullptr;
+	zCPar_TreeNode* treenode = nullptr;
+
+	zCView* win_code = nullptr;
+	zBOOL debugmode = -1;
 	int curfuncnr;
-	int labelcount;
-	int* labelpos;
+
+	int labelcount = 0;
+	int* labelpos  = nullptr;
 
 	zCList <zSTRING>*     add_funclist;
 

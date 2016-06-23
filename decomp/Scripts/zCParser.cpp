@@ -1,14 +1,9 @@
 static zCParser* zCParser::cur_parser;
-struct zCParser * zCParser::GetParser()
+struct zCParser* zCParser::GetParser()
 {
 	return zCParser::cur_parser;
 }
-/*
-class zCParser {
-	int linec; // 20A4h
-	bool stop_on_error; //20E0h
-};
-*/
+
 void zCParser::Reset()
 {
 	this->datsave = 1;
@@ -54,8 +49,7 @@ void zCParser::Reset()
 	memset(this->prevword_index, 0, sizeof(this->prevword_index));
 	memset(this->prevline_index, 0, sizeof(this->prevline_index));
 
-	for ( i = 0; i < this->files.NumInList(); ++i )
-	{
+	for ( i = 0; i < this->files.NumInList(); ++i ) {
 		if ( files[i] )
 			delete file[i];
 	}
@@ -71,6 +65,58 @@ void zCParser::Reset()
 	symtab.Insert(newsym);
 	instance_help = symtab.GetIndex(newsym);
 }
+
+int zCParser::ClearAllInstanceRefs()
+{
+	for (unsigned i = 0; i < symtab.GetNumInList(); ++i) {
+		auto sym = symtab.GetSymbol(i);
+		if ( sym && sym->GetType == zPAR_TYPE_INSTANCE )
+			SetInstance(i, 0);
+	}
+	return 1;
+
+}
+int zCParser::ClearInstanceRefs(void* adr)
+{
+	for (unsigned i = 0; i < symtab.GetNumInList(); ++i) {
+		auto sym = symtab.GetSymbol(i);
+		if (!sym)
+		       continue;
+		if (sym->GetType() != zPAR_TYPE_INSTANCE)
+		       continue;
+		if (sym->GetInstanceAdr() == adr)
+			SetInstance(i, 0);
+	}
+	return 1;
+}
+
+void zCParser::ResetWithVarReferenceList(zCArray<int>& refList, void* adr)
+{
+	for (auto idx : refList) {
+		sym = symtab.GetSymbol(idx);
+		if (!sym)
+			continue;
+		if ( sym->GetType() == zPAR_TYPE_INSTANCE)
+			continue;
+		if (sym->GetInstanceAdr() == adr)
+			SetInstance(i, 0);
+	}
+}
+
+int zCParser::ResetGlobalVars()
+{
+	for (auto i = 0; i < symtab.GetNumInList(); ++i ) {
+		auto sym = symtab.GetSymbol(i);
+		if (sym && sym->GetType() != zPAR_TYPE_INT)
+		       continue;
+		if (sym->HasFlag(0x3F))
+			continue;
+		for (auto j = 0; j < sym->ele; ++j)
+			sym->SetValue(0, j);
+	}
+	return 1;
+}
+
 
 void zCParser::Error(zSTRING& errmsg, int pos)
 {
@@ -108,10 +154,15 @@ void zCParser::Error(zSTRING& errmsg, int pos)
 void zCParser::Message(zSTRING& msg)
 {
 	if ( msgfunc )
-	{
 		this->msgfunc(msg);
-	}
 	zERROR::Message("U:PAR: " + msg);
+}
+
+
+int zCParser::CheckClassSize(zSTRING& className, int size)
+{
+	int idx = GetIndex(className);
+	return CheckClassSize(idx, size);
 }
 
 zCPar_Symbol* zCParser::GetSymbol(zSTRING const& name)
@@ -120,18 +171,48 @@ zCPar_Symbol* zCParser::GetSymbol(zSTRING const& name)
 	return symtab.GetSymbol(tmp.Upper());
 }
 
+zCPar_TreeNode* zCParser::ParseExpressionEx(zSTRING& tok)
+{
+	oldpc_stop = this->pc_stop;
+	oldpc = pc;
+
+	char* data = tok.Data();
+
+	pc = data;
+	pc_stop = &data[tok.Length() + 1];
+	ext_parse = 1;
+
+	tok = GetNextToken();
+	return Parse_Expression(tok, -1);
+}
+
 zCPar_Symbol* zCParser::GetSymbol(int index)
 {
 	return symtab.GetSymbol(index);
+}
+
+int zCParser::GetInt(int index, int array)
+{
+	int out = 0;
+	auto sym = symtab.GetSymbol(index);
+	if ( sym && sym->GetType() == zPAR_TYPE_INT)
+		sym->GetValue(&out, array);
+	return out;
 }
 
 zSTRING zCParser::GetText(int symidx, int idx)
 {
 	zSTRING text;
 	auto sym = GetSymbol(symidx);
-	if ( sym && (sym->bitfield & 0xF000) == 0x3000 )
+	if ( sym && sym->GetType() == zPAR_TYPE_STRING)
 		sym->GetValue(&text, idx);
 	return text;
+}
+
+zSTRING zCParser::GetText(zSTRING& name, int array)
+{
+	auto idx = symtab.GetIndex(name, array);
+	return GetText(idx, 0);
 }
 
 int zCParser::ReadVarType()
@@ -234,19 +315,12 @@ void zCParser::PushDataValue(int val)
 
 int zCParser::PopDataValue()
 {
-	int result;
-
-	result = datastack.Pop();
-	if (v2 == 64)
-	{
+	int result = datastack.Pop();
+	if (result == 64) {
 		result = datastack.Pop(v1);
-	}
-	else if (v2 == 65)
-	{
+	} else if (result == 65) {
 		result = *(int*)datastack.Pop(v1);
-	}
-	else
-	{
+	} else {
 		result = 0;
 	}
 	return result;
@@ -258,16 +332,11 @@ float zCParser::PopFloatValue()
 	float result;
 
 	val = datastack.Pop();
-	if ( val == 64 )
-	{
+	if ( val == 64 ) {
 		result = datastack.PopFloat();
-	}
-	else if ( val == 65 )
-	{
+	} else if ( val == 65 ) {
 		result = *(float *)datastack.Pop();
-	}
-	else
-	{
+	} else {
 		result = 0.0;
 	}
 	return result;
@@ -281,15 +350,10 @@ zSTRING* zCParser::PopString()
 
 int zCParser::PopVarAddress()
 {
-	int result;
-
-	result = datastack.Pop();
-	if (result == 65)
-	{
+	int result = datastack.Pop();
+	if (result == 65) {
 		result = datastack.Pop();
-	}
-	else
-	{
+	} else {
 		datastack.Pop();
 		result = 0;
 	}
@@ -588,12 +652,69 @@ void zCParser::GetParameter(zSTRING& out)
 	out = *PopString();
 }
 
+zSTRING zCParser::GetSymbolInfo(int nr, int& typ, int& ele)
+{
+	auto sym = symtab.GetSymbol(nr);
+	if ( sym ) {
+		typ = sym->GetType();
+		ele = sym->ele;
+		return sym->name;
+	}
+
+	typ = 0;
+	ele = -1;
+
+	return "";
+}
+
+int zCParser::GetInstance(zCParser *this, int classId, int pos)
+{
+	auto classSym = symtab.GetSymbol(classId);
+	if (!classSym)
+		return -1;
+
+	for (auto i = pos; pos < symtab.GetNumInList(); ++i) {
+		auto sym = symtab.GetSymbol(i);
+		int type = sym->GetType();
+		if (type != zPAR_TYPE_INSTANCE)
+			continue;
+		if ( sym->HasFlag(1) && sym->name.Search(0, ".", 1u) < 0 ) {
+			auto parent = sym->GetParent();
+			if ( parent ) {
+				int type = parent->GetType();
+				if (type == zPAR_TYPE_PROTOTYPE) {
+					parent = parent->GetParent();
+				if ( parent == classSym )
+					return sym;
+			}
+		}
+	}
+
+	return -1;
+}
+
+int zCParser::GetPrototype(int classId, int pos)
+{
+	auto classSym = symtab.GetSymbol(classId);
+	if (!classSym)
+		return -1;
+
+	for (auto i = pos; pos < symtab.GetNumInList(); ++i) {
+		auto sym = symtab.GetSymbol(i);
+		auto type = sym->GetType();
+		if (type == zPAR_TYPE_PROTOTYPE && sym->GetParent() == classSym )
+			return i;
+	}
+
+	return -1;
+}
+
 int zCParser::GetBase(int index)
 {
 	auto* symbol = symtab.GetSymbol(index);
 	if (symbol) {
-		int type = (symbol->bitfield & zCPar_Symbol::bitfield_type) >> 12;
-		if ( type == 6 || type == 7 ) {
+		int type = symbol->GetType();
+		if (type == zPAR_TYPE_PROTOTYPE || type == zPAR_TYPE_INSTANCE ) {
 			auto* parent = symbol->GetParent();
 			return symtab->GetIndex(parent->name);
 		}
@@ -606,9 +727,10 @@ int zCParser::GetBaseClass(zCPar_Symbol* symbol)
 	if (!symbol)
 		return -1;
 
-	if ((symbol->bitfield & 0xF000) == 0x7000 ||
-	    (symbol->bitfield & 0xF000) == 0x6000)
-		symbol = zCPar_Symbol::GetParent(symbol);
+	auto type = symbol->GetType();
+
+	if (type == zPAR_TYPE_PROTOTYPE || type == zPAR_TYPE_INSTANCE )
+		symbol = symbol->GetParent();
 
 	if ( symbol )
 		return symtab.GetIndex(symbol->name);
@@ -693,7 +815,6 @@ zCPar_TreeNode* zCParser::CreateLeaf(char tok, zCPar_TreeNode *node)
 	return result;
 }
 
-// private:
 zCPar_TreeNode* zCParser::PushTree(zCPar_TreeNode *node)
 {
 	while (node)
@@ -701,17 +822,34 @@ zCPar_TreeNode* zCParser::PushTree(zCPar_TreeNode *node)
 	return node;
 }
 
+zCPar_Symbol* zCParser::SearchFuncWithStartAddress(int startAddress)
+{
+	for (auto i = 0; i <= symtab.GetNumInList(); ++i) {
+		int stackPos;
+		auto sym = symtab.GetSymbol(i);
+		auto type = sym->GetType();
+		if ( type == zPAR_TYPE_FUNC || type == zPAR_TYPE_PROTOTYPE ) {
+			stackPos = 0;
+			sym->GetStackPos(&stackPos, 0);
+			if ( startAddress == stackPos )
+				return sym;
+		}
+	}
+	return nullptr;
+}
+
 void* zCParser::GetInstanceAndIndex(int& index)
 {
 	index = datastack.Pop();
 	if ( idx <= 0 )
-	{
 		return 0;
-	}
-	else
-	{
-		return (void *)symtab.GetSymbol(index)->GetOffset();
-	}
+	return (void *)symtab.GetSymbol(index)->GetOffset();
+}
+
+void* zCParser::GetInstance()
+{
+	int index;
+	return GetInstanceAndIndex(index);
 }
 
 void zCParser::SetPercentDone(int percent)
@@ -720,16 +858,30 @@ void zCParser::SetPercentDone(int percent)
 		progress.BarSetPercent(percent, zSTR_EMPTY);
 }
 
+zBOOL zCParser::CreatePrototype(int index, void* new_offset)
+{
+	zCPar_Symbol* sym = symtab->GetSymbol(index);
+	if (!symbol || symbol->GetType() != zPAR_TYPE_PROTOTYPE)
+		return false;
+
+	int func_offset;
+	sym->SetOffset(new_offset);
+	sym->SetUseInstance();
+	sym->GetStackPos(func_offset, 0);
+	DoStack(func_offset);
+	return 1;
+}
+
 zBOOL zCParser::CreateInstance(int instanceId, void* mem)
 {
-	zCPar_Symbol *symbol = symtab->GetSymbol(instanceId);
+	zCPar_Symbol* symbol = symtab->GetSymbol(instanceId);
 	if (!symbol || symbol->type != zPAR_TYPE_INSTANCE)
 		return 0;
 
 	symbol->SetOffset(symbol, int(mem));
 
 	int func_offset;
-	zCPar_Symbol::SetUseInstance(symbol);
+	symbol->SetUseInstance();
 	symbol->GetStackPos(func_offset, 0);
 
 	// Вызов конструктора instance
@@ -741,9 +893,8 @@ int zCParser::SetInstance(int instanceId, void* newAddr)
 {
 	auto sym = symtab.GetSymbol(instanceId);
 
-	if ( sym && sym->type == zPAR_TYPE_INSTANCE )
-	{
-		sym->SetOffset(sym, newAddr);
+	if ( sym && sym->GetType() == zPAR_TYPE_INSTANCE ) {
+		sym->SetOffset(newAddr);
 		return 1:
 	}
 
@@ -759,11 +910,52 @@ int zCParser::SetInstance(zSTRING const& instanceName, void* newAddr)
 			heroInst = sym;
 	}
 
-	if ( sym && sym->type == zPAR_TYPE_INSTANCE )
-	{
-		sym->SetOffset(sym, newAddr);
+	if ( sym && sym->GetType() == zPAR_TYPE_INSTANCE ) {
+		sym->SetOffset(newAddr);
 		return 1:
 	}
 
 	return 0;
+}
+
+zSTRING zCParser::GetInstanceValue(zSTRING& name, unsigned nr, void* adr, int array)
+{
+	name.Upper();
+	auto idx = symtab.GetIndex(name);
+
+	return GetInstanceValue(idx, nr, adr, array);
+}
+
+zSTRING zCParser::GetInstanceValue(int cindex, unsigned int nr, char *adr, int array)
+{
+	auto csym = symtab->GetSymbol(cindex);
+	if (!csym || csym->GetType() != zPAR_TYPE_CLASS)
+		return "";
+
+	if (nr <= 0 || nr >= csym->ele)
+		return "";
+
+	auto next = csym;
+	auto sym = next;
+	for (auto i = 0; i < csym->ele; ++i) {
+		next = next->GetNext();
+		auto offs = next->GetOffset();
+		switch (next->GetType()) {
+		case zPAR_TYPE_FUNC:
+			offs = next->GetOffset();
+			sym = symtab.GetSymbol(*(int)(adr + offs));
+			if (sym)
+				return sym->name;
+		default:
+			continue;
+		case zPAR_TYPE_INT:
+			return *(int*)(adr + offs);
+		case zPAR_TYPE_FLOAT:
+			return *(float*)(adr + offs);
+		case zPAR_TYPE_STRING:
+			return "\"" + *(zSTRING*)(adr + offs) + "\"";
+		}
+	}
+
+	return "";
 }

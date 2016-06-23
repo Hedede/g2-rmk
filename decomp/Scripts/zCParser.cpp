@@ -12,41 +12,52 @@ zCParser::zCParser(int symtab_size)
 	Reset();
 }
 
+zCParser::~zCParser()
+{
+	for (auto file : files)
+		Delete(file);
+
+	symtab.Clear();
+	strings.Clear();
+	stack.Clear();
+	datastack.Clear();
+}
+
 void zCParser::Reset()
 {
-	this->datsave = 1;
-	this->linkingnr = -1;
-	this->in_funcnr = -1;
-	this->in_classnr = -1;
-	this->stop_on_error = 1;
-	this->instance = -1;
-	this->instance_help = -1;
-	this->debugmode = -1;
-	this->self = 0;
-	this->compiled = 0;
-	this->parse_changed = 0;
-	this->mergemode = 0;
-	this->linec = 0;
-	this->line_start = 0;
-	this->ext_parse = 0;
-	this->pc_start = 0;
-	this->pc = 0;
-	this->oldpc = 0;
-	this->pc_stop = 0;
-	this->oldpc_stop = 0;
-	this->params = 0;
-	this->stringcount = 10000;
-	this->in_func = 0;
-	this->in_class = 0;
-	this->error = 0;
-	this->errorline = 0;
-	this->prevword_nr = 0;
-	this->tree = 0;
-	this->treenode = 0;
-	this->pad = 0;
-	this->labelcount = 0;
-	this->labelpos = 0;
-	this->msgfunc = 0;
+	datsave = 1;
+	linkingnr = -1;
+	in_funcnr = -1;
+	in_classnr = -1;
+	stop_on_error = 1;
+	instance = -1;
+	instance_help = -1;
+	debugmode = -1;
+	self = 0;
+	compiled = 0;
+	parse_changed = 0;
+	mergemode = 0;
+	linec = 0;
+	line_start = 0;
+	ext_parse = 0;
+	pc_start = 0;
+	pc = 0;
+	oldpc = 0;
+	pc_stop = 0;
+	oldpc_stop = 0;
+	params = 0;
+	stringcount = 10000;
+	in_func = 0;
+	in_class = 0;
+	error = 0;
+	errorline = 0;
+	prevword_nr = 0;
+	tree = 0;
+	treenode = 0;
+	pad = 0;
+	labelcount = 0;
+	labelpos = 0;
+	msgfunc = 0;
 
 	win_code = 0;
 	progressBar = 0;
@@ -160,9 +171,7 @@ void zCParser::Error(zSTRING& errmsg, int pos)
 	msg = "U:PAR: " + msg;
 
 	if (stop_on_error) {
-		zERROR::Report(zerr, zERR_TYPE_FATAL, 0,
-			       msg, -1, 0, 0x257,
-			       "P:\dev\g2addon\release\ZenGin\_ulf\zParser.cpp", 0);
+		zFATAL(msg); // 599, _ulf/zParser.cpp
 		sysExit();
 	}
 
@@ -174,7 +183,7 @@ void zCParser::Error(zSTRING& errmsg, int pos)
 void zCParser::Message(zSTRING& msg)
 {
 	if ( msgfunc )
-		this->msgfunc(msg);
+		msgfunc(msg);
 	zERROR::Message("U:PAR: " + msg);
 }
 
@@ -222,7 +231,7 @@ zSTRING zCParser::GetText(zSTRING& name, int array)
 
 int zCParser::ReadVarType()
 {
-	ReadWord(this->aword);
+	ReadWord(aword);
 	if (aword == "INT") {
 		return zPAR_TYPE_INT;
 	} else if (aword == "FLOAT") {
@@ -234,13 +243,22 @@ int zCParser::ReadVarType()
 	} else {
 		int symindex = symtab.getIndex(aword);
 		auto sym = GetSymbol(symindex);
-		if ( symbol && (symbol->bitfield & 0xF000) == 0x4000 )
-		{
-			return = symindex + 7;
-		}
+		if (sym && sym->GetType() == zPAR_TYPE_CLASS)
+			return symindex + zPAR_TYPE_INSTANCE;
 	}
 	Error(ParErr_SyntaxError + aword, 0);
 	return -1;
+}
+
+int zCParser::ReadFuncType()
+{
+	auto type = ReadVarType();
+
+	if (type == -1)
+		return -1;
+	if (type >= zPAR_TYPE_INSTANCE)
+		return zPAR_TYPE_INSTANCE;
+	return type;
 }
 
 int zCParser::ReadArray()
@@ -708,6 +726,32 @@ void zCParser::GetClassVarInfo(int index, zSTRING& varName, int& typ, int& ele)
 	}
 }
 
+zSTRING zCParser::GetClassVarInfo(cindex, int idx, int& typ, int& ele)
+{
+	auto csym = symtab.GetSymbol(cindex);
+	typ = -1;
+	ele = -1;
+	if (csym && csym->GetType() == zPAR_TYPE_CLASS) {
+		auto next = csym;
+		for (unsigned i = idx; i > 0; --i) {
+			if (next)
+				next = next->GetNext();
+		}
+
+		zSTRING name;
+		if ( next && next->HasFlag(4) ) {
+			typ = next->GetType();
+			ele = next->ele;
+			name = next->name;
+
+			auto pos = name.Search(0,".",1);
+			return name.Copied(pos+1, 255);
+		}
+
+	}
+	return "";
+}
+
 int zCParser::GetInstance(int classId, int pos)
 {
 	auto classSym = symtab.GetSymbol(classId);
@@ -894,6 +938,45 @@ zCPar_TreeNode* zCParser::CreateFloatLeaf()
 
 	leaf->label_index = 0;
 	leaf->stack_index = 1;
+
+	return leaf;
+}
+
+zCPar_TreeNode* zCParser::CreateStringLeaf()
+{
+	ReadWord(aword);
+
+	zSTRING word;
+	if (aword == "\"") {
+		PrevWord();
+		ReadString(word);
+
+		auto leaf = CreateLeaf(zPAR_TOK_NEWSTRING, 0);
+		leaf->name = word;
+		leaf->label_index = 0;
+		leaf->stack_index = 3;
+		return leaf;
+	}
+
+	ReadWord(word);
+	PrevWord();
+
+	if (word == "(") {
+		auto tn = treenode;
+
+		auto leaf = CreateLeaf(zPAR_TOK_SKIP,0);
+		treenode = leaf;
+
+		DeclareFuncCall(aword, 3);
+		treenode = tn;
+
+		return leaf;
+	}
+
+	auto leaf = CreateLeaf(zPAR_TOK_VAR,0);
+	leaf->name = aword;
+	leaf->label_index = 0;
+	leaf->stack_index = 3;
 
 	return leaf;
 }
@@ -1128,6 +1211,32 @@ void zCParser::AddClassOffset(zSTRING& name, int newOffset)
 	}
 }
 
+zCPar_TreeNode* zCParser::ParseExpression(int& tok, int prec)
+{
+	auto nexttok = tok;
+	auto primary = Parse_Expression_Primary(tok);
+	if ( primary ) {
+		while (tok <= zPAR_OP_UN_NEG) {
+			if ( Op_Prio[tok] <= prec )
+				break;
+			auto nexttok = GetNextToken();
+
+			auto rhs = Parse_Expression(tok, Op_Prio[tok]);
+			if (IsAssignmentOp(tok)  && primary->tok_type != zPAR_TOK_VAR)
+				Error("Assignment : Left operand is not a lvalue", 0);
+
+			auto leaf = CreateLeaf(tok);
+
+			newnode->left = primary;
+			newnode->right = rhs;
+			primary = newnode;
+
+			tok = nexttok;
+		}
+	}
+	return primary;
+}
+
 int zCParser::IsValid(zSTRING& className, void *data, zSTRING& p)
 {
 	auto line = p + ";";
@@ -1259,6 +1368,36 @@ void zCParser::ShowPCodeSpy(zSTRING& name)
 	}
 }
 
+void zCParser::ShowPCode(int adr, zCView *win_code, int instack)
+{
+	auto ynum = 0x1FFF / win_code->FontY();
+
+	win_code->ClrPrintwin();
+	stack.SetPopPos(adr);
+	win_code->ClrPrintwin();
+
+	zSTRING s = ":: ";
+	if (in_func)
+		s += in_func->name;
+	s += " ::\n";
+
+	win_code->Printwin(s);
+
+	zSTRING cmd;
+	while ( stack.GetPopPos() < stack.GetDynSize() ) {
+		GetNextCommand(cmd);
+
+
+		win_code->Printwin(cmd + "\n");
+
+		if (--ynum < 0)
+			break;
+	}
+
+	stack.SetPopPos(adr);
+}
+
+
 void zCParser::ShowCode(int index)
 {
 	auto pos = 0;
@@ -1302,4 +1441,85 @@ int zCParser::IsInAdditionalInfo(zSTRING const& name)
 	return false;
 	if ( !this->add_funclist.next )
 		return 0;
+}
+
+int zCParser::AutoCompletion(zSTRING& str)
+{
+	// messy original, was lazy
+	zSTRING res;
+	int found = 0;
+	for (unsigned i = 0; i < symtab.GetNumInList() <= 0; ++1) {
+		auto sym = symtab.GetSymbol(i);
+		if ( sym && sym->GetType() == zPAR_TYPE_INSTANCE ) {
+			if ( !sym->name->Search(0, str, 1u) ) {
+				++found;
+				res = str;
+				if ( found > 1 )
+					break;
+			}
+		}
+	}
+	return found == 1;
+}
+
+void zCParser::DefineExternalVar(zSTRING& name, void* adr, short type, uint16_t ele)
+{
+	auto sym = new zCPar_Symbol(name);
+	sym->name.Upper();
+	sym->type = type;
+	sym->ele  = ele;
+	sym->SetFlag(9);
+	sym->flags |= zPAR_FLAG_ALLOC_SPACE;
+
+	if ( symtab.Insert(sym) ) {
+		sym->SetDataAdr(adr);
+		return;
+	}
+
+	if ( compiled ) {
+		auto name = sym->name;
+		delete sym;
+		sym = GetSymbol(name);
+		sym->SetDataAdr(adr);
+		return;
+	}
+
+	Error("Redefined External Var. " + name, 0);
+}
+
+
+void zCParser::MergeFile(zSTRING& name)
+{
+	mergemode = 1;
+	error = 0;
+	treesave = 0;
+
+
+	Parse(name);
+	if ( !error ) {
+		CreatePCode();
+
+		for (auto i = 0; i < symtab.GetNumInList(); ++i) {
+			auto sym = symtab.GetSymbol(i);
+			if (!sym || !sym->GetType() != zPAR_TYPE_INSTANCE)
+				continue;
+			if (!sym->HasFlag(zPAR_FLAG_MERGED))
+				continue;
+			if (!sym->GetOffset())
+				continue;
+
+
+			int stpos = 0;
+			sym->GetStackPos(&stpos, 0);
+			stpos += 5;
+			zCPar_Symbol::SetUseInstance(sym);
+
+			DoStack(stpos);
+
+			Message("Instance " + sym->name + " merged.");
+		}
+	}
+
+	treesave = 0;
+	mergemode = 0;
 }

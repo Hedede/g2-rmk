@@ -89,6 +89,8 @@ struct zCParser {
 	void DeclareReturn();
 	void DeclareClass();
 
+	// Parse_Expression in original
+	zCPar_TreeNode* ParseExpression(int& tok, int prec);
 	zCPar_TreeNode* ParseExpression()
 	{
 		auto tok = GetNextToken();
@@ -116,6 +118,7 @@ struct zCParser {
 	}
 	zSTRING GetSymbolInfo(int nr, int& typ, int& ele);
 	void GetClassVarInfo(int index, zSTRING& varName, int& typ, int& ele);
+	zSTRING GetClassVarInfo(cindex, int idx, int& typ, int& ele);
 
 	int GetBaseClass(zCPar_Symbol* symbol)
 	int GetBaseClass(int index);
@@ -176,9 +179,13 @@ struct zCParser {
 
 	void SetInfoFile(zCList<zSTRING>* funcList, zSTRING const& fileName);
 	int IsInAdditionalInfo(zSTRING const& name);
+	int AutoCompletion(zSTRING& str);
+
+	void DefineExternalVar(zSTRING& name, void* adr, short type, uint16_t ele);
 
 	void ShowCode(int index);
 	void ShowPCodeSpy(zSTRING& name);
+	void ShowPCode(int adr, zCView *win_code, int instack);
 	void CloseViews()
 	{
 		if ( win_code )
@@ -192,10 +199,13 @@ struct zCParser {
 	int ClearInstanceRefs(void* adr);
 
 private:
+	void Error(zSTRING& errmsg, int);
+
 	void FindNext(char* str);
 
 	zCPar_TreeNode* CreateLeaf(char tok, zCPar_TreeNode *node);
 	zCPar_TreeNode* CreateFloatLeaf();
+	zCPar_TreeNode* CreateStringLeaf();
 	zCPar_TreeNode* PushTree(zCPar_TreeNode *node);
 
 	zCPar_TreeNode* ParseExpressionEx(zSTRING& tok);
@@ -203,12 +213,10 @@ private:
 	zCPar_Symbol* SearchFuncWithStartAddress(int startAddress);
 
 	int ReadVarType();
-	int ReadArray()
-
+	int ReadFuncType();
+	int ReadArray();
 
 private:
-	void Error(zSTRING& errmsg, int);
-
 	MessageFunc msgfunc = nullptr;
 
 	// Liste von eingebundenen Files

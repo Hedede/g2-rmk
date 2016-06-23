@@ -38,41 +38,102 @@ struct zSKeyMapping {
 class zCInput {
 public:
 	virtual void ~zCInput();
-	virtual void GetState(ushort);
-	virtual void SetState(ushort,int);
-	virtual void GetToggled(ushort);
-	virtual void SetDeviceEnabled(zTInputDevice,int);
-	virtual void GetDeviceEnabled(zTInputDevice);
-	virtual void GetDeviceConnected(zTInputDevice);
-	virtual void KeyPressed(int);
-	virtual void KeyToggled(int);
-	virtual void AnyKeyPressed();
-	virtual void ResetRepeatKey(int);
+	virtual float GetState(ushort)
+	{
+		return 0.0;
+	}
+	virtual void SetState(ushort,int) {}
+	virtual int GetToggled(ushort)
+	{
+		return 1;
+	}
+
+	virtual void SetDeviceEnabled(zTInputDevice,int) {}
+	virtual int GetDeviceEnabled(zTInputDevice)
+	{
+		return 1;
+	}
+	virtual int GetDeviceConnected(zTInputDevice)
+	{
+		return 1;
+	}
+
+	virtual int KeyPressed(int)
+	{
+		return 0;
+	}
+	virtual int KeyToggled(int)
+	{
+		return 0;
+	}
+	virtual int AnyKeyPressed()
+	{
+		return 0;
+	}
+
+	virtual void ResetRepeatKey(int) {}
+
 	virtual uint16_t GetKey(int,int)
 	{
 		return 0;
 	}
-	virtual void SetKey(int,int);
-	virtual void GetChar();
-	virtual void ClearKeyBuffer();
-	virtual void GetNumJoysConnected();
-	virtual void SetJoyDigitalEmu(int);
-	virtual void SetJoyEnabled(int);
-	virtual void JoyState(int,int);
-	virtual void JoyState(int);
-	virtual void GetMousePos(float &,float &,float &);
-	virtual void GetMouseButtonPressedLeft();
-	virtual void GetMouseButtonPressedMid();
-	virtual void GetMouseButtonPressedRight();
-	virtual void SetMouseSensitivity(float,float);
-	virtual void GetMouseSensitivity(float &,float &);
-	virtual void GetMouseIdle();
-	virtual void SetMouseFlipXY(int,int);
-	virtual void GetMouseFlipXY(int &,int &);
+	virtual void SetKey(int,int) {}
+
+	virtual char GetChar()
+	{
+		return 0;
+	}
+
+	virtual void ClearKeyBuffer() {}
+
+	virtual int GetNumJoysConnected()
+	{
+		return 0;
+	}
+
+	virtual void SetJoyDigitalEmu(int) {}
+	virtual void SetJoyEnabled(int) {}
+
+	virtual float JoyState(int,int)
+	{
+		return 0.0;
+	}
+	virtual float JoyState(int)
+	{
+		return 0.0;
+	}
+
+	virtual void GetMousePos(float &,float &,float &) {}
+
+	virtual int GetMouseButtonPressedLeft()
+	{
+		return 0;
+	}
+	virtual int GetMouseButtonPressedMid()
+	{
+		return 0;
+	}
+	virtual int GetMouseButtonPressedRight()
+	{
+		return 0;
+	}
+
+	virtual void SetMouseSensitivity(float,float) {}
+	virtual void GetMouseSensitivity(float &,float &) {}
+
+	virtual int GetMouseIdle()
+	{
+		return 0;
+	}
+
+	virtual void SetMouseFlipXY(int,int) {}
+	virtual void GetMouseFlipXY(int &,int &) {}
+
 	virtual void ProcessInputEvents() = 0;
 
 	void BindOption(zSTRING name, uint16_t value, zCArray<uint16_t> array);
 	void BindKeys(bool alternate_keys);
+
 private:
 	zCArraySort mappings;
 };

@@ -1,19 +1,19 @@
 class zTPortalInfo {
-      zBYTE  visible;        //
-      zBYTE  alpha;          //
+	zBYTE  visible;
+	zBYTE  alpha;
 };
 
 class oCPortalRoom {
-    zSTRING portalName;    //zSTRING 
-    zSTRING ownerNpc;      //zSTRING 
-    int ownerGuild;    //int           
+	zSTRING portalName;
+	zSTRING ownerNpc;
+	int ownerGuild;
 };
 
 class oCPortalRoomManager {
-   zSTRING*        oldPlayerPortal;    //
-   zSTRING*        curPlayerPortal;    //
-   oCPortalRoom*   oldPlayerRoom;      //
-   oCPortalRoom*   curPlayerRoom;      //
+	zSTRING*        oldPlayerPortal;
+	zSTRING*        curPlayerPortal;
+	oCPortalRoom*   oldPlayerRoom;
+	oCPortalRoom*   curPlayerRoom;
 
-    zCArraySort <oCPortalRoom*> portals;
+	zCArraySort<oCPortalRoom*> portals;
 };

@@ -74,6 +74,12 @@ class zCPar_SymbolTable {
 		return firstsym;
 	}
 
+	void ShrinkToFit()
+	{
+		table.ShrinkToFit();
+		tablesort.ShrinkToFit();
+	}
+
 private:
 	zCArray<zCPar_Symbol*> table;
 	zCArraySort<int> tablesort;
@@ -83,6 +89,15 @@ private:
 }
 
 struct zCPar_StringTable {
+	zCPar_StringTable(int num)
+		: table(num)
+	{ }
+
+	~zCPar_StringTable()
+	{
+		Clear();
+	}
+
 	int GetNumInList()
 	{
 		return table.GetNumInList();
@@ -102,11 +117,14 @@ struct zCPar_StringTable {
 
 	void Clear()
 	{
-		for (auto string : table) {
-			if (string)
-				delete string;
-		}
+		for (auto string : table)
+			Delete(string);
 		table.DeleteList();
+	}
+
+	void ShrinkToFit()
+	{
+		table.ShrinkToFit();
 	}
 
 	void Show()
@@ -117,6 +135,20 @@ struct zCPar_StringTable {
 		}
 	}
 
+	int Save(zSTRING& fileName)
+	{
+		auto file = zfactory->CreateZFile(fileName);
+		file->Create();
+
+		for (auto string : table) {
+			auto str = string ? *string : "";
+			file->Write(str);
+			file->Write("\n");
+		}
+		file->Close();
+		delete file;
+	}
+
 private:
-	zCArray <zSTRING *> table;
+	zCArray<zSTRING*> table;
 };

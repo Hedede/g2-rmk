@@ -1,5 +1,25 @@
-class zCPar_TreeNode {
-public:
+struct zCPar_TreeNode {
+	static auto MakeMonadicNode(char tok, zCPar_TreeNode *right)
+	{
+		auto node = new zCPar_TreeNode(tok, 0);
+		node->right = right;
+
+		return node;
+	}
+
+	static auto MakeDyadicNode(zCPar_TreeNode* left, char tok, zCPar_TreeNode *right)
+	{
+		auto node = new zCPar_TreeNode(tok, 0);
+		node->left = left
+		node->right = right;
+
+		return node;
+	}
+
+	zCPar_TreeNode();
+	zCPar_TreeNode(char tok, int index);
+	zCPar_TreeNode(char tok, zSTRING& name, int index);
+
 	void SetNext(zCPar_TreeNode *next)
 	{
 		this->next = next;
@@ -14,6 +34,7 @@ public:
 	{
 		this->right = right;
 	}
+
 private:
 	zSTRING name;
 	zPAR_TOK tok_type;

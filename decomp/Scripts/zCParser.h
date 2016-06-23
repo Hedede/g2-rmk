@@ -84,6 +84,7 @@ struct zCParser {
 	}
 
 	void PrevWord();
+	void ReadWord(zSTRING& word);
 
 
 	void DeclareReturn();
@@ -176,6 +177,7 @@ struct zCParser {
 
 	void CreateVarReferenceList(zSTRING const& className, zCArray<int>& refList);
 	int Reparse(zSTRING& fileName);
+	int Parse(zSTRING fileName);
 
 	void SetInfoFile(zCList<zSTRING>* funcList, zSTRING const& fileName);
 	int IsInAdditionalInfo(zSTRING const& name);
@@ -199,6 +201,8 @@ struct zCParser {
 	int ClearInstanceRefs(void* adr);
 
 private:
+	static bool enableParsing;
+
 	void Error(zSTRING& errmsg, int);
 
 	void FindNext(char* str);

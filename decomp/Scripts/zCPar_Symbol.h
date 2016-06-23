@@ -32,13 +32,13 @@ private:
 
 	//Inhalt des Symbols, Pointer oder Primitiver Typ
 	union {
-		void *data_ptr;
-		int *data_pint;
-		float *data_pfloat;
-		zSTRING *data_pstring;
-		int data_int;
-		float data_float;
-	} content;
+		void*    data_ptr;
+		int*     data_pint;
+		float*   data_pfloat;
+		zSTRING* data_pstring;
+		int      data_int;
+		float    data_float;
+	}; // content;
 
 	// Offset bei Klassenvariablen
 	// Adresse bei Instanzen

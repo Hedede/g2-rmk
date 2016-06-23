@@ -4,6 +4,14 @@ struct zCParser* zCParser::GetParser()
 	return zCParser::cur_parser;
 }
 
+zCParser::zCParser(int symtab_size)
+	: symtab{0}, strings{0}, stack{64000u}, datastack{}
+{
+	if ( symtab_size > 0 )
+		symtab->SetSize(symtab_size);
+	Reset();
+}
+
 void zCParser::Reset()
 {
 	this->datsave = 1;
@@ -64,6 +72,18 @@ void zCParser::Reset()
 	sym->bitfield = 0x7001;
 	symtab.Insert(newsym);
 	instance_help = symtab.GetIndex(newsym);
+}
+
+void zCParser::CreateVarReferenceList(zSTRING const& className, zCArray<int>& refList)
+{
+	auto classIndex = zparser.GetIndex(className);
+	if ( classIndex >= 0 ) {
+		for (auto i = 0; i < symtab.GetNumInList(); ++i ) {
+			if (!MatchClass(i, className))
+				continue;
+			refList.Insert(i);
+		}
+	}
 }
 
 int zCParser::ClearAllInstanceRefs()
@@ -171,21 +191,6 @@ zCPar_Symbol* zCParser::GetSymbol(zSTRING const& name)
 	return symtab.GetSymbol(tmp.Upper());
 }
 
-zCPar_TreeNode* zCParser::ParseExpressionEx(zSTRING& tok)
-{
-	oldpc_stop = this->pc_stop;
-	oldpc = pc;
-
-	char* data = tok.Data();
-
-	pc = data;
-	pc_stop = &data[tok.Length() + 1];
-	ext_parse = 1;
-
-	tok = GetNextToken();
-	return Parse_Expression(tok, -1);
-}
-
 zCPar_Symbol* zCParser::GetSymbol(int index)
 {
 	return symtab.GetSymbol(index);
@@ -236,6 +241,26 @@ int zCParser::ReadVarType()
 	}
 	Error(ParErr_SyntaxError + aword, 0);
 	return -1;
+}
+
+int zCParser::ReadArray()
+{
+	zSTRING word;
+	ReadWord(word);
+
+	int res = 0;
+	if ( word == "[" ) {
+		PrevWord();
+	} else {
+		res = ReadInt();
+
+		auto exp = "]"_s;
+		ReadWord(aword);
+		if ( aword != exp )
+			Error(ParErr_Expected +  "'" + exp + "'");
+	}
+
+	return res;
 }
 
 int zCParser::SaveDat(zSTRING& fileName)
@@ -667,7 +692,23 @@ zSTRING zCParser::GetSymbolInfo(int nr, int& typ, int& ele)
 	return "";
 }
 
-int zCParser::GetInstance(zCParser *this, int classId, int pos)
+void zCParser::GetClassVarInfo(int index, zSTRING& varName, int& typ, int& ele)
+{
+	varName.Upper();
+
+	auto csym = symtab.GetSymbol(index);
+	typ = -1;
+	ele = -1;
+	if ( csym && csym->GetType() == zPAR_TYPE_CLASS ) {
+		auto sym = symtab.GetSymbol(csym->name + "." + varName);
+		if ( sym && sym->HasFlag(4) ) {
+			typ = sym->GetType()
+			ele = sym->ele;
+		}
+	}
+}
+
+int zCParser::GetInstance(int classId, int pos)
 {
 	auto classSym = symtab.GetSymbol(classId);
 	if (!classSym)
@@ -678,15 +719,18 @@ int zCParser::GetInstance(zCParser *this, int classId, int pos)
 		int type = sym->GetType();
 		if (type != zPAR_TYPE_INSTANCE)
 			continue;
-		if ( sym->HasFlag(1) && sym->name.Search(0, ".", 1u) < 0 ) {
-			auto parent = sym->GetParent();
-			if ( parent ) {
-				int type = parent->GetType();
-				if (type == zPAR_TYPE_PROTOTYPE) {
-					parent = parent->GetParent();
-				if ( parent == classSym )
-					return sym;
-			}
+		if ( sym->HasFlag(1))
+			continue;
+		if (sym->name.Search(0, ".", 1u) >= 0)
+			continue;
+
+		auto parent = sym->GetParent();
+		if ( parent ) {
+			int type = parent->GetType();
+			if (type == zPAR_TYPE_PROTOTYPE)
+				parent = parent->GetParent();
+			if ( parent == classSym )
+				return sym;
 		}
 	}
 
@@ -712,15 +756,17 @@ int zCParser::GetPrototype(int classId, int pos)
 int zCParser::GetBase(int index)
 {
 	auto* symbol = symtab.GetSymbol(index);
-	if (symbol) {
-		int type = symbol->GetType();
-		if (type == zPAR_TYPE_PROTOTYPE || type == zPAR_TYPE_INSTANCE ) {
-			auto* parent = symbol->GetParent();
-			return symtab->GetIndex(parent->name);
-		}
+	if (!symbol)
+		return -1;
+
+	int type = symbol->GetType();
+	if (type == zPAR_TYPE_PROTOTYPE || type == zPAR_TYPE_INSTANCE ) {
+		auto* parent = symbol->GetParent();
+		return symtab->GetIndex(parent->name);
 	}
 	return -1;
 }
+
 
 int zCParser::GetBaseClass(zCPar_Symbol* symbol)
 {
@@ -728,8 +774,9 @@ int zCParser::GetBaseClass(zCPar_Symbol* symbol)
 		return -1;
 
 	auto type = symbol->GetType();
-
-	if (type == zPAR_TYPE_PROTOTYPE || type == zPAR_TYPE_INSTANCE )
+	if (type == zPAR_TYPE_INSTANCE)
+		symbol = symbol->GetParent();
+	if (type == zPAR_TYPE_PROTOTYPE)
 		symbol = symbol->GetParent();
 
 	if ( symbol )
@@ -815,10 +862,46 @@ zCPar_TreeNode* zCParser::CreateLeaf(char tok, zCPar_TreeNode *node)
 	return result;
 }
 
+zCPar_TreeNode* zCParser::CreateFloatLeaf()
+{
+	bool pv = 0;
+	ReadWord(aword);
+
+	if (aword[0] == '-') {
+		pv = 1;
+		ReadWord(aword);
+	} else if (aword[0] == '+') {
+		ReadWord(aword);
+	}
+
+	if ( isdigit(aword[0]) ) {
+		if ( pv )
+			PrevWord();
+		PrevWord();
+		auto _float = ReadFloat();
+		auto leaf = CreateLeaf(zPAR_TOK_FLOAT, 0);
+		label_index = _float;
+		stack_index = 1;
+
+		return leaf;
+	}
+
+	if ( pv )
+		PrevWord();
+
+	auto leaf = CreateLeaf(zPAR_TOK_VAR, 0);
+	leaf->name = aword;
+
+	leaf->label_index = 0;
+	leaf->stack_index = 1;
+
+	return leaf;
+}
+
 zCPar_TreeNode* zCParser::PushTree(zCPar_TreeNode *node)
 {
 	while (node)
-		node = zCParser::PushOnStack(node);
+		node = PushOnStack(node);
 	return node;
 }
 
@@ -836,6 +919,45 @@ zCPar_Symbol* zCParser::SearchFuncWithStartAddress(int startAddress)
 		}
 	}
 	return nullptr;
+}
+
+int zCParser::FindInstanceVar(zSTRING& name)
+{
+	auto pos = name.Search(0, ".", 1u);
+	if ( pos <= 0 )
+		return -1;
+
+	auto varName = name.Copied(0, pos);
+	name.Delete(0, pos + 1);
+
+	auto idx = FindIndex(&varName);
+
+	instance = idx;
+
+	auto sym = symtab.GetSymbol(idx);
+
+	auto base = GetBaseClass(sym);
+	if (!base)
+		return -1;
+
+	name = parent->name + "." + name;
+	return symtab.GetIndex(name);
+}
+
+int zCParser::FindIndex(zSTRING& varName)
+{
+	auto index = zCParser::FindInstanceVar(varName);
+	if ( index >= 0 )
+		return index;
+	if ( in_func )
+		index = symtab.GetIndex(in_func->name + "." + varName);
+	if ( index >= 0 )
+		return index;
+	if ( in_class )
+		index = symtab.GetIndex(in_class->name + "." + varName);
+	if ( index >= 0 )
+		return index;
+	return symtab.GetIndex(varName);
 }
 
 void* zCParser::GetInstanceAndIndex(int& index)
@@ -958,4 +1080,226 @@ zSTRING zCParser::GetInstanceValue(int cindex, unsigned int nr, char *adr, int a
 	}
 
 	return "";
+}
+
+void zCParser::FindNext(char *SubStr)
+{
+	auto pos = pc;
+	prevword_nr = (prevword_nr + 1) & 0xF;
+	prevword_index[prevword_nr] = pc;
+	prevline_index[prevword_nr] = linec;
+
+	pc = strstr(pc, SubStr);
+
+	if (pc) {
+		do {
+			pos = strchr(pos,'\n');
+			if (!pos)
+				break;
+			if (pos > pc)
+				return;
+			++pos;
+			++linec;
+			line_start = pc - pc_start;
+		} while (pos && pos <= pc);
+	} else {
+		Error("Unexpected End of File.");
+	}
+}
+
+void zCParser::AddClassOffset(zSTRING& name, int newOffset)
+{
+	auto sym = symtab.GetSymbol(name);
+	if (sym && sym->GetType() == zPAR_TYPE_CLASS) {
+		if (compiled) {
+			if (sym->GetClassOffset() != newOffset)
+				Error("Dat-File is not compatible (Classoffset changed) ! Please reparse !");
+		} else {
+			sym->SetClassOffset(newOffset);
+			auto next = sym;
+			for (unsigned i = 0; i < sym->ele; ++i) {
+				next = next->GetNext();
+				if (next->HasFlag(zPAR_FLAG_CLASSVAR)) {
+					auto off = next->GetOffset();
+					next->SetOffset(off + newOffset);
+				}
+			}
+		}
+	}
+}
+
+int zCParser::IsValid(zSTRING& className, void *data, zSTRING& p)
+{
+	auto line = p + ";";
+	zCPar_TreeNode* leaf = 0;
+
+	className.Upper();
+	auto sym = symtab.GetSymbol(className);
+	if ( sym && sym->GetType() == zPAR_TYPE_CLASS ) {
+		error = 0;
+		zCPar_Symbol::SetUseInstanceAdr(data);
+
+		pc = line.Data();
+		pc_stop = line.Data() + line.Length() + 1;
+
+		auto res = ParseExpression();
+		if ( res && !error )
+			leaf = EvalLeaf(res, 0);
+
+		return leaf != 0;
+	}
+
+	return 0;
+}
+
+int zCParser::Reparse(zSTRING& fileName)
+{
+	unsigned i = 0;
+	for (; i < files.GetNum(); ++i) {
+		if (GetFileName(i) == fileName) {
+			files[i]->enableTreeLoad = 0;
+			ParseFile(fileName);
+			files[i]->enableTreeLoad = 0;
+			break;
+		}
+	}
+	return i;
+}
+
+
+zCPar_TreeNode* zCParser::ParseExpressionEx(zSTRING& tok)
+{
+	oldpc_stop = this->pc_stop;
+	oldpc = pc;
+
+	char* data = tok.Data();
+
+	pc = data;
+	pc_stop = &data[tok.Length() + 1];
+	ext_parse = 1;
+
+	tok = GetNextToken();
+	return Parse_Expression(tok, -1);
+}
+
+void zCParser::DeclareClass()
+{
+	auto lc = linec;
+	auto ls = line_start;
+
+	zSTRING word;
+	ReadWord(word);
+
+	params = 1;
+
+	auto csym = new zCPar_Symbol;
+	in_class = csym;
+	csym->name = word;
+	csym->SetType(zPAR_TYPE_CLASS);
+
+	if ( !symtab.Insert(in_class) )
+		Error(ParErr_Redefined + in_class->name);
+
+	ParseBlock();
+	in_class->SetLineData(in_class, lc, linec - lc+1, ls, pc - pc_start - ls+3);
+	in_class->SetFileNr(>in_class, files.GetNum() - 1);
+
+	in_class = 0;
+	in_classnr = 0;
+	params = 0;
+}
+
+void zCParser::DeclareReturn()
+{
+	if ( in_func ) {
+		if ( in_func->HasFlag(2) ) {
+			auto offs = in_func->GetOffset() - 2;
+			if ( offs && offs == 1 ) {
+				treenode->next = CreateStringLeaf();
+				while (treenode->next)
+					treenode = treenode->next;
+			} else {
+				auto tok = GetNextToken();
+				treenode->next = Parse_Expression(tok, -1);
+
+				if ( treenode->next )
+					treenode = treenode->next->SeekEndTree();
+
+				PrevWord();
+			}
+		}
+
+		auto leaf = CreateLeaf(zPAR_TOK_RET, 0);
+
+		if ( treenode )
+			treenode->next = leaf;
+		treenode = leaf;
+	} else {
+		Errpr("Unexpected 'return'");
+	}
+}
+
+void zCParser::ShowPCodeSpy(zSTRING& name)
+{
+	auto sym = GetSymbol(name);
+	if (!sym)
+		return;
+
+	int pos;
+	sym->GetStackPos(pos, 0);
+	stack.SetPopPos(pos);
+	printf("U:PAR: * PSEUDO - CODE *");
+
+	for (unsigned i = 0; i < 40; ++i) {
+		if (stack.GetPopPos() < stack.GetDynSize())
+			break;
+		zSTRING cmd;
+		GetNextCommand(cmd);
+		zINFO("U:PAR: " + cmd);
+	}
+}
+
+void zCParser::ShowCode(int index)
+{
+	auto pos = 0;
+	auto sym = symtab.GetSymbol(index);
+	if ( sym ) {
+		if (sym->GetType() == zPAR_TYPE_FUNC ||
+		    sym->GetType() == zPAR_TYPE_INSTANCE)
+			sym->GetStackPos(&pos, 0);
+	}
+
+	auto fonty = screen->FontY();
+
+	if ( !win_code ) {
+		win_code = new zCView(0, 6*fonty, 8191, 10*fonty+6*fonty+2*fonty, 2);
+
+		screen->InsertItem(win_code, 0);
+		ClrFlags(win_code, 512);
+	}
+
+	if ( !win_code->ondesk )
+		screen->InsertItem(win_code, 0);
+
+	debugmode = 1;
+	ShowPCode(pos, win_code, 0);
+}
+
+void zCParser::SetInfoFile(zCList<zSTRING>* funcList, zSTRING const& fileName)
+{
+	add_funclist = funcList;
+	add_filename = fileName;
+	add_created = 0;
+}
+
+int zCParser::IsInAdditionalInfo(zSTRING const& name)
+{
+	for (auto func : add_funclist) {
+		func.Upper();
+		if (func == name)
+			return true;
+	}
+	return false;
+	if ( !this->add_funclist.next )
+		return 0;
 }

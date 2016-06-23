@@ -1,7 +1,6 @@
 uint8_t tree_version = 50;
 
-class zCParser {
-public:
+struct zCParser {
 	typedef void (*MessageFunc) (zSTRING);
 
 	static uint8_t GetVersion()
@@ -13,6 +12,8 @@ public:
 	{
 		tree_version = ver;
 	}
+
+	zCParser(int symtab_size);
 
 	int SaveDat(zSTRING& fileName);
 	int LoadDat(zSTRING& fileName);
@@ -84,6 +85,10 @@ public:
 
 	void PrevWord();
 
+
+	void DeclareReturn();
+	void DeclareClass();
+
 	zCPar_TreeNode* ParseExpression()
 	{
 		auto tok = GetNextToken();
@@ -110,9 +115,10 @@ public:
 		return GetSymbol(index);
 	}
 	zSTRING GetSymbolInfo(int nr, int& typ, int& ele);
+	void GetClassVarInfo(int index, zSTRING& varName, int& typ, int& ele);
 
 	int GetBaseClass(zCPar_Symbol* symbol)
-
+	int GetBaseClass(int index);
 	int GetBase(int index);
 
 	void* GetInstance();
@@ -149,11 +155,30 @@ public:
 	zSTRING GetText(int symidx, int idx);
 	zSTRING GetText(zSTRING& name, int array);
 
+	zSTRING GetInstanceValue(int cindex, unsigned int nr, char *adr, int array);
+	zSTRING GetInstanceValue(zSTRING& name, unsigned nr, void* adr, int array);
+
+
+	int FindIndex(zSTRING& varName);
+	int FindInstanceVar(zSTRING& name);
+
 	void ShowSymbols()
 	{
 		symtab.Show();
 	}
 
+	zBOOL MatchClass(int index, zSTRING const& name);
+	void AddClassOffset(zSTRING& name, int newOffset);
+	int IsValid(zSTRING& className, void *data, zSTRING& p);
+
+	void CreateVarReferenceList(zSTRING const& className, zCArray<int>& refList);
+	int Reparse(zSTRING& fileName);
+
+	void SetInfoFile(zCList<zSTRING>* funcList, zSTRING const& fileName);
+	int IsInAdditionalInfo(zSTRING const& name);
+
+	void ShowCode(int index);
+	void ShowPCodeSpy(zSTRING& name);
 	void CloseViews()
 	{
 		if ( win_code )
@@ -167,13 +192,19 @@ public:
 	int ClearInstanceRefs(void* adr);
 
 private:
-	zCPar_TreeNode* PushTree(zCPar_TreeNode *node);
+	void FindNext(char* str);
 
+	zCPar_TreeNode* CreateLeaf(char tok, zCPar_TreeNode *node);
+	zCPar_TreeNode* CreateFloatLeaf();
+	zCPar_TreeNode* PushTree(zCPar_TreeNode *node);
 
 	zCPar_TreeNode* ParseExpressionEx(zSTRING& tok);
 
-
 	zCPar_Symbol* SearchFuncWithStartAddress(int startAddress);
+
+	int ReadVarType();
+	int ReadArray()
+
 
 private:
 	void Error(zSTRING& errmsg, int);
@@ -251,7 +282,7 @@ private:
 	int labelcount = 0;
 	int* labelpos  = nullptr;
 
-	zCList <zSTRING>*     add_funclist;
+	zCList<zSTRING> add_funclist;
 
 	zSTRING add_filename;
 	int add_created;

@@ -3,7 +3,13 @@ class zTPortalInfo {
 	zBYTE  alpha;
 };
 
-class oCPortalRoom {
+struct oCPortalRoom {
+	zSTRING& GetPortalName()
+	{
+		return portalName;
+	}
+
+private:
 	zSTRING portalName;
 	zSTRING ownerNpc;
 	int ownerGuild;

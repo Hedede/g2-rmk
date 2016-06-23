@@ -50,22 +50,24 @@ struct zCTransferConstr {
 struct zCPatch {
 	zCPatch() = default;
 
-	zVEC3 vec0;
+	zVEC3 vec0; // pos
 	zVEC3 vec1;
-	zVEC3 vec2;
+	zVEC3 vec2; // normal
 	float __grid2;
-	zVEC3 vec3;
+	zVEC3 vec3; // color
 	zVEC3 vec4;
-	__int16 unk3;
-	__int16 unk4;
+
+	__int16 tilex;
+	__int16 tiley;
 
 	zCArray<zCTransfer> transfers;
 
-	zVEC3 vec6;
+	zVEC3 colorVec;
 };
 
 #pragma pack(push, 1)
 struct zCPatchMap {
+	zCPatchMap() = default;
 	~zCPatchMap() {
 		for (auto patch : patches) {
 			if (patch) {
@@ -78,8 +80,8 @@ struct zCPatchMap {
 		// also implicit deletings of arrays
 	}
 
-	bool lit;
-	short dim[2];
+	bool lit = false;
+	short dim[2] {0,0};
 
 	zCArray<zCPatch*>   patches;
 	zCArray<zCPolygon*> surface;

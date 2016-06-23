@@ -344,7 +344,10 @@ private:
 	void LightWorldStaticCompiled();
 	void LightWorldStaticUncompiled(zCTree<zCVob>* node);
 	void MakeVobLightingDirty();
+	void MakeTransfers();
+	zCPatchMap* GeneratePatchMapFromSurface(zCArray<zCPolygon *>& surface)
 	void GenerateSurfaces(int doRayTracing, zTBBox3D* updateBBox3D);
+	void GenerateLightmapFromPatchMap(zCPatchMap* patchMap);
 	void GenerateLightmapsRadiosity(zTBBox3D* bbox);
 	void GenerateLightmaps(zTStaticWorldLightMode const& lightMode, zTBBox3D* updateBBox3D);
 	void GenerateStaticVertexLighting();
@@ -357,6 +360,7 @@ private:
 	void RemoveAllZones();
 	void AddZone(zCZone* zone);
 	void RemoveZone(zCZone* zone);
+	void ProcessZones();
 
 private:
 	//Jedes (?) Vob in der Welt ist hier drin.
@@ -1296,6 +1300,126 @@ void zCWorld::AddZone(zCZone* zone)
 	}
 }
 
+void zCWorld::ProcessZones()
+{
+	GetActiveSkyControler()->SetOverrideColorFlag(0);
+	GetActiveSkyControler()->SetOverrideColorFlag(1.0);
+
+	auto& camBBox = zCCamera::activeCam->connectedVob->bbox3D;
+
+	zVEC3 camMins = camBBox.mins;
+	zVEC3 camMaxs = camBBox.maxs;
+	zVEC3 camPos  = zCCamera::activeCam->connectedVob->GetPositionWorld();
+
+	camMins = camPos;
+	camMaxs = camPos;
+
+	if (!zoneBoxSorter.sorted) {
+		zoneBoxSorter->GetActiveList(camMins, zoneActiveHandle);
+		zoneActiveList.DeleteList();
+		for (auto zone : zoneActiveHandle.activeList)
+			zoneActiveList.InsertEnd(zone);
+	} else {
+		zoneBoxSorter->UpdateActiveList(camMins, zoneActiveHandle);
+		zoneActiveList.DeleteList();
+		for (auto zone : zoneActiveHandle.activeList)
+			zoneActiveList.InsertEnd(zone);
+	}
+
+	zoneActiveList.Compare = zCWorld::ActiveZoneListCompare;
+	zoneActiveList.QSort();
+
+	zCArray<zCZone*> zoneDefaultList;
+	for (auto zone : zoneGlobalList) {
+		if (zone->GetDefaultZoneClass() != zone->GetMotherZoneClass())
+			break;
+		zoneDefaultList.InsertEnd(zone);
+	}
+
+	int zoneNum[2] = {};
+	zCArraySort<zCZone*> zoneList[2]; // zoneList, zoneDeactivateList
+
+	zCArraySort<zCZone*>* zoneListp[2] = {&zoneActiveList, &zoneLastClassList};
+
+	while ( 1 ) {
+		for (unsigned i = 0; i < 2; ++i) {
+			zoneList[i].Clear();
+			zoneClass[i] = -1;
+			if ( zoneNum[i] < zoneListp[i]->GetNum() )
+				zoneClass[i] = zoneListp[i][zoneNum[i]]->GetZoneMotherClass();
+		}
+
+		if ( zoneClass[0] != zoneClass[1] ) {
+			if ( zoneClass[0] >= zoneClass[1] ) {
+				auto num = zoneListp[1]->GetNum();
+				for (; zoneNum[1] < num; ++zoneNum[1]) {
+					auto zc = zoneListp[1][zoneNum[1]]->GetZoneMotherClass();
+					if ( zc != zoneClass[1] )
+						break;
+
+					zoneList[1].InsertEnd(zoneListp[1][zoneNum[1]]);
+				}
+			} else {
+				auto num = zoneListp[0]->GetNum();
+				for (; zoneNum[0] < num; ++zoneNum[0]) {
+					auto zc = zoneListp[0][zoneNum[0]]->GetZoneMotherClass();
+					if ( zc != zoneClass[0] )
+						break;
+
+					zoneList[0].InsertEnd(zoneListp[0][zoneNum[0]]);
+				}
+			}
+		} else {
+			if ( zoneClass[0] == -1 )
+				break;
+
+			for (unsigned i = 0; i < 2; ++i) {
+				auto num = zoneListp[i]->GetNum();
+				for (; zoneNum[i] < num; ++zoneNum[i]) {
+					auto zc = zoneListp[i][zoneNum[i]]->GetZoneMotherClass();
+					if (zc != zoneClass[i])
+						break;
+					zoneList[i].InsertEnd(zoneListp[i][zoneNum[i]]);
+				}
+				zoneList[i].QSort();
+			}
+
+			for (unsigned i = 0; i < zoneList[1].GetNum(); ++i) {
+				if (zoneList[0].Search(zoneList[1][i]) != -1) {
+					zoneList[1].RemoveIndex[i];
+					--i;
+				}
+			}
+		}
+
+		zCZone* zone;
+		if ( zoneList[0].GetNum() > 0 ) {
+			zone = zoneList[0];
+		} else if ( zoneList[1].GetNum() > 0 ) {
+				zone = zoneList[1][0];
+		}
+
+		zone->ProcessZoneList(zoneList[0], zoneList[1], this);
+
+		auto zc = zone->GetDefaultZoneClass();
+		if (!zc) continue;
+		for (auto i = 0u; i < zoneDefaultList.GetNum(); ++i) {
+			if (zoneDefaultList[i]->GetDefaultZoneClass() == zc) {
+				zoneDefaultList.RemoveIndex(i);
+				break;
+			}
+		}
+	}
+
+	zoneList[0].Clear();
+	zoneList[1].Clear();
+
+	for (auto zone : zoneDefaultList)
+		zone->ProcessZoneList(zoneList[0], zoneList[1], this);
+
+	zoneLastClassList = zoneActiveList;
+}
+
 
 // ---------- Render
 void zCWorld::RenderWaynet(zCCamera *cam)
@@ -2071,6 +2195,268 @@ void zCWorld::GenerateStaticVertexLighting()
 	zINFO("D: WORLD: ... Finished.");
 }
 
+void zCWorld::MakeTransfers()
+{
+	zINFO("D: WORLD: LM: Making transfers...");
+
+	unsigned numTransfers;
+
+	zCArray<zCTransferConstr> constrs(1024);
+
+	unsigned i = 0;
+	for (auto patchMap1 : patchMapList) {
+		for (auto patch1 : patchMap1->patches) {
+			constrs.Clear();
+			float sum = 0.0;
+			for (auto patchMap2 : patchMapList) {
+				auto poly = patchMap2->surface[0];
+				auto& plane = poly->polyPlane;
+
+				// distance to plane
+				float distp = plane->normal * patch1->vec0 - plane.distance;
+				if (distp <= 0.0 || distp > 800.0*800.0)
+					continue;
+
+				for (auto patch2 : patchMap2->patches) {
+					if (patch2 == patch1)
+						continue;
+					auto diff = patch2->vec0 - patch1->vec0;
+					float dist_sq = diff.Length2();
+					if (dist_sq > 800.0*800.0)
+						continue;
+					float dist = sqrt(dist_sq);
+					diff *= 1.0 / dist;
+
+					float dot = -(patch2->vec2*diff)*(patch1->vec2*diff);
+
+					zVEC3 inters;
+					zCPolygon* hitPoly;
+					if (LightingTestRay(patch2->vec0, patch2->vec0, inters, hitPoly)) {
+						if ((inters - patch2->vec0).Length2() > 50.0)
+							continue;
+					}
+
+					// in original was dist*dist
+					float val = dot * patch2->grid2 / (dist_sq * Pi);
+					if (val <= 0.001)
+						continue;
+
+					zCTransferConstr constr;
+					constr.parent = patch2;
+					constr.val = val;
+					sum += val;
+					constrs.Insert(constr);
+					++numTransfers;
+				}
+			}
+
+			patch1->transfers.AllocAbs(constrs.GetNum());
+			for (auto constr : constrs) {
+				zCTransfer trans;
+				trans.parent = constr.parent;
+				trans.val = constr.val * 65536.0 / sum;
+				patch1->transfers.Insert(trans);
+			}
+		}
+
+		auto perc = (i / patchMapList.GetNum() * 100.0);
+		if ( perc % 10 == 0 && perc != lastPerc ) {
+			zINFO("D: WORLD: LM: .. "_s + perc + " % ..");
+			lastPerc = perc;
+		}
+	}
+
+	zINFO("D: WORLD: LM: NumTransfers: "_s + numTransfers + ", mem: " + numTransfers * 10 / (1024.0*1024.0) + " megs");
+}
+
+
+void zCWorld::GenerateLightmapFromPatchMap(zCPatchMap* patchMap)
+{
+	if (!patchMap->lit)
+		return;
+
+	int dimx = patchMap->dim[0];
+	int dimy = patchMap->dim[1];
+
+	auto srcMap = new zVEC3[dimx*dimy];
+	auto dstMap = new zVEC3[dimx*dimy];
+
+	for (auto vec : srcMap)
+		vec = zVEC3{-1.0, 0, 0};
+
+	zVEC3 vecsum;
+	for (auto patch : patchMap->patches) {
+		auto max = patch->vec3.GetMaxCoord(); // made up
+		if (max > 255.0)
+			patch->vec3 *= 255.0 / max;
+
+		srcMap[patch->tilex + dimx*patch->tiley] = patch->vec3;
+
+		vecsum += patch->vec3;
+	}
+
+	float maxPos = std::numeric_limits<float>::min();
+	float maxNeg = std::numeric_limits<float>::max();
+	for (auto x = 0; x < dimx; ++x) {
+		for (auto y = 0; y <= dimy; ++y) {
+			auto xMinus1 = x - 1;
+			auto xPlus1  = x + 1;
+			zClamp(xMinus1, 0, dimx - 1);
+			zClamp(xPlus1,  0, dimx - 1);
+
+			float maxPos2 = std::numeric_limits<float>::min();
+			float maxNeg2 = std::numeric_limits<float>::max();
+
+			zVEC3 vecsum2;
+			float mult = 0.0;
+
+			auto yMinus1 = y - 1;
+			auto yPlus1  = y + 1;
+			zClamp(yMinus1, 0, dimy - 1);
+			zClamp(yPlus1,  0, dimy - 1);
+
+			// dunno what to call it
+			auto sample = [&] (int index, float mul) {
+				if (srcMap[index].x >= 0.0) {
+					mult += mul;
+					vecsum2 += srcMap[index] * mul;
+					float dot = srcMap[index] * COL_SCALE;
+
+					if (dot <= maxNeg)
+						maxNeg2 = dot;
+					if (dot >= maxPos)
+						maxPos2 = dot;
+				}
+			}
+
+			sample(xMinus1 + dimx * yMinus1, 1.0);
+			sample(xMinus1 + dimx * y, 2.0);
+			sample(xMinus1 + dimx * yPlus1, 1.0);
+			sample(x       + dimx * yMinus1, 2.0);
+			sample(x       + dimx * y, 4.0); // dstMap + (srcMap - arr2)
+			sample(x       + dimx * yPlus1, 2.0);
+			sample(xPlus1  + dimx * yMinus1, 1.0);
+			sample(xPlus1  + dimx * y, 2.0);
+			sample(xPlus1  + dimx * yPlus1, 1.0);
+
+			if (mult > 0.0) {
+				if (maxNeg >= maxNeg2)
+					maxNeg = maxNeg2;
+				if (maxPos <= maxPos2)
+					maxPos = maxPos2;
+			}
+
+			auto idx = x + dimx*y;
+			if (mult < 2.0 || maxPos2 - maxNeg2 < 10.0) {
+				dstMap[idx] = srcMap[idxx];
+			} else {
+				dstMap[idx] = vecsum2 / mult;
+			}
+		}
+	}
+
+	for (auto x = 0; x < dimx; ++x) {
+		for (auto y = 0; y <= dimy; ++y) {
+			auto idx = x + xdim*y;
+			if (arr2[idx].x == -1.0) {
+				auto xMinus1 = x - 1;
+				auto xPlus1  = x + 1;
+				zClamp(xMinus1, 0, dimx - 1);
+				zClamp(xPlus1,  0, dimx - 1);
+
+				auto yMinus1 = y - 1;
+				auto yPlus1  = y + 1;
+				zClamp(yMinus1, 0, dimy - 1);
+				zClamp(yPlus1,  0, dimy - 1);
+
+				float mult = 0.0;
+				zVEC3 vecsum2;
+				auto sample = [&] (int index) {
+					if (srcMap[index].x >= 0.0) {
+						++mult;
+						vecsum2 += srcMap[index];
+					}
+				}
+
+				// даже не перепроверял
+				sample(xMinus1 + dimx*yMinus1);
+				sample(xMinus1 + dimx*y);
+				sample(xMinus1 + dimx*yPlus1);
+				sample(x       + dimx*yMinus1);
+				sample(x       + dimx*y);
+				sample(x       + dimx*yPlus1);
+				sample(xPlus1  + dimx*yMinus1);
+				sample(xPlus1  + dimx*y);
+				sample(xPlus1  + dimx*yPlus1);
+
+				if (mult <= 0.0) {
+					arr1[idx] = zVEC3{0,0,0};
+				} else {
+					arr1[idx] = vecsum2 / mult;
+				}
+			} else {
+				arr1[idx] = arr2[idx]; // whatever
+			}
+		}
+	}
+
+	auto tex = zrenderer->CreateTexture();
+	auto lightMap = new zCLightMap;
+	tex->cacheState |= 4;
+
+	auto texConv = zrenderer->CreateTextureConvert();
+	if (!texConv->Lock(2))
+		zFATAL("C: zCWorld::GenerateLightmapFromPatchMap() could not lock texConvert for write"); // 1228
+
+	zCTextureInfo texInfo;
+	texInfo.texFormat = 4;
+	texInfo.sizeX = dimx;
+	texInfo.sizeY = dimy;
+	texInfo.numMipMap = 1;
+	texInfo.refSizeX = texInfo.sizeX;
+	texInfo.refSizeY = texInfo.sizeY;
+
+	void* texData;
+	int texSize;
+
+	texConvert->SetTextureInfo(&texInfo);
+	texConvert->GetTextureBuffer(0, &texData, &texXSize);
+
+	if (texData) {
+		for (unsigned y = 0; y < texInfo.sizeY; ++y) {
+			for (unsigned x = 0; x < texInfo.sizeX; ++x) {
+				auto idx = x + y*texXSize;
+				auto dat = (zCOLOR*)texData[idx];
+
+				// dontcare
+				dat.SetRGB(arr1[idx].x, arr1[idx].y, arr1[idx].z);
+			}
+		}
+	}
+
+	texConv->Unlock(texConv);
+	texInfo = texConv->GetTextureInfo();
+	texInfo.numMipMap = 1;
+	texInfo.texFormat = zCTexture::CalcNextBestFormat(texInfo.texFormat);
+
+	texConv->CopyContents(tex);
+	tex->cacheState |= 4;
+
+	lightMap->CalcLightmapOriginUpRight(patchMap->__normal, patchMap->__up, patchMap->__right);
+
+	for (auto poly : patchMap->surface)
+		poly->setLightMap(lightMap);
+
+	Release(lightMap);
+	Release(tex);
+
+	numLightMapTexel += tex->GetMemSizeBytes();
+	++numLightMaps;
+
+	delete[] srcMap;
+	delete[] dstMap;
+}
+
 void zCWorld::GenerateLightmapsRadiosity(zTBBox3D* bbox)
 {
 	GenerateSurfaces( 0, bbox);
@@ -2099,6 +2485,154 @@ void zCWorld::GenerateLightmapsRadiosity(zTBBox3D* bbox)
 
 	patchMapList.DeleteList();
 }
+
+zCPatchMap* zCWorld::GeneratePatchMapFromSurface(zCArray<zCPolygon *>& surface)
+{
+	zTBBox2D lmBox;
+	int realDim[2];
+
+	GetSurfaceLightmapBBox2D(surface, lmBox, realDim);
+
+	float invGrid = 1.0 / zLIGHTMAP_GRID;
+	float sizeX = (lmBox.maxs.x - lmBox.mins.x) * invGrid;
+	float sizeY = (lmBox.maxs.y - lmBox.mins.y) * invGrid;
+
+	zVEC3 origin, up, right;
+	surface[0]->polyPlane.GetOriginUpRight(origin, up, right);
+
+	auto yvec = lmBox.mins.y * up;
+	auto xvec = lmBox.mins.x * right;
+
+	origin += xvec + yvec;
+
+	auto patchMap = new zCPatchMap;
+
+	patchMap->surface  = surface;
+	patchMap->__normal = origin;
+
+	auto xpos = right * zLIGHTMAP_GRID * sizeX;
+
+	patchMap->__right = xpos;
+
+	auto ypos = up * zLIGHTMAP_GRID * sizeY;
+
+	patchMap->__up = ypos;
+
+	patchMap->dim[0] = sizeX;
+	patchMap->dim[1] = sizeY;
+
+	patchMap->bbox.Init();
+
+	auto surfPlane = patchMap->surface[0]->polyPlane;
+
+	patchMap->plane0 =  surfPlane;
+	patchMap->plane1 = -surfPlane; // .normal *= -1;
+
+	float maxDistP = std::numeric_limits<float>::min(); // maxDist+
+	float maxDistN = std::numeric_limits<float>::max(); // maxDist-
+	for (auto poly : patchMap) {
+		for (unsigned i = 0; i < poly->numVerts; ++i) {
+			auto vert = poly->vertex[i];
+			patchMap->bbox->AddPoint(vertex->position);
+			// distance to plane
+			float dist = vert->position * patchMap->plane1.normal - patchMap->plane1.distance;
+			if (dist >= 0.0) {
+				if (maxDistP <= dist)
+					maxDistP = dist;
+			} else if (maxDistN >= idst) {
+				maxDistN = dist;
+			}
+		}
+	}
+
+	if (maxDistN < 0.0)
+		patchMap->plane0.distance += maxDistN;
+	if (minDistP > 0.0)
+		patchMap->plane1.distance += maxDistP;
+
+	ypos = up    * zLIGHTMAP_GRID_HALF;
+	xpos = right * zLIGHTMAP_GRID_HALF;
+
+	auto middle = origin + xpos + ypos;
+
+	auto& bbox = patchMap->bbox;
+
+	auto maxDim = bbox.GetMaxDimension(); // made up
+
+	auto polyNormalInv = surface[0]->polyPlane.normal * (-2.0 * maxDim);
+	auto polyNormal = surface[0]->polyPlane.normal * maxDim;
+
+	zCPolygon* hitPoly;
+	zVEC3 inters;
+	for (auto x = 0; x < realDim[0]; ++x) {
+		for (auto y = 0; y < realDim[1]; ++y) {
+			zVEC3 pos_y = up    * zLIGHTMAP_GRID * y;
+			zVEC3 pos_x = right * zLIGHTMAP_GRID * x;
+			zVEC3 posm  = up + right;
+
+			zCPolygon* intersPoly = 0;
+			zVEC3 start = posm + polyNormal;
+			if (patchMap->poly0) {
+				if (patchMap->poly0->CheckRayPolyIntersection(start, polyNormalInv, inters, hitPoly))
+					intersPoly = patchMap->poly0;
+			} else {
+				for (auto poly : patchMap->surface) {
+					if (poly->CheckRayPolyIntersection(start, polyNormalInv, inters, hitPoly)) {
+						patchMap->poly0 = poly;
+						intersPoly = patchMap->poly0;
+
+						break;
+					}
+				}
+
+				if (!intersPoly) {
+					auto uphalf = up * zLIGHTMAP_GRID_HALF;
+					auto righthalf = right * zLIGHTMAP_GRID_HALF;
+					auto start = posm - righthalf - uphalf;
+
+					auto xs = 0;
+					auto ys = 0;
+					for (; ys < 2; ++ys) {
+						auto ups = up * zLIGHTMAP_GRID*ys;
+						auto rgs = right * zLIGHTMAP_GRID*xs;
+						auto origin = start + ups + rgs + polyNormal;
+						if (patchMap->CheckRaySurfaceIntersection(origin, polyNormalInv, inters, intersPoly))
+							break;
+
+						if (ys > 1) {
+							ys = 0;
+							if (++xs > 1)
+								break;
+						}
+					}
+				}
+			}
+
+			if (intersPoly) {
+				auto patch = new zCPatch;
+				patch->vec0 = inters;
+				patch->vec1 = inters;
+				patch->__grid2 = zLIGHTMAP_GRID * zLIGHTMAP_GRID;
+				patch->tilex = x;
+				patch->tiley = y;
+
+				if (intersPoly->material->texture) {
+					patch->colorVec = zVEC3{1,1,1};
+				} else {
+					patch->colorVec = zVEC3{color[0].0/255,color[1]/255.0,color[2]/255.0};
+				}
+
+				patch->ve2 = GetPhongNormal(intersPoly, patch->vec2);
+
+				patchMap->lit = 0;
+				patchMap->patches.InsertEnd(patche);
+			}
+		}
+	}
+
+	return patchMap;
+}
+
 
 void zCWorld::GenerateSurfaces(int doRayTracing, zTBBox3D* updateBBox3D)
 {

@@ -1,3 +1,10 @@
+enum zTArchiveMode {
+	zARC_MODE_BINARY,
+	zARC_MODE_ASCII,
+	zARC_MODE_ASCII_PROPS,
+	zARC_MODE_BIN_SAFE,
+};
+
 class zCArchiver : public zCObject {
 	Z_OBJECT(zCArchiver);
 public:
@@ -75,9 +82,9 @@ public:
 	virtual void GetChecksumEnabled() = 0;
 	virtual void SetChecksumEnabled(int) = 0;
 	virtual void SetNoReadSearchCycles(int) = 0;
-	virtual void InProperties() = 0;
-	virtual void InSaveGame() = 0;
-	virtual void InBinaryMode() = 0;
+	virtual bool InProperties() = 0;
+	virtual bool InSaveGame() = 0;
+	virtual bool InBinaryMode() = 0;
 	virtual void GetParentObject() = 0;
 	virtual void OpenWriteBuffer(zCBuffer *,zTArchiveMode,int,int,int) = 0;
 	virtual void OpenWriteFile(zFILE *,zTArchiveMode,int,int,int) = 0;

@@ -1,3 +1,5 @@
+zSTRING s_arcModeString[4] = {"BINARY", "ASCII", "ASCII_PROPS", "BIN_SAFE"};
+
 class zCArchiverFactory {
 	virtual void CreateArchiverRead(zSTRING const &,int);
 	virtual void CreateArchiverRead(zFILE *,int);

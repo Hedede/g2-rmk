@@ -180,6 +180,8 @@ struct zCParser {
 
 	void SetInfoFile(zCList<zSTRING>* funcList, zSTRING const& fileName);
 	int IsInAdditionalInfo(zSTRING const& name);
+	int WriteAdditionalInfo(zSTRING& call, int zeile, int filepos);
+
 	int AutoCompletion(zSTRING& str);
 
 	int CheckClassSize(int index, int size);
@@ -224,6 +226,7 @@ private:
 	int ReadFuncType();
 	int ReadArray();
 	int ReadInt();
+	float ReadFloat();
 	void ReadString(zSTRING& out);
 
 private:

@@ -399,8 +399,51 @@ int zCParser::ReadInt()
 	auto result = aword.ToInt();
 
 	return sign ? -result : result;
-
 }
+
+float zCParser::ReadFloat()
+{
+	float result;
+	int sign = 0;
+
+	ReadWord(aword);
+
+	if (aword == "-" || aword == "+") {
+		if (aword == "-")
+			sign = 1;
+		ReadWord(aword);
+	}
+
+	bool exponent = 0;
+	bool stop = 0;
+	unsigned i = 0;
+	for (; i < aword.Length; ++i) {
+		if (isdigit(aword[i]))
+			continue;
+		if (aword[i] == '.' || stop)
+			break;
+		stop = 1;
+	}
+
+	if (aword[i] == 'E') {
+		exponent = 1;
+		if (i != aword.Length() - 1)
+			Error(ParErr_SyntaxError + aword, 0);
+	} else {
+		Error(ParErr_SyntaxError + aword, 0);
+		return -1.0;
+	}
+
+	str = aword;
+	if ( exponent ) {
+		auto val = ReadInt();
+		str += ""_s + val;
+	}
+
+	result = str.ToFloat();
+	return sign ? -result : result;
+}
+
 void zCParser::ReadString(zSTRING& out)
 {
 	Match("\"");
@@ -1546,24 +1589,6 @@ void zCParser::ShowCode(int index)
 	ShowPCode(pos, win_code, 0);
 }
 
-void zCParser::SetInfoFile(zCList<zSTRING>* funcList, zSTRING const& fileName)
-{
-	add_funclist = funcList;
-	add_filename = fileName;
-	add_created = 0;
-}
-
-int zCParser::IsInAdditionalInfo(zSTRING const& name)
-{
-	for (auto func : add_funclist) {
-		func.Upper();
-		if (func == name)
-			return true;
-	}
-	return false;
-	if ( !this->add_funclist.next )
-		return 0;
-}
 
 int zCParser::AutoCompletion(zSTRING& str)
 {
@@ -1609,6 +1634,42 @@ void zCParser::DefineExternalVar(zSTRING& name, void* adr, short type, uint16_t 
 	Error("Redefined External Var. " + name, 0);
 }
 
+void zCParser::DefineExternal(zSTRING& name, int (*func)(), int type, int first, ...)
+{
+	auto funcsym = new zCPar_Symbol();
+	funcsym->SetName(name);
+	funcsym->SetType(zPAR_TYPE_FUNC);
+	funcsym->SetFlag(zPAR_FLAG_EXTERNAL|zPAR_FLAG_CONST);
+	if ( type )
+		funcsym->SetFlag(zPAR_FLAG_RETURN);
+	funcsym->SetOffset(type);
+
+	if ( !symtab.Insert(funcsym) ) {
+		if ( !compiled ) {
+			Error("Redefined External . ", 0);
+			return;
+		}
+
+		auto name = funcsym->GetName();
+		delete funcsym;
+		funcsym = GetSymbol(name);
+	}
+
+	funcsym->SetStackPos((int)func, 0);
+	if (compiled)
+		return;
+
+	for (auto arg = &first; *arg; ++arg) {
+		auto argsym = new zCPar_Symbol();
+		
+		auto id = funcsym->ele++;
+		argsym->name = funcsym->name + ".PAR" + id;
+		argsym->SetType(*arg);
+		argsym->SetParent(0);
+
+		symtab.Insert(argsym);
+	}
+}
 
 void zCParser::MergeFile(zSTRING& name)
 {
@@ -1720,4 +1781,59 @@ int zCParser::CheckClassSize(zSTRING& className, int size)
 {
 	int idx = GetIndex(className);
 	return CheckClassSize(idx, size);
+}
+
+void zCParser::SetInfoFile(zCList<zSTRING>* funcList, zSTRING const& fileName)
+{
+	add_funclist = funcList;
+	add_filename = fileName;
+	add_created = 0;
+}
+
+int zCParser::IsInAdditionalInfo(zSTRING const& name)
+{
+	for (auto func : add_funclist) {
+		func.Upper();
+		if (func == name)
+			return true;
+	}
+	return false;
+	if ( !this->add_funclist.next )
+		return 0;
+}
+
+int zCParser::WriteAdditionalInfo(zSTRING& call, int zeile, int filepos)
+{
+	zSTRING currentDir;
+	zFILE_FILE file();
+	file.SetCurrentDir(currentDir);
+
+	zoptions->ChangeDir(DIR_COMPILED_SCRIPTS);
+
+	auto zfile = zfactory->CreateZFile(add_filename);
+
+	if ( add_created ) {
+		zfile->unk1 = 0;
+		zfile->Open(1);
+		zfile->Append();
+	} else {
+		zfile->Create();
+		add_created = 1;
+	}
+
+	zSTRING str;
+	str = "FILE   { " + fname + " }\n";
+	zfile->Write(str);
+	str = "SYMBOL { " + call +  " }\n";
+	zfile->Write(str);
+	str = "LINE   { "_s + zeile +  " }\n";
+	zfile->Write(str);
+	str = "FILEPOS{ "_s + filepos + " }\n\n");
+	zfile->Write(str);
+
+	zfile->Close();
+	delete zfile;
+
+	file.ChangeDir(0);
+	return 1;
 }

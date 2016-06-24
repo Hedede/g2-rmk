@@ -87,6 +87,7 @@ struct zCParser {
 	void ReadWord(zSTRING& word);
 
 
+	void DeclareAssignFunc(zSTRING& name);
 	void DeclareReturn();
 	void DeclareClass();
 
@@ -108,8 +109,6 @@ struct zCParser {
 	void GetParameter(zSTRING& out);
 	void GetParameter(float& out);
 	void GetParameter(int& out);
-
-	int CheckClassSize(zSTRING& className, int size)
 
 	zCPar_Symbol* GetSymbol(zSTRING const& name);
 	zCPar_Symbol* GetSymbol(int index);
@@ -183,6 +182,9 @@ struct zCParser {
 	int IsInAdditionalInfo(zSTRING const& name);
 	int AutoCompletion(zSTRING& str);
 
+	int CheckClassSize(int index, int size);
+	int CheckClassSize(zSTRING& className, int size)
+
 	void DefineExternalVar(zSTRING& name, void* adr, short type, uint16_t ele);
 
 	void ShowCode(int index);
@@ -216,9 +218,13 @@ private:
 
 	zCPar_Symbol* SearchFuncWithStartAddress(int startAddress);
 
+	void Match(zSTRING& match);
+
 	int ReadVarType();
 	int ReadFuncType();
 	int ReadArray();
+	int ReadInt();
+	void ReadString(zSTRING& out);
 
 private:
 	MessageFunc msgfunc = nullptr;

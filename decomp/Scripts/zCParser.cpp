@@ -187,13 +187,6 @@ void zCParser::Message(zSTRING& msg)
 	zERROR::Message("U:PAR: " + msg);
 }
 
-
-int zCParser::CheckClassSize(zSTRING& className, int size)
-{
-	int idx = GetIndex(className);
-	return CheckClassSize(idx, size);
-}
-
 zCPar_Symbol* zCParser::GetSymbol(zSTRING const& name)
 {
 	auto tmp = name;
@@ -227,6 +220,94 @@ zSTRING zCParser::GetText(zSTRING& name, int array)
 {
 	auto idx = symtab.GetIndex(name, array);
 	return GetText(idx, 0);
+}
+
+void zCParser::PrevWord()
+{
+	pc = prevword_index[prevword_nr];
+	linec = prevline_index[prevword_nr];
+	prevword_nr = (prevword_nr - 1) & 0xF;
+}
+
+void zCParser::ReadWord(zSTRING& word)
+{
+	while ( 2 ) {
+		while ( 2 ) {
+			i = 0;
+
+			PrevWord();
+
+			while ( pc < pc_stop ) {
+				++pc
+				if ( *pc > ' ' ) {
+					if ( !strrchr(trenn, *pc) ) {
+						::word[i++] = *pc;
+						continue;
+					}
+
+					if ( i <= 0 )
+						::word[i++] = *pc;
+					else
+						--pc;
+					break;
+				}
+
+				if ( tk != '\n' ) {
+					if (i > 0)
+						break;
+					continue;
+				}
+
+				++linec;
+				line_start = pc - pc_start;
+				if (i > 0)
+					break;
+
+				prevword_index[prevword_nr] = pc_next;
+				prevline_index[prevword_nr] = linec;
+			}
+
+			if ( !i ) {
+				if ( ext_parse ) {
+					ext_parse = 0;
+					pc = oldpc;
+					pc_stop = oldpc_stop;
+					continue;
+				}
+			}
+
+			break;
+		}
+
+		::word[i] = 0;
+
+		word = ::word;
+		word.Upper();
+
+		if (word == "/") {
+			if (*pc = '/') {
+				++pc;
+				FindNext("\n");
+				++pc;
+				continue;
+			}
+			if (*pc == '*') {
+				++pc;
+				FindNext("*/");
+				pc += 2;
+				continue;
+			}
+		}
+
+		break;
+	}
+}
+
+void zCParser::Match(zSTRING& match)
+{
+	ReadWord(aword)
+	if (aword != match)
+		Error(ParErr_Expected + "'" + match + "'");
 }
 
 int zCParser::ReadVarType()
@@ -272,76 +353,260 @@ int zCParser::ReadArray()
 	} else {
 		res = ReadInt();
 
-		auto exp = "]"_s;
-		ReadWord(aword);
-		if ( aword != exp )
-			Error(ParErr_Expected +  "'" + exp + "'");
+		Match("]");
 	}
 
 	return res;
 }
 
-int zCParser::SaveDat(zSTRING& fileName)
+int zCParser::ReadInt()
 {
-	if (this->datsave) {
-		zSTRING msg = "Saving " + fileName;
+	int sign = 0;
 
-		if (this->msgfunc)
-			this->msgfunc(msg);
+	ReadWord(aword);
 
-		zERROR::Message("U:PAR: " + msg);
-
-		zoptions->ChangeDir(0x13);
-
-		zFILE file = zfactory->CreateZFile(fileName);
-		file->Create();
-
-		file->Write(&tree_version, 1);
-		this->symtab->Save(file);
-		this->stack->Save(file);
-
-		file->Close();
-
-		delete file;
+	if (aword == "-" || aword == "+") {
+		if (aword == "-")
+			sign = 1;
+		ReadWord(aword);
 	}
+
+	int result;
+	if (!isdigit(aword[0])) {
+		auto idx = FindIndex(aword);
+		auto sym = symtab.GetSymbol(idx);
+		if ( !sym ) {
+			Error(ParErr_UnknownVar + aword);
+			return -1;
+		}
+
+		if (sym->GetType() != zPAR_TYPE_INT || !sym->HasFlag(1) ) {
+			Error("Expected integer constant : " + aword);
+			return -1;
+		}
+
+		sym->GetValue(&result, 0);
+		return result;
+	}
+
+	for (unsigned i = 1; i < aword.Length(); ++i) {
+		if (!isdigit(aword[i])) {
+			Error("Expected an Integer-Value :" + aword);
+			return -1;
+		}
+	}
+
+	auto result = aword.ToInt();
+
+	return sign ? -result : result;
+
+}
+void zCParser::ReadString(zSTRING& out)
+{
+	Match("\"");
+
+	while (*pc != '"') {
+		out += *pc;
+
+		if ( pc >= pc_stop ) {
+			Error("Unexpected End of File.", 0);
+		} else {
+			++pc;
+		}
+	}
+
+	++pc;
+}
+
+void zCParser::DeclareClass()
+{
+	auto lc = linec;
+	auto ls = line_start;
+
+	zSTRING word;
+	ReadWord(word);
+
+	params = 1;
+
+	auto csym = new zCPar_Symbol;
+	in_class = csym;
+	csym->name = word;
+	csym->SetType(zPAR_TYPE_CLASS);
+
+	if ( !symtab.Insert(in_class) )
+		Error(ParErr_Redefined + in_class->name);
+
+	ParseBlock();
+	in_class->SetLineData(in_class, lc, linec - lc+1, ls, pc - pc_start - ls+3);
+	in_class->SetFileNr(>in_class, files.GetNum() - 1);
+
+	in_class = 0;
+	in_classnr = 0;
+	params = 0;
+}
+
+void zCParser::DeclareReturn()
+{
+	if ( in_func ) {
+		if ( in_func->HasFlag(2) ) {
+			auto offs = in_func->GetOffset() - 2;
+			if ( offs && offs == 1 ) {
+				treenode->next = CreateStringLeaf();
+				while (treenode->next)
+					treenode = treenode->next;
+			} else {
+				auto tok = GetNextToken();
+				treenode->next = Parse_Expression(tok, -1);
+
+				if ( treenode->next )
+					treenode = treenode->next->SeekEndTree();
+
+				PrevWord();
+			}
+		}
+
+		auto leaf = CreateLeaf(zPAR_TOK_RET, 0);
+
+		if ( treenode )
+			treenode->next = leaf;
+		treenode = leaf;
+	} else {
+		Errpr("Unexpected 'return'");
+	}
+}
+
+void zCParser::DeclareAssignFunc(zSTRING& name)
+{
+	auto idx = ReadArray();
+
+	Match("=");
+
+	ReadWord(aword);
+
+	auto old_treenode = treenode;
+
+	treenode = CreateLeaf(zPAR_TOK_PUSHINDEX, treenode);
+	treenode->name = aword;
+
+	treenode = CreateLeaf(zPAR_TOK_VAR, treenode);
+	treenode->name = name;
+	treenode->label_index = idx;
+	treenode->stack_index = 5;
+
+	old_treenode = treenode;
+
+	treenode = CreateLeaf(zPAR_TOK_ASSIGNFUNC, treenode);
+}
+
+
+zCPar_TreeNode* zCParser::ParseExpression(int& tok, int prec)
+{
+	auto nexttok = tok;
+	auto primary = Parse_Expression_Primary(tok);
+	if ( primary ) {
+		while (tok <= zPAR_OP_UN_NEG) {
+			if ( Op_Prio[tok] <= prec )
+				break;
+			auto nexttok = GetNextToken();
+
+			auto rhs = Parse_Expression(tok, Op_Prio[tok]);
+			if (IsAssignmentOp(tok)  && primary->tok_type != zPAR_TOK_VAR)
+				Error("Assignment : Left operand is not a lvalue", 0);
+
+			auto leaf = CreateLeaf(tok);
+
+			newnode->left = primary;
+			newnode->right = rhs;
+			primary = newnode;
+
+			tok = nexttok;
+		}
+	}
+	return primary;
+}
+
+int zCParser::IsValid(zSTRING& className, void *data, zSTRING& p)
+{
+	auto line = p + ";";
+	zCPar_TreeNode* leaf = 0;
+
+	className.Upper();
+	auto sym = symtab.GetSymbol(className);
+	if ( sym && sym->GetType() == zPAR_TYPE_CLASS ) {
+		error = 0;
+		zCPar_Symbol::SetUseInstanceAdr(data);
+
+		pc = line.Data();
+		pc_stop = line.Data() + line.Length() + 1;
+
+		auto res = ParseExpression();
+		if ( res && !error )
+			leaf = EvalLeaf(res, 0);
+
+		return leaf != 0;
+	}
+
 	return 0;
 }
 
-int zCParser::LoadDat(zSTRING& fileName)
+zCPar_TreeNode* zCParser::ParseExpressionEx(zSTRING& tok)
 {
-	int result = 0;
+	oldpc_stop = this->pc_stop;
+	oldpc = pc;
 
-	zoptions->ChangeDir(0x13);
+	char* data = tok.Data();
 
-	zSTRING msg = "Loading " + fileName;
+	pc = data;
+	pc_stop = &data[tok.Length() + 1];
+	ext_parse = 1;
 
-	if (msgfunc)
-		msgfunc(msg);
+	tok = GetNextToken();
+	return Parse_Expression(tok, -1);
+}
 
-	zERROR::Message("U:PAR: " + msg);
 
-	zFILE* file = zfactory->CreateZFile(fileName);
-	file->Open(0);
+void zCParser::Parse(zSTRING fileName)
+{
+	fileName.Upper();
+	mainfile = fileName;
 
-	int version;
-	file->Read(&version, 1);
+	compiled = 0;
 
-	if (version == tree_version) {
-		symtab.load(file);
-		stack.load(file):
+	auto pos = fileName.Search(0,".SRC",1);
 
-		zSTRING tmp = '\xFF' + "INSTANCE_HELP";
-		instance_help = symtab.GetIndex(tmp);
-	} else {
-		zSTRING msg = "Dat-File is not compatible. Please use the \"SRC\"-File.";
-		Error(msg, 0):
+	if ( enableParsing ) {
+		if (pos > 0)
+			return ParseSource(fileName);
 
-		result = -1;
+		if ( fileName.Search(0, ".D", 1u) > 0 )
+			return ParseFile(fileName);
 	}
 
-	delete file;
+	if (pos > 0)
+		fileName.Overwrite(pos, ".DAT");
 
-	return result;
+
+	if ( fileName.Search(0, ".DAT", 1u) > 0 ) {
+		compiled = 1;
+
+		zPATH path(fileName);
+		return LoadDat(path.GetFilename() + ".DAT");
+	}
+	return -1;
+}
+
+int zCParser::Reparse(zSTRING& fileName)
+{
+	unsigned i = 0;
+	for (; i < files.GetNum(); ++i) {
+		if (GetFileName(i) == fileName) {
+			files[i]->enableTreeLoad = 0;
+			ParseFile(fileName);
+			files[i]->enableTreeLoad = 0;
+			break;
+		}
+	}
+	return i;
 }
 
 void zCParser::PushVarAddress(int adr)
@@ -876,86 +1141,6 @@ void zCParser::SetReturn(zSTRING* str)
 	datastack.Push(66);
 }
 
-void zCParser::PrevWord()
-{
-	pc = prevword_index[prevword_nr];
-	linec = prevline_index[prevword_nr];
-	prevword_nr = (prevword_nr - 1) & 0xF;
-}
-
-void zCParser::ReadWord(zSTRING& word)
-{
-	while ( 2 ) {
-		while ( 2 ) {
-			i = 0;
-
-			PrevWord();
-
-			while ( pc < pc_stop ) {
-				++pc
-				if ( *pc > ' ' ) {
-					if ( !strrchr(trenn, *pc) ) {
-						::word[i++] = *pc;
-						continue;
-					}
-
-					if ( i <= 0 )
-						::word[i++] = *pc;
-					else
-						--pc;
-					break;
-				}
-
-				if ( tk != '\n' ) {
-					if (i > 0)
-						break;
-					continue;
-				}
-
-				++linec;
-				line_start = pc - pc_start;
-				if (i > 0)
-					break;
-
-				prevword_index[prevword_nr] = pc_next;
-				prevline_index[prevword_nr] = linec;
-			}
-
-			if ( !i ) {
-				if ( ext_parse ) {
-					ext_parse = 0;
-					pc = oldpc;
-					pc_stop = oldpc_stop;
-					continue;
-				}
-			}
-
-			break;
-		}
-
-		::word[i] = 0;
-
-		word = ::word;
-		word.Upper();
-
-		if (word == "/") {
-			if (*pc = '/') {
-				++pc;
-				FindNext("\n");
-				++pc;
-				continue;
-			}
-			if (*pc == '*') {
-				++pc;
-				FindNext("*/");
-				pc += 2;
-				continue;
-			}
-		}
-
-		break;
-	}
-}
 
 void zCParser::SolveLabels(zCPar_TreeNode* node)
 {
@@ -1239,63 +1424,6 @@ zSTRING zCParser::GetInstanceValue(int cindex, unsigned int nr, char *adr, int a
 	return "";
 }
 
-void zCParser::DeclareClass()
-{
-	auto lc = linec;
-	auto ls = line_start;
-
-	zSTRING word;
-	ReadWord(word);
-
-	params = 1;
-
-	auto csym = new zCPar_Symbol;
-	in_class = csym;
-	csym->name = word;
-	csym->SetType(zPAR_TYPE_CLASS);
-
-	if ( !symtab.Insert(in_class) )
-		Error(ParErr_Redefined + in_class->name);
-
-	ParseBlock();
-	in_class->SetLineData(in_class, lc, linec - lc+1, ls, pc - pc_start - ls+3);
-	in_class->SetFileNr(>in_class, files.GetNum() - 1);
-
-	in_class = 0;
-	in_classnr = 0;
-	params = 0;
-}
-
-void zCParser::DeclareReturn()
-{
-	if ( in_func ) {
-		if ( in_func->HasFlag(2) ) {
-			auto offs = in_func->GetOffset() - 2;
-			if ( offs && offs == 1 ) {
-				treenode->next = CreateStringLeaf();
-				while (treenode->next)
-					treenode = treenode->next;
-			} else {
-				auto tok = GetNextToken();
-				treenode->next = Parse_Expression(tok, -1);
-
-				if ( treenode->next )
-					treenode = treenode->next->SeekEndTree();
-
-				PrevWord();
-			}
-		}
-
-		auto leaf = CreateLeaf(zPAR_TOK_RET, 0);
-
-		if ( treenode )
-			treenode->next = leaf;
-		treenode = leaf;
-	} else {
-		Errpr("Unexpected 'return'");
-	}
-}
-
 void zCParser::FindNext(char *SubStr)
 {
 	auto pos = pc;
@@ -1340,116 +1468,6 @@ void zCParser::AddClassOffset(zSTRING& name, int newOffset)
 			}
 		}
 	}
-}
-
-zCPar_TreeNode* zCParser::ParseExpression(int& tok, int prec)
-{
-	auto nexttok = tok;
-	auto primary = Parse_Expression_Primary(tok);
-	if ( primary ) {
-		while (tok <= zPAR_OP_UN_NEG) {
-			if ( Op_Prio[tok] <= prec )
-				break;
-			auto nexttok = GetNextToken();
-
-			auto rhs = Parse_Expression(tok, Op_Prio[tok]);
-			if (IsAssignmentOp(tok)  && primary->tok_type != zPAR_TOK_VAR)
-				Error("Assignment : Left operand is not a lvalue", 0);
-
-			auto leaf = CreateLeaf(tok);
-
-			newnode->left = primary;
-			newnode->right = rhs;
-			primary = newnode;
-
-			tok = nexttok;
-		}
-	}
-	return primary;
-}
-
-int zCParser::IsValid(zSTRING& className, void *data, zSTRING& p)
-{
-	auto line = p + ";";
-	zCPar_TreeNode* leaf = 0;
-
-	className.Upper();
-	auto sym = symtab.GetSymbol(className);
-	if ( sym && sym->GetType() == zPAR_TYPE_CLASS ) {
-		error = 0;
-		zCPar_Symbol::SetUseInstanceAdr(data);
-
-		pc = line.Data();
-		pc_stop = line.Data() + line.Length() + 1;
-
-		auto res = ParseExpression();
-		if ( res && !error )
-			leaf = EvalLeaf(res, 0);
-
-		return leaf != 0;
-	}
-
-	return 0;
-}
-
-zCPar_TreeNode* zCParser::ParseExpressionEx(zSTRING& tok)
-{
-	oldpc_stop = this->pc_stop;
-	oldpc = pc;
-
-	char* data = tok.Data();
-
-	pc = data;
-	pc_stop = &data[tok.Length() + 1];
-	ext_parse = 1;
-
-	tok = GetNextToken();
-	return Parse_Expression(tok, -1);
-}
-
-
-int zCParser::Reparse(zSTRING& fileName)
-{
-	unsigned i = 0;
-	for (; i < files.GetNum(); ++i) {
-		if (GetFileName(i) == fileName) {
-			files[i]->enableTreeLoad = 0;
-			ParseFile(fileName);
-			files[i]->enableTreeLoad = 0;
-			break;
-		}
-	}
-	return i;
-}
-
-void zCParser::Parse(zSTRING fileName)
-{
-	fileName.Upper();
-	mainfile = fileName;
-
-	compiled = 0;
-
-	auto pos = fileName.Search(0,".SRC",1);
-
-	if ( enableParsing ) {
-		if (pos > 0)
-			return ParseSource(fileName);
-
-		if ( fileName.Search(0, ".D", 1u) > 0 )
-			return ParseFile(fileName);
-	}
-
-	if (pos > 0)
-		fileName.Overwrite(pos, ".DAT");
-
-
-	if ( fileName.Search(0, ".DAT", 1u) > 0 ) {
-		compiled = 1;
-
-		zPATH path(fileName);
-		return LoadDat(path.GetFilename() + ".DAT");
-	}
-	return -1;
 }
 
 void zCParser::ShowPCodeSpy(zSTRING& name)
@@ -1626,4 +1644,80 @@ void zCParser::MergeFile(zSTRING& name)
 
 	treesave = 0;
 	mergemode = 0;
+}
+
+int zCParser::SaveDat(zSTRING& fileName)
+{
+	if (datsave) {
+		Message("Saving " + fileName);
+
+		zoptions->ChangeDir(DIR_COMPILED_SCRIPTS);
+
+		zFILE file = zfactory->CreateZFile(fileName);
+		file->Create();
+
+		file->Write(&tree_version, 1);
+
+		symtab.Save(file);
+		stack.Save(file);
+
+		file->Close();
+
+		delete file;
+	}
+	return 0;
+}
+
+int zCParser::LoadDat(zSTRING& fileName)
+{
+	int result = 0;
+
+	zoptions->ChangeDir(DIR_COMPILED_SCRIPTS);
+
+	Message("Loading " + fileName);
+
+	zFILE* file = zfactory->CreateZFile(fileName);
+	file->Open(0);
+
+	int version;
+	file->Read(&version, 1);
+
+	if (version == tree_version) {
+		symtab.load(file);
+		stack.load(file):
+
+		zSTRING tmp = '\xFF' + "INSTANCE_HELP";
+		instance_help = symtab.GetIndex(tmp);
+	} else {
+		zSTRING msg = "Dat-File is not compatible. Please use the \"SRC\"-File.";
+		Error(msg, 0):
+
+		result = -1;
+	}
+
+	delete file;
+
+	return result;
+}
+
+int zCParser::CheckClassSize(int index, int size)
+{
+	auto csym = symtab.GetSymbol(index);
+	if ( csym && csym->GetType() == zPAR_TYPE_CLASS ) {
+		if ( csym->GetOffset() != size ) {
+			auto msg1 = "Class - size not compatible : " + csym->name + "\n";
+			auto msg2 = "CPP - size : "_s + size + "\n";
+			auto msg3 = "Script - size : " + csym->GetOffset();
+			Error(msg1 + msg2 + msg3);
+		}
+		return csym->GetOffset() == size;
+	}
+	return 0;
+
+}
+
+int zCParser::CheckClassSize(zSTRING& className, int size)
+{
+	int idx = GetIndex(className);
+	return CheckClassSize(idx, size);
 }

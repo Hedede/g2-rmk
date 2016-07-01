@@ -39,15 +39,15 @@ struct zCVobLightData {
 
 	//Siehe Auflistung oben
 	struct {
-		uint32_t isStatic       : 1;
-		uint32_t rangeAniSmooth : 1;
-		uint32_t rangeAniLoop   : 1;
-		uint32_t colorAniSmooth : 1;
-		uint32_t colorAniLoop   : 1;
-		uint32_t isTurnedOn     : 1;
-		uint32_t lightQuality   : 4;
-		uint32_t lightType      : 4;
-		uint32_t canMove        : 1;
+		uint32_t isStatic       : 1; // 1
+		uint32_t rangeAniSmooth : 1; // 2
+		uint32_t rangeAniLoop   : 1; // 4
+		uint32_t colorAniSmooth : 1; // 8
+		uint32_t colorAniLoop   : 1; // 0x10
+		uint32_t isTurnedOn     : 1; // 0x20
+		uint32_t lightQuality   : 4; // 0x40 0x80 0x100 0x200
+		uint32_t lightType      : 4; // 0x400 0x800 0x1000 0x2000
+		uint32_t canMove        : 1; // 0x4000
 	} flags;
 };
 

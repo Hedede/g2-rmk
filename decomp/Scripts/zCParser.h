@@ -90,6 +90,9 @@ struct zCParser {
 	void DeclareAssignFunc(zSTRING& name);
 	void DeclareReturn();
 	void DeclareClass();
+	void DeclareFunc();
+	void DeclarePrototype();
+	void DeclareIf()
 
 	// Parse_Expression in original
 	zCPar_TreeNode* ParseExpression(int& tok, int prec);
@@ -172,6 +175,7 @@ struct zCParser {
 
 	zBOOL MatchClass(int index, zSTRING const& name);
 	void AddClassOffset(zSTRING& name, int newOffset);
+	void* EvalLeaf(zCPar_TreeNode* node, int w1);
 	int IsValid(zSTRING& className, void *data, zSTRING& p);
 
 	void CreateVarReferenceList(zSTRING const& className, zCArray<int>& refList);
@@ -198,6 +202,9 @@ struct zCParser {
 			screen->RemoveItem(win_code);
 		debugmode = 0;
 	}
+
+	int SaveGlobalVars(zCArchiver& arc);
+	int LoadGlobalVars(zCArchiver& arc);
 
 	void Reset();
 	int ResetGlobalVars();

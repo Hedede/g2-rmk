@@ -488,6 +488,98 @@ void zCParser::DeclareClass()
 	params = 0;
 }
 
+void zCParser::DeclarePrototype()
+{
+	auto olinec = linec;
+	auto olinec_start = line_start;
+
+	zSTRING word;
+	ReadWord(word);
+
+	if ( isdigit(word[0]) )
+		Error("Syntax Error. First letter is a digit in prototypename.", 0);
+
+	Match("(");
+
+	ReadWord(aword);
+
+	auto sym = symtab.GetSymbol(aword);
+
+	if (sym && sym->GetType() == zPAR_TYPE_CLASS ) {
+		in_func = new zCPar_Symbol(word);
+		in_func->SetType(zPAR_TYPE_PROTOTYPE);
+
+		in_func->SetParent(sym);
+		in_class = sym;
+
+		if ( !symtab.Insert(in_func) )
+			Error(ParErr_Redefined + in_func->name);
+
+		Match(")");
+
+		treenode = CreateLeaf(zPAR_TOK_INSTANCE, treenode);
+		treenode->name = word;
+
+		ParseBlock();
+		in_func->SetLineData(olinec, linec - olinec + 1, olinec_start, pc - pc_start - olinec_start + 3);
+		in_func->SetFileNr(files.GetNum() - 1);
+
+		treenode = CreateLeaf(zPAR_TOK_RET, treenode);
+		treenode = CreateLeaf(zPAR_TOK_INSTANCEEND, treenode);
+	} else {
+		Error(ParErr_NoValidClass, aword);
+	}
+}
+
+void zCParser::DeclareFunc()
+{
+	auto old_linec = linec;
+	auto old_line_start = line_start;
+
+	auto ftype = ReadFuncType();
+
+	auto sym = new zCPar_Symbol();
+	sym->SetType(zPAR_TYPE_FUNC);
+	sym->SetFlag(zPAR_FLAG_CONST);
+
+	if ( !symtab.Insert(sym) )
+		Error(ParErr_Redefined + sym->name);
+
+	treenode = CreateLeaf(zPAR_TOK_FUNC, treenode);
+	in_func = sym;
+
+	if ( ftype )
+		sym->SetFlag(zPAR_FLAG_RETURN);
+
+	sym->SetOffset(ftype);
+
+	Match("(");
+
+	ReadWord(aword);
+
+	if (aword = "VAR") {
+		params = 1;
+		DeclareVar(0);
+		params = 0;
+
+		Match(")");
+	} else {
+		if (aword != ")") {
+			Error("Expected ')'");
+			return;
+		}
+	}
+
+	ParseBlock();
+
+	sym->SetLineData(old_linec, linec - old_linec + 1, old_line_start, pc - pc_start - old_line_start + 3);
+	sym->SetFileNr(files.GetNum() - 1);
+
+	in_func = 0;
+	in_funcnr = 0;
+	treenode = CreateLeaf(zPAR_TOK_FUNCEND, treenode);
+}
+
 void zCParser::DeclareReturn()
 {
 	if ( in_func ) {
@@ -541,6 +633,69 @@ void zCParser::DeclareAssignFunc(zSTRING& name)
 	treenode = CreateLeaf(zPAR_TOK_ASSIGNFUNC, treenode);
 }
 
+void zCParser::DeclareIf()
+{
+	int idx = -1;
+	while ( 1 ) {
+		auto tok = GetNextToken();
+
+		treenode->next = ParseExpression(&tok, -1);
+		while (treenode->next)
+			treenode = treenode->next;
+
+		int pos = labelpos;
+		treenode = CreateLeaf(zPAR_TOK_JUMPF, treenode);
+		treenode->label_index = labelpos++;
+
+		PrevWord();
+
+		ParseBlock();
+		ReadWord(aword);
+
+		if (aword == "ELSE") {
+			treenode = CreateLeaf(zPAR_TOK_LABEL, treenode);
+			treenode->label_index = pos;
+			if ( aword == ";")
+				break;
+			continue;
+		}
+
+		if ( idx < 0 ) {
+			idx = labelpos;
+			labelpos = idx + 1;
+		}
+
+		treenode = CreateLeaf(zPAR_TOK_JUMP, treenode);
+		treenode->label_index = idx;
+
+		ReadWord(aword);
+		if (aword == "{") {
+			treenode = CreateLeaf(zPAR_TOK_LABEL, treenode);
+			treenode->label_index = pos;
+
+			PrevWord();
+
+			ParseBlock();
+			ReadWord(aword);
+
+			Match(";");
+
+			break;
+		}
+
+		PrevWord();
+
+		Match("IF");
+	}
+
+
+	if ( idx >= 0 ) {
+		treenode = CreateLeaf(zPAR_TOK_LABEL, treenode);
+		treenode->label_index = idx;
+	}
+
+	PrevWord();
+}
 
 zCPar_TreeNode* zCParser::ParseExpression(int& tok, int prec)
 {
@@ -667,10 +822,10 @@ void zCParser::PushDataValue(int val)
 int zCParser::PopDataValue()
 {
 	int result = datastack.Pop();
-	if (result == 64) {
-		result = datastack.Pop(v1);
-	} else if (result == 65) {
-		result = *(int*)datastack.Pop(v1);
+	if (result == zPAR_TOK_PUSHINT) {
+		result = datastack.Pop();
+	} else if (result == zPAR_TOK_PUSHVAR) {
+		result = *(int*)datastack.Pop();
 	} else {
 		result = 0;
 	}
@@ -709,6 +864,105 @@ int zCParser::PopVarAddress()
 		result = 0;
 	}
 	return result;
+}
+
+void* zCParser::EvalLeaf(zCPar_TreeNode* node, int w1)
+{
+	void* evalleft, evalright;
+	if ( node->tok_type <= zPAR_OP_UN_NEG ) {
+		if ( node->tok_type >= zPAR_OP_UN_PLUS ) {
+			evalleft = node;
+			evalright = EvalLeaf(node->right, 0);
+		} else {
+			evalleft = EvalLeaf(node->left, node.tok_type);
+			evalright = EvalLeaf(node->right, 0);
+		}
+
+LABEL_34:
+		switch ( node->tok_type ) {
+		case zPAR_OP_PLUS:
+			return evalleft + evalright;
+		case zPAR_OP_MINUS:
+			return evalleft - evalright;
+		case zPAR_OP_MUL:
+			return evalleft * evalright;
+		case zPAR_OP_UN_PLUS:
+			return evalright;
+		case zPAR_OP_DIV:
+			return evalleft / evalright;
+		case zPAR_OP_MOD:
+			return evalleft % evalright;
+		case zPAR_OP_OR:
+			return evalright | evalleft;
+		case zPAR_OP_AND:
+			return evalright & evalleft;
+		case zPAR_OP_LOWER:
+			return evalleft < evalright;
+		case zPAR_OP_HIGHER:
+			return evalleft > evalright;
+		case zPAR_OP_LOG_OR:
+			return evalleft || evalright;
+		case zPAR_OP_LOG_AND:
+			return evalleft && evalright;
+		case zPAR_OP_SHIFTL:
+			return evalleft << evalright;
+		case zPAR_OP_SHIFTR:
+			return evalleft >> evalright;
+		case zPAR_OP_LOWER_EQ:
+			return evalleft <= evalright;
+		case zPAR_OP_EQUAL:
+			return evalleft == evalright;
+		case zPAR_OP_NOTEQUAL:
+			return evalleft != evalright;
+		case zPAR_OP_HIGHER_EQ:
+			return evalleft >= evalright;
+		case zPAR_OP_IS:
+			return *evalleft = evalright;
+		case zPAR_OP_ISPLUS:
+			return *evalleft += evalright;
+		case zPAR_OP_ISMINUS:
+			return *evalleft -= evalright;
+		case zPAR_OP_ISMUL:
+			return *evalleft *= evalright;
+		case zPAR_OP_ISDIV:
+			return *evalleft /= evalright;
+		case zPAR_OP_UN_MINUS:
+			return evalleft = -evalright;
+		case zPAR_OP_UN_NOT:
+			return !evalright;
+		case zPAR_OP_UN_NEG:
+			return ~evalright;
+		default:
+			Error("Code - Error in Tree-Expression !");
+			break;
+		}
+		return evalleft;
+	}
+
+	if ( node->tok_type == zPAR_TOK_FLOAT )
+		return node->label_index;
+	if ( node->tok_type != zPAR_TOK_VAR ) {
+		Error("Error in EvalLeaf.");
+		evalleft = node;
+		evalright = node;
+		goto LABEL_34;
+	}
+
+	auto idx = FindIndex(node->name);
+	auto sym = symtab.GetSymbol(idx);
+
+	if ( !sym ) {
+		Error("Unknown Var '" + node->name + "'.");
+	}
+
+	if ( w1 == zPAR_OP_IS || w1 >= zPAR_OP_ISPLUS && w1 <= zPAR_OP_ISDIV ) {
+		return sym->GetDataAdr(node->label_index);
+	} else if ( zCPar_Symbol::HasFlag(sym, zPAR_FLAG_CLASSVAR) ) {
+		return *sym->GetDataAdr(node->label_index);
+	}
+
+	sym->GetValue(&node, node->label_index);
+	return node;
 }
 
 void zCParser::Execute(int op1, int op2, char opcode)
@@ -1671,6 +1925,71 @@ void zCParser::DefineExternal(zSTRING& name, int (*func)(), int type, int first,
 	}
 }
 
+int retval;
+int* zCParser::CallFunc(int funcIdx, ...)
+{
+	retval = 0;
+
+	ayto sym = symtab.GetSymbol(funcIdx);
+
+	if ( sym && sym->GetType() == zPAR_TYPE_FUNC ) {
+		datastack.Clear();
+
+		char* arg = (char*)&funcIdx;
+		for (unsigned i = 0; i < sym->ele; ++i) {
+			auto var = symtab.GetSymbol(funcIdx + i + 1);
+
+			if (var->GetType() == 1) {
+				arg += sizeof(float);
+
+				float value = *(float*)arg;
+				var->SetValue(value, 0);
+
+				datastack.Push(value);
+				datastack.Push(64);
+				continue;
+			}
+			if (var->GetType() == 2) {
+				arg += sizeof(int);
+
+				int value = *(int*)arg;
+				var->SetValue(value, 0);
+
+				datastack.Push(value);
+				datastack.Push(64);
+				continue;
+			}
+			if (var->GetType() == 3) {
+				arg += sizeof(zSTRING);
+
+				zSTRING value = *(zSTRING*)arg;
+				var->SetValue(value, 0);
+
+				auto adr = sym->GetDataAdr(0);
+				datastack.Push(adr);
+				datastack.Push(65);
+				continue;
+			}
+
+			Error("Function type not supported. (" + sym->name + ")", 0);
+		}
+
+		labelcount = funcIdx;
+
+		sym->GetStackPos(&stackPos, 0);
+		DoStack(stackPos);
+
+		if (sym->HasFlag(zPAR_FLAG_RETURN) && in(sym->GetOffset(), 1,2))
+			retval = PopDataValue();
+
+		labelcount = -1;
+	} else {
+		Message("Warning : Engine calls an undefined function. (index : "_s + funcIdx + " )");
+	}
+
+	return &retval;
+}
+
 void zCParser::MergeFile(zSTRING& name)
 {
 	mergemode = 1;
@@ -1828,12 +2147,76 @@ int zCParser::WriteAdditionalInfo(zSTRING& call, int zeile, int filepos)
 	zfile->Write(str);
 	str = "LINE   { "_s + zeile +  " }\n";
 	zfile->Write(str);
-	str = "FILEPOS{ "_s + filepos + " }\n\n");
+	str = "FILEPOS{ "_s + filepos + " }\n\n";
 	zfile->Write(str);
 
 	zfile->Close();
 	delete zfile;
 
 	file.ChangeDir(0);
+	return 1;
+}
+
+int zCParser::SaveGlobalVars(zCArchiver& arc)
+{
+	unsigned numSymbols = 0;
+	for (unsigned i = 0; i < symtab.GetNumInList(); ++i ) {
+		auto sym = symtab.GetSymbol(i);
+		if (sym && sym->GetType() == zPAR_TYPE_INT && !sym->flags && sym->ele > 0)
+			++numSymbols;
+	}
+
+	arc->WriteInt("numSymbols", numSymbols);
+
+	for (unsigned i = 0; i < symtab.GetNumInList(); ++i ) {
+		auto sym = symtab.GetSymbol(i);
+		if (!sym || sym->GetType() != zPAR_TYPE_INT)
+			continue;
+		if (sym->flags)
+			continue;
+		if (sym->ele <= 0)
+			continue;
+
+		auto nam = "symName"_s + i;
+		arc.WriteString(nam, sym->name);
+		arc.WriteString(nam + "cnt", sym->ele);
+
+		for (unsigned e = 0; e < sym->ele; ++i) {
+			int val;
+			sym->GetValue(&val, e);
+
+			arc->WriteInt("symValue"_s + i + "_" + e, val);
+		}
+	}
+
+	return 1;
+}
+
+int zCParser::LoadGlobalVars(zCArchiver& arc)
+{
+	int numSymbols;
+	arc->ReadInt("numSymbols", &numSymbols);
+
+	for (auto i = 0; i < numSymbols; ++i) {
+		auto nam = "symName"_s + i;
+
+		zSTRING symName;
+		arc->ReadString(nam, symName);
+		symName.Upper();
+		auto = symtab.GetSymbol(symName);
+		if (sym && sym->GetType() == zPAR_TYPE_INT && !sym->flags && sym->ele > 0) {
+			auto cnt = 0;
+			arc->ReadInt(nam + "cnt", cnt);
+			for (auto e = 0; e < cnt; ++e) {
+				int val;
+				arc->ReadInt("symValue"_s + i + "_" + e, val);
+				sym->SetValue(val, e);
+			}
+		} else {
+			int val;
+			arc->ReadInt("symValue"_s + i, val);
+		}
+	}
+
 	return 1;
 }

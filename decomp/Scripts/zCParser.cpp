@@ -310,6 +310,141 @@ void zCParser::Match(zSTRING& match)
 		Error(ParErr_Expected + "'" + match + "'");
 }
 
+int zCParser::GetNextToken()
+{
+	static zSTRING Operators = "+-*/%|&<>=";
+
+	ReadWord(aword);
+
+	zSTRING tmpstr;
+	auto c = aword[0];
+	if (c >= 'A' && c <= 'Z' || c == '_' || c == '#' ) {
+		ReadWord(tmpstr);
+		PrevWord();
+
+		--prevword_nr;
+		if ( tmpstr == "(" )
+			return zPAR_TOK_FUNC;
+
+		return zPAR_TOK_VAR;
+	}
+
+	if (c >= '0' && c <= '9') {
+		for (auto i = 1; i < aword.Length(); ++i ) {
+			if (!isdigit(aword[i]))
+				Error(ParErr_SyntaxError + aword, 0);
+		}
+
+		return zPAR_TOK_FLOAT;
+	}
+
+	// tried to turn into switch (it probably WAS a switch)
+	// but goto throws me off
+	auto search = Operators.Search(0, c, 1u);
+	if ( search >= 0 ) {
+		if ( c == '|' ) {
+			if ( *pc == '|' ) {
+				++pc;
+				return zPAR_OP_LOG_OR;
+			}
+			goto LABEL_37;
+		}
+		if ( c == '&' ) {
+			if ( *pc == '&' ) {
+				++pc;
+				return zPAR_OP_LOG_AND;
+			}
+			goto LABEL_37;
+		}
+		if ( c == '<' ) {
+			if ( *pc == '<' ) {
+				++pc;
+				return zPAR_OP_SHIFTL;
+			}
+			if ( *pc == '=' )
+			{
+				++pc;
+				return zPAR_OP_LOWER_EQ;
+			}
+		}
+		if ( c != '>' ) {
+LABEL_37:
+			if ( *pc == '=' ) {
+				if ( c == '=' ) {
+					++pc;
+					return zPAR_OP_EQUAL;
+				}
+				if ( c == '+' ) {
+					++pc;
+					return zPAR_OP_ISPLUS;
+				}
+				if ( c == '-' ) {
+					++pc;
+					return zPAR_OP_ISMINUS;
+				}
+				if ( c == '*' ) {
+					++pc;
+					return zPAR_OP_ISMUL;
+				}
+				if ( c == '/' ) {
+					++pc;
+					return zPAR_OP_ISDIV;
+				}
+			}
+			return search;
+		}
+		if ( *pc == '>' ) {
+			++pc;
+			return zPAR_OP_SHIFTR;
+		}
+		if ( *pc == '=' ) {
+			++pc;
+			return zPAR_OP_HIGHER_EQ;
+		}
+
+		return search;
+	}
+
+	if ( c == '!' ) {
+		if ( *pc == '=' ) {
+			++pc;
+			return zPAR_OP_NOTEQUAL;
+		} else {
+			++pc;
+			return zPAR_OP_UN_NOT;
+		}
+	}
+
+	if ( c == '~' ) {
+		++pc;
+		return zPAR_OP_UN_NEG;
+	}
+	if ( c == '(' ) {
+		++pc;
+		return zPAR_TOK_BRACKETON;
+	}
+	if ( c == ')' ) {
+		++pc;
+		return zPAR_TOK_BRACKETOFF;
+	}
+	if ( c == ';' ) {
+		++pc;
+		return zPAR_TOK_SEMIKOLON;
+	}
+	if ( c == ',' ) {
+		++pc;
+		return zPAR_TOK_KOMMA;
+	}
+	if ( c == '}' || tmpchar == '{' ) {
+		++pc;
+		return zPAR_TOK_SCHWEIF;
+	}
+
+	Error("Syntax Error.", 0);
+
+	return zPAR_TOK_NONE;
+}
+
 int zCParser::ReadVarType()
 {
 	ReadWord(aword);

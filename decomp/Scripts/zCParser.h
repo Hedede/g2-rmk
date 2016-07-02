@@ -86,6 +86,8 @@ struct zCParser {
 	void PrevWord();
 	void ReadWord(zSTRING& word);
 
+	int GetNextToken();
+
 	void DeclareAssign(zSTRING& name);
 	void DeclareAssignFunc(zSTRING& name);
 	void DeclareReturn();

@@ -1,4 +1,14 @@
 struct zCPar_File {
+	static int IsNewerDate(zDATE& a, zDATE& b)
+	{
+		return a < b;
+	}
+
+	static int IsExactDate(zDATE& a, zDATE& b)
+	{
+		return a == b;
+	}
+
 	zCPar_File() = default;
 
 	zSTRING GetName()

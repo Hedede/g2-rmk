@@ -149,6 +149,11 @@ struct zCPar_StringTable {
 		delete file;
 	}
 
+	void Insert(zSTRING& s)
+	{
+		table.Insert(new zSTRING{s});
+	}
+
 private:
 	zCArray<zSTRING*> table;
 };

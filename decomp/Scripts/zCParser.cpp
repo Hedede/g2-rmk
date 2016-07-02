@@ -148,6 +148,7 @@ int zCParser::ResetGlobalVars()
 	return 1;
 }
 
+zSTRING ParErr_UnknownVar = "Unknown identifier : ";
 
 void zCParser::Error(zSTRING& errmsg, int pos)
 {
@@ -664,6 +665,203 @@ void zCParser::DeclarePrototype()
 	} else {
 		Error(ParErr_NoValidClass, aword);
 	}
+}
+
+void zCParser::DeclareVar(int isConst)
+{
+	zCPar_TreeNode* node, node2;
+	zCPar_Symbol* classsym = nullptr;
+
+RECURSE:
+	auto type = ReadVarType();
+	if (type >= zPAR_TYPE_INSTANCE) {
+		classsym = GetSymbol(type - 7);
+		type = 7;
+		type = 7; // sic!
+	}
+
+	while ( 1 ) {
+		int line = linec;
+		int pos = line_start;
+
+		zSTRING name;
+		ReadWord(name);
+
+		int ele = 1;
+		ReadWord(aword);
+		if (aword == "[") {
+			auto ele = ReadInt();
+			zASSERT(ele < 4096); // zParser_Lexer.cpp, 948
+			Match("]");
+		} else {
+			PrevWord();
+		}
+
+		auto newsym = new zCPar_Symbol()
+
+		newsym->SetName(name);
+		newsym->SetType(type);
+		newsym->ele = ele;
+		newsym->SetParent(classsym);
+
+		if ( isConst )
+			newsym->SetFlag(zPAR_FLAG_CONST);
+
+		if ( in_func ) {
+			zSTRING name = in_func->name + "." + newsym->name;
+			newsym->SetName(name);
+
+			if (params) {
+				zASSERT(in_func->ele < 4095); // 966
+				++in_func->ele;
+
+				switch (newsym->GetType()) {
+				case zPAR_TYPE_INT:
+					node = new zCPar_TreeNode(zPAR_TOK_VAR, 0);
+					node->name = newsym->name;
+					node->label_index = 0;
+					node->stack_index = 2;
+
+					node2 = CreateLeaf(zPAR_OP_IS, node);
+					node2->next = treenode->next;
+					treenode->next = node;
+
+					if ( in_func->ele == 1 )
+						treenode = node2;
+					break;
+				case zPAR_TYPE_STRING:
+					node = new zCPar_TreeNode(zPAR_TOK_VAR, 0);
+					node->name = newsym->name;
+					node->label_index = 0;
+					node->stack_index = 3;
+
+					node2 = CreateLeaf(zPAR_TOK_ASSIGNSTR, node);
+					node2->next = treenode->next;
+					treenode->next = node;
+
+					if ( in_func->ele == 1 )
+						treenode = node2;
+					break;
+				case zPAR_TYPE_INSTANCE:
+					node = new zCPar_TreeNode(zPAR_TOK_PUSHINST);
+					node->name = newsym->name;
+					node->label_index = symindex;
+					node->stack_index = 7;
+
+					node2 = CreateLeaf(zPAR_TOK_ASSIGNINST, node);
+					node2->next = treenode->next;
+					treenode->next = node;
+
+					if ( in_func->ele == 1 )
+						treenode = node2;
+
+					break;
+				case zPAR_TYPE_FLOAT:
+					node = new zCPar_TreeNode(zPAR_TOK_VAR);
+					node->name = newsym->name;
+					node->label_index = 0;
+					node->stack_index = 1;
+
+					node2 = CreateLeaf(zPAR_TOK_ASSIGNFLOAT, node);
+					node2->next = treenode->next;
+					treenode->next = node;
+
+					if ( in_func->ele == 1 )
+						treenode = node2;
+
+					break;
+				case zPAR_TYPE_FUNC:
+					node = new zCPar_TreeNode(zPAR_TOK_VAR);
+					node->name = newsym->name;
+					node->label_index = 0;
+					node->stack_index = 5;
+
+					node2 = CreateLeaf(zPAR_TOK_ASSIGNFUNC, node)
+						node2->next = treenode->next;
+					treenode->next = node;
+
+					if ( in_func->ele == 1 )
+						treenode = node2;
+					break;
+				default:
+					Error("Parameters of this type are not supported.", 0);
+					break;
+				}
+			}
+		} else if ( in_class ) {
+			newsym.name = in_class->name + "." + newsym->name;
+
+			if ( params ) {
+				++in_class->ele;
+				newsym->SetParent(in_class);
+				newsym->SetFlag(zPAR_FLAG_CLASSVAR);
+			}
+		}
+
+		if ( !symtab.Insert(newsym) )
+			Error(ParErr_Redefined + newsym->name, 0);
+
+		if ( isConst ) {
+			Match("=");
+
+			if ( ele > 1 )
+				Match("{");
+
+			for (auto i = 0; i < ele;) {
+				switch ( type ) {
+				case zPAR_TYPE_INT:
+					tok = GetNextToken();
+					expr = Parse_Expression(tok, -1);
+					newsym->SetValue(EvalLeaf(expr, 0), i);
+
+					PrevWord();
+					break;
+				case zPAR_TYPE_FLOAT:
+					value = ReadFloat();
+					newsym->SetValue(value, i);
+					break;
+				case zPAR_TYPE_STRING:
+					ReadString(str);
+					newsym->SetValue(str, i);
+					break;
+				case zPAR_TYPE_FUNC:
+					ReadWord(aword);
+					idx = GetIndex(aword);
+					if ( idx < 0 )
+						Error(ParErr_UnknownVar + aword, 0);
+
+					newsym->SetType(zPAR_TYPE_INT);
+					newsym->SetValue(idx, i);
+					newsym->SetType(zPAR_TYPE_FUNC);
+				default:
+					break;
+				}
+
+				if (++i != ele)
+					Match(",");
+			}
+
+			if ( ii > 1 )
+				Match("}");
+
+			if ( type == zPAR_TYPE_FUNC )
+				newsym->SetType(zPAR_TYPE_INT);
+		}
+
+		newsym->SetLineData(line, linec - line + 1, pos, pc - pc_start - pos + 3);
+		newsym->SetFileNr(files.GetNum() - 1);
+
+		ReadWord(aword);
+		if ( aword == "," )
+			break;
+
+		if ( in_func ) {
+			Match("VAR");
+			goto RECURSE;
+		}
+	}
+
+	PrevWord();
 }
 
 void zCParser::DeclareFunc()

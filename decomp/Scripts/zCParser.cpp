@@ -903,6 +903,31 @@ void zCParser::DeclareIf()
 	PrevWord();
 }
 
+void zCParser::ParseBlock()
+{
+	Match("{");
+
+	zSTRING word;
+	ReadWord(word);
+
+	while (ps < pc_stop) {
+		if (word == "CONST")
+			DeclareVar(true);
+		else if (word == "VAR")
+			DeclareVar(false);
+		else if (word == "RETURN")
+			DeclareReturn();
+		else if (word == "IF")
+			DeclareIf();
+		else if (word == "}")
+			return;
+		else 
+			DeclareAssign(word);
+
+		Match(";");
+	}
+}
+
 zCPar_TreeNode* zCParser::Parse_Expression_Primary(int& tok)
 {
 	zCPar_TreeNode* ret = nullptr;

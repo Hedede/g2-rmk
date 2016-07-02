@@ -1,34 +1,4 @@
-void zCParser::Match(zSTRING const& str)
-{
-	ReadWord(this->aword);
-	if (aword != str)
-		Error(ParErr_Expected + "'" + str + "'", 0);
-}
 
-void zCParser::ParseBlock()
-{
-	Match("{");
-
-	zSTRING word;
-	ReadWord(word);
-
-	while (ps < pc_stop) {
-		if (word == "CONST")
-			DeclareVar(true);
-		else if (word == "VAR")
-			DeclareVar(false);
-		else if (word == "RETURN")
-			DeclareReturn();
-		else if (word == "IF")
-			DeclareIf();
-		else if (word == "}")
-			return;
-		else 
-			DeclareAssign(word);
-
-		Match(";");
-	}
-}
 
 void zCParser::DeclareVar(int isConst)
 {
@@ -213,7 +183,6 @@ PushSym:
 			goto ReadVar;
 		}
 	}
-	this->pc = this->prevword_index[prevword_nr];
-	this->linec = this->prevline_index[prevword_nr];
-	this->prevword_nr = (prevword_nr - 1) & 0xF;
+
+	PrevWord();
 }

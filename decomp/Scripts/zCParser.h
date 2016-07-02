@@ -104,6 +104,8 @@ struct zCParser {
 		return ParseExpression(tok, -1);
 	}
 
+	void ParseBlock();
+
 	int* CallFunc(int funcIndex, ...);
 	int* CallFunc(zSTRING const& func)
 	{

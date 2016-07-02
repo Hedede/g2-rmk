@@ -610,6 +610,77 @@ void zCParser::DeclareReturn()
 	}
 }
 
+void zCParser::DeclareAssign(zSTRING& name)
+{
+	auto idx = FindIndex(name);
+	if (idx < 0) {
+		Error(ParErr_UnknownVar + name);
+		return;
+	}
+
+	auto sym = symtab.GetSymbol(idx);
+	auto type = sym->GetType();
+
+	int tok;
+	switch (type) {
+	case zPAR_TYPE_FLOAT:
+		idx = ReadArray();
+		Match("=");
+		ReadWord(aword);
+		sym = GetSymbol(aword);
+		if (sym && sym->GetType() == zPAR_TYPE_FUNC) {
+			DeclareFuncCall(aword,1);
+			treenode = CreateLeaf(zPAR_TOK_VAR, treenode);
+			treenode->name = name;
+			treenode->label_index  = idx;
+			treenode->startAddress = 1;
+		} else {
+			PrevWord();
+			treenode = CreateLeaf(zPAR_TOK_FLOAT, treenode);
+			treenode->label_index = ReadFloat();
+			treenode = CreateLeaf(zPAR_TOK_VAR, treenode);
+			treenode->name = name;
+			treenode->label_index  = idx;
+			treenode->startAddress = 1;
+		}
+		treenode = CreateLeaf(zPAR_TOK_ASSIGNFLOAT, treenode);
+		return;
+	case zPAR_TYPE_INT:
+		PrevWord();
+		tok = GetNextToken();
+		treenode->next = Parse_Expression(tok, -1);
+		return;
+	case zPAR_TYPE_STRING:
+		idx = ReadArray();
+		Match("=");
+		treenode->next = CreateStringLeaf();
+		while (treenode->next)
+			treenode = treenode->next;
+		treenode = CreateLeaf(zPAR_TOK_VAR, treenode);
+		treenode->name = name;
+		treenode->label_index = idx;
+		treenode->stack_index = 3;
+		treenode = CreateLeaf(zPAR_TOK_ASSIGNSTR, treenode);
+		return;
+	case zPAR_TYPE_FUNC:
+		if ( sym->HasFlag(zPAR_FLAG_CONST) )
+			DeclareFuncCall(name, 0);
+		else
+			DeclareAssignFunc(name);
+		return;
+	case zPAR_TYPE_INSTANCE:
+		Match("=");
+		ReadWord(aword);
+		DeclareFuncCall(aword, 7);
+		treenode = CreateLeaf(zPAR_TOK_PUSHINST, treenode);
+		treenode->name = name;
+		treenode->stack_index = 7;
+		treenode = CreateLeaf(zPAR_TOK_ASSIGNINST, treenode);
+	default:
+		return;
+	}
+}
+
 void zCParser::DeclareAssignFunc(zSTRING& name)
 {
 	auto idx = ReadArray();
@@ -639,7 +710,7 @@ void zCParser::DeclareIf()
 	while ( 1 ) {
 		auto tok = GetNextToken();
 
-		treenode->next = ParseExpression(&tok, -1);
+		treenode->next = Parse_Expression(&tok, -1);
 		while (treenode->next)
 			treenode = treenode->next;
 
@@ -697,7 +768,88 @@ void zCParser::DeclareIf()
 	PrevWord();
 }
 
-zCPar_TreeNode* zCParser::ParseExpression(int& tok, int prec)
+zCPar_TreeNode* zCParser::Parse_Expression_Primary(int& tok)
+{
+	zCPar_TreeNode* ret = nullptr;
+	switch (tok) {
+	case zPAR_TOK_FLOAT:
+		ret = new zCPar_TreeNode(zPAR_TOK_FLOAT, aword.ToLong());
+		tok = GetNextToken();
+		break;
+	case zPAR_TOK_FUNC:
+		{
+			auto otnode = treenode;
+			auto otree = tree;
+
+			ret = new zCPar_TreeNode(zPAR_TOK_SKIP, 0);
+
+			treenode = ret;
+			tree = ret;
+
+			DeclareFuncCall(aword, zPAR_TYPE_INT);
+			ret = tree;
+
+			treenode = otnode;
+			tree = otree;
+		}
+		break;
+	case zPAR_TOK_BRACKETON:
+		tok = GetNextToken();
+		ret = Parse_Expression(tok, -1);
+		if ( tok != zPAR_TOK_BRACKETOFF ) {
+			Error("Missing ')'", 0);
+			break;
+		}
+		tok = GetNextToken();
+
+		break;
+	case zPAR_OP_PLUS:
+	case zPAR_OP_MINUS:
+		tok = GetNextToken();
+		ret = CreateLeaf(tok + zPAR_OP_UN_PLUS, Parse_Expression_Primary(tok));
+		tok = GetNextToken();
+		break;
+	default:
+		Error(ParErr_SyntaxError + aword);
+		tok = GetNextToken();
+		break;
+	case zPAR_OP_UN_PLUS:
+	case zPAR_OP_UN_MINUS:
+	case zPAR_OP_UN_NOT:
+	case zPAR_OP_UN_NEG:
+		tok = GetNextToken();
+		ret = CreateLeaf(tok, Parse_Expression_Primary(tok));
+		tok = GetNextToken();
+		break;
+	case zPAR_TOK_VAR:
+		{
+			auto idx = 0;
+			auto tmp = aword;
+			ReadWord(aword);
+
+			if (aword == "(") {
+				ReadWord(aword);
+
+			} else if (aword == "[") {
+				idx = ReadInt();
+				Match("]");
+			} else {
+				PrevWord();
+			}
+
+			ret = new zCPar_TreeNode(tok, idx);
+			ret->name = tmp;
+			ret->stack_index = 2;
+
+			tok = GetNextToken();
+			break;
+		}
+	}
+
+	return ret;
+}
+
+zCPar_TreeNode* zCParser::Parse_Expression(int& tok, int prec)
 {
 	auto nexttok = tok;
 	auto primary = Parse_Expression_Primary(tok);
@@ -1544,6 +1696,52 @@ zCPar_TreeNode* zCParser::PushTree(zCPar_TreeNode *node)
 	return node;
 }
 
+void zCParser::CreatePCode()
+{
+	error = 0;
+
+	unsigned timediff = 0;
+	if (!compiled) {
+		Message("Linking ...");
+
+		auto time = sysGetTime();
+		unsigned n = 0;
+		for (auto file : files) {
+			if (file->tree) {
+				linkingnr = n;
+				labelpos = file->labelcount;
+				add_funclist.Reserve(file->labelcount);
+
+				PushTree(file->tree);
+
+				SolveLabels(file->tree);
+
+				Delete(file->tree);
+			}
+		}
+		auto time2 = sysGetTime();
+		timediff = time2 - time;
+	} else {
+		Message("Linking skipped.");
+	}
+
+	linkingnr = -1;
+	if ( error ) {
+		Message("Linking failed.");
+	} else {
+		Message("Symbols   : "_s + symtab.GetNumInList());
+		Message("Code Size : "_s + stack.GetDynSize() + " bytes.");
+		Message("Linking ok ("_s + (timediff * 0.001) + "s).");
+	}
+
+	if ( !compiled && parse_changed ) {
+		zPATH path{mainfile};
+		SaveDat(path.GetFilename() + ".DAT");
+	}
+
+	self = GetSymbol("SELF");
+}
+
 zCPar_Symbol* zCParser::SearchFuncWithStartAddress(int startAddress)
 {
 	for (auto i = 0; i <= symtab.GetNumInList(); ++i) {
@@ -2155,6 +2353,82 @@ int zCParser::WriteAdditionalInfo(zSTRING& call, int zeile, int filepos)
 
 	file.ChangeDir(0);
 	return 1;
+}
+
+void zCParser::SaveInfoFile(zSTRING fileName)
+{
+	auto zfile = zfactory->CreateZFile(fileName);
+	zfile->Create();
+
+	zfile->Write("// ***  Externals  ***\n\n");
+
+	for (unsigned i = 0; i < symtab.GetNumInList(); ++i) {
+		auto sym = symtab.GetSymbol(i);
+		if (sym->HasFlag(zPAR_FLAG_EXTERNAL)) {
+			zSTRING name = "FUNC ";
+			if (sym->HasFlag(zPAR_FLAG_RETURN)) {
+				switch (sym->GetOffset()) {
+					case 2:
+						name += "INT";
+						break;
+					case 1:
+						name += "FLOAT";
+						break;
+					case 3:
+						name += "STRING";
+						break;
+					case 7:
+						name += "INSTANCE";
+						break;
+					default:
+						break;
+				}
+			} else {
+				name += "VOID";
+			}
+
+			name += " " + sym->name + " ( ";
+
+			for (unsigned e = 0; e < sym->ele; ++e) {
+				auto var = symtab->GetSymbol(i + e + 1);
+				switch (var->GetType()) {
+				case 2:
+					name += "VAR INT i";
+					break;
+				case 1:
+					name += "VAR FLOAT r";
+					break;
+				case 3:
+					name += "VAR STRING s";
+					break;
+				case 5:
+					name += "VAR FUNC f";
+					break;
+				case 7:
+					name += "VAR INSTANCE n";
+					break;
+				default:
+					break;
+				}
+
+				name += e;
+				if (e < sym->ele)
+					name += ", ";
+
+			}
+
+			name += " ) { ";
+			if (sym->HasFlag(zPAR_FLAG_RETURN))
+				name += "return 0; ";
+			name += "};";
+			name += "\n";
+
+			zfile->Write(name);
+		}
+	}
+
+	zfile->Close();
+	delete zfile;
 }
 
 int zCParser::SaveGlobalVars(zCArchiver& arc)

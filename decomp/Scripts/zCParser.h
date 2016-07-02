@@ -86,16 +86,16 @@ struct zCParser {
 	void PrevWord();
 	void ReadWord(zSTRING& word);
 
-
+	void DeclareAssign(zSTRING& name);
 	void DeclareAssignFunc(zSTRING& name);
 	void DeclareReturn();
 	void DeclareClass();
 	void DeclareFunc();
 	void DeclarePrototype();
-	void DeclareIf()
+	void DeclareIf();
 
-	// Parse_Expression in original
-	zCPar_TreeNode* ParseExpression(int& tok, int prec);
+	zCPar_TreeNode* Parse_Expression_Primary(int& tok);
+	zCPar_TreeNode* Parse_Expression(int& tok, int prec);
 	zCPar_TreeNode* ParseExpression()
 	{
 		auto tok = GetNextToken();
@@ -182,6 +182,7 @@ struct zCParser {
 	int Reparse(zSTRING& fileName);
 	int Parse(zSTRING fileName);
 
+	void SaveInfoFile(zSTRING fileName);
 	void SetInfoFile(zCList<zSTRING>* funcList, zSTRING const& fileName);
 	int IsInAdditionalInfo(zSTRING const& name);
 	int WriteAdditionalInfo(zSTRING& call, int zeile, int filepos);
@@ -202,6 +203,8 @@ struct zCParser {
 			screen->RemoveItem(win_code);
 		debugmode = 0;
 	}
+
+	void CreatePCode();
 
 	int SaveGlobalVars(zCArchiver& arc);
 	int LoadGlobalVars(zCArchiver& arc);

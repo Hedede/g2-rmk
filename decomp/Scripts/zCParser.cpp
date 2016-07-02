@@ -1101,6 +1101,102 @@ void zCParser::DeclareIf()
 	PrevWord();
 }
 
+int zCParser::ParseFile(zSTRING& fileName)
+{
+	for (auto file : files) {
+		if (fileName == file.GetName()) {
+			zWARNING("U:PAR: Ignoring " + fileName + " ( File already parsed )"); // 784, zParser.cpp
+			return 0;
+		}
+	}
+
+	fname = fileName;
+	labelpos = 0;
+
+	auto node = new zCPar_TreeNode();
+	tree = node;
+	treenode = node;
+	node->tok_type = zPAR_TOK_SKIP;
+
+	auto file = new zCPar_File();
+	files.InsertEnd(file);
+	file->fileNum = files.GetNum();
+	file->enableTreeLoad = treeload;
+
+	zDATE date;
+	auto load = file->Load(fileName, &symtab, &date);
+	if ( load != -1 ) {
+		if ( load ) {
+			Message(fileName + " : Load...");
+			labelpos = file->labelcount;
+		} else {
+			Message(fileName + " : Parse...");
+
+			auto nsym = symtab.GetNumInList();
+			auto lsym = symtab.GetLastSymbol();
+
+			linec = 1;
+			line_start = 0;
+			pc = file->startAddress;
+			pc_start = file->startAddress;
+			pc_stop = (file->fileSize + file->startAddress - 1);
+
+			// NOT same as ParseBlock()
+			do {
+				zSTRING tmp;
+				ReadWord(tmp);
+
+				if (tmp == "CONST")
+					DeclareVar(1);
+				else if (tmp == "VAR")
+					DeclareVar(0);
+				else if (tmp == "FUNC")
+					DeclareFunc();
+				else if (tmp == "CLASS")
+					DeclareClass();
+				else if (tmp == "INSTANCE")
+					DeclareInstance();
+				else if (tmp == "PROTOTYPE")
+					DeclarePrototype();
+				else if (tmp == "")
+					break;
+				else
+					Error(ParErr_SyntaxError + tmp, 0)
+
+						Match(";");
+			} while(pc < pc_stop);
+
+			Delete(file->startAddress);
+
+			file->labelcount = labelpos;
+
+			Delete(file->tree);
+
+			file->tree = this->tree;
+
+			if ( treesave ) {
+				if ( lsym ) {
+					auto sym = lsym->GetNext();
+					auto nsym2 = symtab.GetNumInList();
+					file->SaveTree(nsym2 - nsym, sym, date);
+				} else {
+					auto sym = fsym->GetFirstSymbol();
+					auto nsym2 = symtab.GetNumInList();
+					file->SaveTree(nsym2, fsym, date);
+				}
+			}
+		}
+		return 0;
+	}
+
+	Error("File " + fileName + " not found.", 0);
+
+	files.Remove(file);
+
+	delete file;
+	return -1;
+}
+
 void zCParser::ParseBlock()
 {
 	Match("{");
@@ -1108,7 +1204,7 @@ void zCParser::ParseBlock()
 	zSTRING word;
 	ReadWord(word);
 
-	while (ps < pc_stop) {
+	while (pc < pc_stop) {
 		if (word == "CONST")
 			DeclareVar(true);
 		else if (word == "VAR")
@@ -1119,7 +1215,7 @@ void zCParser::ParseBlock()
 			DeclareIf();
 		else if (word == "}")
 			return;
-		else 
+		else
 			DeclareAssign(word);
 
 		Match(";");

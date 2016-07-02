@@ -105,6 +105,7 @@ struct zCParser {
 		return ParseExpression(tok, -1);
 	}
 
+	int ParseFile(zSTRING& fileName);
 	void ParseBlock();
 
 	int* CallFunc(int funcIndex, ...);
@@ -358,23 +359,23 @@ enum zPAR_TOK {
 
 	/* Unäre Operatoren nehmen natürlich nur einen Wert vom Datenstack.
 	   Sie schieben ebenfalls das Ergebnis auf den Datenstack. */
-	zPAR_OP_UNARY         = 30,             
+	zPAR_OP_UNARY         = 30,
 	zPAR_OP_UN_PLUS       = 30,       //"+" 0x1E
 	zPAR_OP_UN_MINUS      = 31,       //"-" 0x1F
 	zPAR_OP_UN_NOT        = 32,       //"!" 0x20
 	zPAR_OP_UN_NEG        = 33,       //"~" 0x21
-	zPAR_OP_MAX           = 33,           
+	zPAR_OP_MAX           = 33,
 
 	//Jetzt: Andere Tokens (zum Parsen)
 	zPAR_TOK_BRACKETON    = 40,
-	zPAR_TOK_BRACKETOFF   = 41,   
+	zPAR_TOK_BRACKETOFF   = 41,
 	zPAR_TOK_SEMIKOLON    = 42,
 	zPAR_TOK_KOMMA        = 43,
 	zPAR_TOK_SCHWEIF      = 44,
 	zPAR_TOK_NONE         = 45,
 
 	zPAR_TOK_FLOAT        = 51,
-	zPAR_TOK_VAR          = 52,           
+	zPAR_TOK_VAR          = 52,
 	zPAR_TOK_OPERATOR     = 53,
 
 	/* Weitere Befehle (Nicht vergessen: Operatoren sind auch Befehle!)
@@ -666,4 +667,5 @@ const zSTRING PARSER_TOKEN_NAMES[246] = {
 	"[INVALID_TOKEN]       ",
 	"[INVALID_TOKEN]       ",
 	"[INVALID_TOKEN]       ",
-	"zPAR_TOK_PUSH_ARRAYVAR" };
+	"zPAR_TOK_PUSH_ARRAYVAR"
+};

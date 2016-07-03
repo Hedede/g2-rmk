@@ -3056,3 +3056,88 @@ int zCParser::LoadGlobalVars(zCArchiver& arc)
 
 	return 1;
 }
+
+int zCParser::ParseSource(zSTRING& fileName)
+{
+	zoptions->ChangeDir(DIR_SCRIPTS);
+
+	zPATH path(fileName);
+
+	zSTRING dirName, driveName;
+	path.GetDir(dirName);
+	path.GetDir(driveName);
+
+	if (driveName != "")
+		dirName = driveName + ":" + dirName;
+
+	auto zfile = zfactory->CreateZFile(fileName);
+
+	if (!zfile->Exists()) {
+		Error("Source-File " + fileName + " not found.");
+		return -1;
+	}
+
+	zfile->Open(0);
+	zfile->Reset(zfile);
+
+	finddata_t fd;
+
+Spagh:
+	zSTRING v49 = "";
+
+	zSTRING fileName; // v38
+	zfile->Read(fileName);
+	if ( !zfile->Eof() ) {
+		fileName.Upper();
+		if (fileName.Search(0, "*", 1) > 0 || fileName.Search(0, "?", 1) > 0) {
+			unsigned i = fileName.Length(); 
+			do {
+				if (fileName[--i] == '\\') {
+					v49 = fileName.Copied(0, i + 1);
+					break;
+				}
+			} while (i > 0);
+
+
+			auto pathName =  dirName + fileName
+			zFILE::DirectFileAccess(1,pathName);
+
+			v15 = _findfirst(pathName.Data(), &fd);
+			zFILE::DirectFileAccess(0);
+			if ( v15 >= 0 ) {
+				auto tmp = v4 + fd.name;
+				fileName = tmp;
+				fileName.Upper();
+				break;
+			}
+			Error("Found no matching File : " + fileName, 0);
+
+			goto Return;
+		}
+
+		while (  )
+		{
+			if (fileName.Search(0, ".SRC", 1u) >= 0)
+				ParseSource(dirName + fileName);
+			else if ( fileName.Search(0, ".D", 1u) >= 0 )
+				ParseFile(dirName + fileName);
+
+			if ( !v18 || _findnext(v15, &fd) < 0 )
+				goto Spagh;
+
+			auto tmp = v49 + fd.name;
+
+			if (tmp.Upper() == fileName ) {
+				zWARNING("U:PAR:Parser found 2 files with same filename."); // 764,zParser.cpp
+				filename = "";
+			} else {
+				filename = tmp;
+			}
+		}
+	}
+
+Return:
+	zfile->Close();
+	delete zfile;
+	return 0;
+}

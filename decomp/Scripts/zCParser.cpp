@@ -913,6 +913,116 @@ void zCParser::DeclareFunc()
 	treenode = CreateLeaf(zPAR_TOK_FUNCEND, treenode);
 }
 
+void zCParser::DeclareInstance()
+{
+	zCArray<zSTRING> names;
+	zCArray<zCPar_Symbol *> symbols;
+
+	auto olinec = linec;
+	auto olinec_start = line_start;
+
+	zSTRING word;
+
+	do {
+		ReadWord(word);
+		if ( isdigit(word[0]) )
+			Error("Syntax Error. First letter is a digit. Tnstancename : ", 0);
+		names.InsertEnd(word);
+		ReadWord(aword);
+	} while (word == ",");
+
+	PrevWord();
+
+	Match("(");
+
+	ReadWord(aword);
+	auto csym = symtab.GetSymbol(aword);
+	if (!csym || !in(csym->GetType(), zPAR_TYPE_CLASS, zPAR_TYPE_PROTOTYPE)) {
+		Error(ParErr_NoValidClass + aword, 0);
+		return;
+	}
+
+	Match(")");
+
+	in_class = csym;
+	if (csym->GetType() == zPAR_TYPE_PROTOTYPE)
+		in_class = csym->GetParent();
+
+	symtab.GetLastSymbol();
+
+	for (auto name : names) {
+		auto sym = new zCPar_Symbol();
+		sym->SetName(name);
+		sym->SetType(zPAR_TYPE_INSTANCE);
+		sym->ele = 0;
+		sym->SetParent(csym);
+		in_func = sym;
+
+		if ( !symtab.Insert(sym) ) {
+			if ( !mergemode ) {
+				Error(ParErr_Redefined + sym->name);
+				return;
+			}
+
+			Delete(sym);
+
+			sym = symtab.GetSymbol(name);
+			if (sym && sym->GetType() != zPAR_TYPE_INSTANCE) {
+				Error(ParErr_Redefined + sym->name, 0);
+				return;
+			}
+
+			sym->SetFlag(zPAR_FLAG_MERGED);
+		}
+
+		symbols.InsertEnd(in_func);
+
+		treenode = CreateLeaf(zPAR_TOK_INSTANCE, treenode);
+		treenode->name = name;
+	}
+
+
+	ReadWord(aword);
+	PrevWord();
+
+	if (aword != ";") {
+		ParseBlock();
+		in_func->SetFlag(1);
+	}
+
+	for (auto sym : symbols) {
+		ReadWord(aword);
+		PrevWord();
+
+		if (aword != ";") {
+			ParseBlock();
+			in_func->SetFlag(1);
+		}
+
+		for (auto sym : symbols) {
+			sym->SetLineData(olinec, linec - olinec + 1, olinec_start, pc - pc_start - olinec_start + 3);
+			sym->SetFileNr(files.GetNum() - 1);
+		}
+
+		in_func = 0;
+		in_class = 0;
+		in_classnr = 0;
+
+		treenode = CreateLeaf(zPAR_TOK_RET, treenode);
+		treenode = CreateLeaf(zPAR_TOK_INSTANCEEND, treenode);
+
+		sym->SetLineData(olinec, linec - olinec + 1, olinec_start, pc - pc_start - olinec_start + 3);
+		sym->SetFileNr(files.GetNum() - 1);
+	}
+
+	in_func = 0;
+	in_class = 0;
+	in_classnr = 0;
+
+	treenode = CreateLeaf(zPAR_TOK_RET, treenode);
+	treenode = CreateLeaf(zPAR_TOK_INSTANCEEND, treenode);
+}
+
 void zCParser::DeclareReturn()
 {
 	if ( in_func ) {

@@ -1145,6 +1145,116 @@ void zCParser::DeclareAssignFunc(zSTRING& name)
 	treenode = CreateLeaf(zPAR_TOK_ASSIGNFUNC, treenode);
 }
 
+void zCParser::DeclareFuncCall(zSTRING& name, int typematch)
+{
+	auto sym = symtab.GetSymbol(name);
+	if (!sym ) {
+		Error(ParErr_UndefinedFunction + name);
+		return;
+	}
+
+	if ( typematch > 0 && sym->GetOffset() != typematch ) {
+		zSTRING msg = "Func does not return a";
+		switch ( typematch ) {
+		case zPAR_TYPE_INT:
+			msg += "n int";
+			break;
+		case zPAR_TYPE_FLOAT:
+			msg += " float";
+			break;
+		case zPAR_TYPE_STRING:
+			msg += " string";
+			break;
+		case zPAR_TYPE_INSTANCE:
+			msg += "n instance";
+		default:
+			break;
+		}
+		Error(msg, 0);
+		return;
+	}
+
+	int lstart, linec;
+	bool inadd = false;
+	inadd = 0;
+	if ( IsInAdditionalInfo(sym->name) ) {
+		inadd = 1;
+		lstart = line_start;
+		line = linec;
+	}
+
+	Match("(");
+
+
+	for (unsigned i = 0; i < sym->ele; ++i) {
+		auto arg = sym->GetNext();
+		switch (arg->GetType()) {
+		case zPAR_TYPE_INT:
+			tok = GetNextToken();
+			treenode->next = Parse_Expression(tok, -1);
+			while (treenode->next)
+				treenode = treenode->next;
+			PrevWord();
+			break;
+		case zPAR_TYPE_FLOAT:
+			treenode->next = CreateFloatLeaf();
+			while (treenode->next)
+				treenode = treenode->next;
+			break;
+		case zPAR_TYPE_STRING:
+			treenode->next = CreateStringLeaf();
+			while (treenode->next)
+				treenode = treenode->next;
+			break;
+		case zPAR_TYPE_INSTANCE:
+			ReadWord(aword);
+			treenode = CreateLeaf(zPAR_TOK_PUSHINST, treenode);
+			if (aword != "SELF" || in_func->GetType() != zPAR_TYPE_INSTANCE) {
+				treenode->name.data = aword;
+				treenode->label_index = GetBaseClass(arg);
+				treenode->stack_index = 7;
+			} else {
+				treenode->name.data = aword;
+				treenode->label_index = GetBaseClass(in_func);
+				treenode->stack_index = 7;
+			}
+			break;
+		case zPAR_TYPE_FUNC:
+			ReadWord(aword);
+			if (aword == "NOFUNC") {
+				treenode = CreateLeaf(zPAR_TOK_PUSHINDEX, treenode);
+				treenode->name = aword;
+			} else {
+				treenode = CreateLeaf(zPAR_TOK_FLOAT, treenode);
+				treenode->label_index = -1;
+			}
+			break;
+		default:
+			Error("Parameters of this type not currently supported.");
+			goto LOOPEND;
+		}
+
+		if ( i + 1 != sym->ele )
+			Match(",");
+	}
+
+LOOPEND:
+	Match(")");
+	treenode = CreateLeaf(zPAR_TOK_CALL, treenode);
+	treenode->name = sym->name;
+
+	if ( inadd ) {
+		zSTRING add;
+		for (auto pos = &pc_start[lstart]; *pos != '\n'; ++pos ) {
+			if ( pos >= pc_stop )
+				break;
+			if ( pos >= ' ' || pos == '\t' )
+				add += *pos;
+		}
+		WriteAdditionalInfo(add, line, lstart);
+	}
+}
+
 void zCParser::DeclareIf()
 {
 	int idx = -1;
@@ -1783,8 +1893,10 @@ void zCParser::DoStack(int entry)
 		case zPAR_TOK_PUSHVAR:
 			adr = stack.PopInt();
 			symbol = symtab.GetSymbol(adr);
+
+			adr = symbol.GetDataAdr(0);
 			PushVarAddress(adr);
-			goto PushVar;
+			continue;
 
 		case zPAR_TOK_PUSH_ARRAYVAR:
 			adr = stack.PopInt();

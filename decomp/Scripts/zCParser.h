@@ -90,6 +90,7 @@ struct zCParser {
 
 	void DeclareAssign(zSTRING& name);
 	void DeclareAssignFunc(zSTRING& name);
+	void DeclareFuncCall(zSTRING& name, int typematch);
 	void DeclareReturn();
 	void DeclareClass();
 	void DeclareVar();

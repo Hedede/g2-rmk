@@ -45,7 +45,7 @@ void zCPar_Symbol::SetValue(zSTRING& val, int index)
 
 void zCPar_Symbol::SetValue(float val, int index)
 {
-	if ((bitfield & 0xFFFu) <= 1)
+	if (ele <= 1)
 		content.data_float = val;
 	else
 		content.data_pfloat[index] = val;
@@ -53,7 +53,7 @@ void zCPar_Symbol::SetValue(float val, int index)
 
 void zCPar_Symbol::SetValue(int val, int index)
 {
-	if ((bitfield & 0xFFFu) <= 1)
+	if (ele <= 1)
 		content.data_int = val;
 	else
 		content.data_pint[index] = val;
@@ -61,15 +61,15 @@ void zCPar_Symbol::SetValue(int val, int index)
 
 void  zCPar_Symbol::GetValue(int& out, int index)
 {
-	if ( (this->bitfield & 0xFFFu) <= 1 )
-		out = this->content.data_int;
+	if (ele <= 1 )
+		out = content.data_int;
 	else
-		out = this->content.data_pint[index];
+		out = content.data_pint[index];
 }
 
 void zCPar_Symbol::GetValue(float& out, int index)
 {
-	if ( (this->bitfield & 0xFFFu) <= 1 )
+	if (ele <= 1 )
 		out = content.data_float;
 	else
 		out = content.data_pfloat[index];
@@ -106,10 +106,9 @@ zCPar_Symbol * zCPar_Symbol::GetNext()
 	return next;
 }
 
-bool zCPar_Symbol::ArrayCheck(size_t index)
+bool zCPar_Symbol::ArrayCheck(int index)
 {
-	return (index & 0x80000000) == 0 &&
-	        index < (bitfield & 0xFFFu);
+	return index >= 0 && index < ele;
 }
 
 void zCPar_Symbol::SetParent(zCPar_Symbol& newParent)
@@ -170,8 +169,7 @@ void zCPar_Symbol::SetUseInstanceAdr(zCPar_Symbol* adr)
 
 void zCPar_Symbol::SetUseInstance(zCPar_Symbol* inst)
 {
-	if ( !inst )
-	{
+	if ( !inst ) {
 		zCPar_Symbol::instance_adr = 0;
 		zCPar_Symbol::instance_sym = 0;
 		return;
@@ -179,15 +177,11 @@ void zCPar_Symbol::SetUseInstance(zCPar_Symbol* inst)
 
 	zPAR_TYPE type = (inst->bitfield >> 12) & 0xF;
 
-	if ( type == zPAR_TYPE_INSTANCE || type == zPAR_TYPE_PROTOTYPE )
-	{
-		if ( inst->offset )
-		{
+	if ( type == zPAR_TYPE_INSTANCE || type == zPAR_TYPE_PROTOTYPE ) {
+		if ( inst->offset ) {
 			zCPar_Symbol::instance_adr = (void *)inst->offset;
 			zCPar_Symbol::instance_sym = inst;
-		}
-		else
-		{
+		} else {
 			zCPar_Symbol::instance_adr = 0;
 			zCPar_Symbol::instance_sym = 0;
 		}
@@ -210,19 +204,18 @@ void* zCPar_Symbol::GetInstanceAdr()
 	return offset;
 }
 
-char* zCPar_Symbol::GetDataAdr(int idx)
+void* zCPar_Symbol::GetDataAdr(int idx)
 {
 	static float   dummyflt = 0.0;
 	static int     dummyint = 0;
 	static zSTRING dummystr = "";
 
 	if ( flags & zPAR_FLAG_CLASSVAR ) {
-		if ( zCPar_Symbol::instance_adr )
-		{
+		if ( zCPar_Symbol::instance_adr ) {
 			char* ptr = (char *)zCPar_Symbol::instance_adr + offset;
 			if ( type == zPAR_TYPE_STRING )
-				return ptr + 20 * idx;
-			return = 4 * idx + offset;
+				return ((zSTRING*)ptr)[idx];
+			return ((int*)ptr)[idx];
 		}
 
 		zSTRING msg;
@@ -231,7 +224,7 @@ char* zCPar_Symbol::GetDataAdr(int idx)
 			msg = zCPar_Symbol::instance_sym->name + ": ";
 		msg += this->name;
 
-		zERROR::Message("U:PAR: Adressing an empty Instance : " + msg);
+		zINFO(2,"U:PAR: Adressing an empty Instance : " + msg); //zParser_Symbol.cpp, 365
 
 		if (type == zPAR_TYPE_STRING) {
 			dummystr = "";
@@ -247,20 +240,22 @@ char* zCPar_Symbol::GetDataAdr(int idx)
 
 	switch ( type ) {
 	case zPAR_TYPE_STRING:
-		return (char *)&content.data_pstring[idx];
+		return &content.data_pstring[idx];
 	case zPAR_TYPE_INT:
+		if ( size > 1 )
+			return &content.data_pint[idx];
 	case zPAR_TYPE_FLOAT:
 		if ( size > 1 )
-			return (char*)this->content.data_int + 4 * idx;
+			return &content.data_pfloat[idx];
 	case zPAR_TYPE_FUNC:
 	case zPAR_TYPE_PROTOTYPE:
 	case zPAR_TYPE_INSTANCE:
 		break;
 	default:
-		return (char *)this->content.data_ptr;
+		return content.data_ptr;
 	}
 
-	return (char *)&this->content;
+	return &content;
 }
 
 void zCPar_Symbol::AllocSpace()

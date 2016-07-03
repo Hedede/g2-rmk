@@ -990,30 +990,28 @@ void zCParser::DeclareInstance()
 		in_func->SetFlag(1);
 	}
 
+	ReadWord(aword);
+	PrevWord();
+
+	if (aword != ";") {
+		ParseBlock();
+		in_func->SetFlag(1);
+	}
+
 	for (auto sym : symbols) {
-		ReadWord(aword);
-		PrevWord();
-
-		if (aword != ";") {
-			ParseBlock();
-			in_func->SetFlag(1);
-		}
-
-		for (auto sym : symbols) {
-			sym->SetLineData(olinec, linec - olinec + 1, olinec_start, pc - pc_start - olinec_start + 3);
-			sym->SetFileNr(files.GetNum() - 1);
-		}
-
-		in_func = 0;
-		in_class = 0;
-		in_classnr = 0;
-
-		treenode = CreateLeaf(zPAR_TOK_RET, treenode);
-		treenode = CreateLeaf(zPAR_TOK_INSTANCEEND, treenode);
-
 		sym->SetLineData(olinec, linec - olinec + 1, olinec_start, pc - pc_start - olinec_start + 3);
 		sym->SetFileNr(files.GetNum() - 1);
 	}
+
+	in_func = 0;
+	in_class = 0;
+	in_classnr = 0;
+
+	treenode = CreateLeaf(zPAR_TOK_RET, treenode);
+	treenode = CreateLeaf(zPAR_TOK_INSTANCEEND, treenode);
+
+	sym->SetLineData(olinec, linec - olinec + 1, olinec_start, pc - pc_start - olinec_start + 3);
+	sym->SetFileNr(files.GetNum() - 1);
 
 	in_func = 0;
 	in_class = 0;

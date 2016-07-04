@@ -2363,6 +2363,276 @@ zCPar_TreeNode* zCParser::CreateStringLeaf()
 	return leaf;
 }
 
+zCPar_TreeNode* zCParser::PushOnStack(zCPar_TreeNode *node)
+{
+	lastNode = node;
+	
+	for (auto right = node->right; right; right = PushOnStack(right));
+	for (auto left  = node->left;  left;  left  = PushOnStack(left));
+
+	int tok = node->tok_type;
+
+	if (tok < zPAR_OP_UN_NEG) {
+		stack.PushByte(tok);
+		return node->next;
+	}
+
+	if (tok == zPAR_ROK_FLOAT) {
+		stack.PushByte(zPAR_TOK_PUSHINT);
+		stack.PushInt(node->label_index);
+		return node->next;
+	}
+
+	if (tok == zPAR_TOK_VAR ) {
+		auto idx = FindIndex(node->name);
+		if ( idx < 0 ) {
+			Error(ParErr_UnknownVar + node->name, 0);
+			return nullptr;
+		}
+
+		auto sym = symtab.GetSymbol(idx);
+		if (sym->HasFlag(zPAR_FLAG_CLASSVAR) && in_class != sym->GetParent()) {
+			stack.PushByte(zPAR_TOK_SETINSTANCE);
+			stack.PushInt(GetLastInstance());
+		}
+
+		sym = symtab.GetSymbol(idx);
+		auto t_type = node->stack_index;
+		if ( t_type == zPAR_TYPE_INT ) {
+			if (in(sym->GetType(), zPAR_TYPE_INSTANCE, zPAR_TYPE_PROTOTYPE)) {
+				stack.PushByte(zPAR_TOK_PUSHINT);
+				stack.PushInt(idx);
+				return node->next;
+			}
+		}
+
+		if ( t_type == zPAR_TYPE_FUNC ) {
+			if (in(sym->GetType(), zPAR_TYPE_INSTANCE,zPAR_TYPE_PROTOTYPE)) {
+				stack.PushByte(zPAR_TOK_PUSHVAR);
+				stack.PushInt(idx);
+				return node->next;
+			}
+
+			if ( sym->GetType() == t_type ) {
+				auto arridx = node->label_index;
+				if (arridx <= 0 )
+					stack.PushByte(zPAR_TOK_PUSHVAR);
+				else
+					stack.PushByte(zPAR_TOK_PUSH_ARRAYVAR);
+
+				stack.PushInt(idx);
+
+				arrind_1 = node->label_index;
+				if (arridx < 0 || arrind >= sym->ele) {
+					Error("Buuuuhhhh, Pfiffe, Unmut : Array-Index out of Range : " + sym->name + "[ " + arridx + "]", 0);
+				}
+
+				if ( arridx > 0 )
+					stack->PushByte(lindex);
+				return node->next;
+			}
+
+			Error("Wrong type : " + node->name);
+		}
+
+		return nullptr;
+	}
+
+	if ( tok == zPAR_TOK_FUNC ) {
+		in_funcnr = symtab.GetIndex(&node->name);
+		if ( in_funcnr < 0 )
+			Error(ParErr_UnknownVar + node->name, 0);
+
+		in_func = symtab.GetSymbol(in_funcnr);
+		if ( !in_func->HasFlag(8) )
+			in_func->SetStackPos(stack.GetDynSize(), 0);
+		return node->next;
+	}
+
+	if ( tok == zPAR_TOK_FUNCEND ) {
+		in_funcnr = 0;
+		in_func = 0;
+		stack.PushByte(0x3Cu);
+		return node->next;
+	}
+
+	if ( tok == zPAR_TOK_INSTANCE ) {
+		in_funcnr = symtab.GetIndex(&node->name);;
+		if ( in_funcnr < 0 )
+			Error(ParErr_UnknownVar + node->name, 0);
+
+		in_func = symtab.GetSymbol(in_funcnr);
+
+		auto stpos;
+		in_func->GetStackPos(&stpos, 0);
+		in_func->SetStackPos(stack.GetDynSize(), 0);
+		in_class = in_func->GetParent();
+		if (!mergemode || stpos <= 0) {
+			if (in_class->GetType() == zPAR_TYPE_PROTOTYPE ) {
+				stack.PushByte(zPAR_TOK_CALL);
+				in_class->GetStackPos(&stpos, 0);
+				stack.PushInt(stpos);
+				in_class = in_class->GetParent();
+			}
+		} else {
+			stack.PushByte(zPAR_TOK_CALL);
+			stack.PushInt(stpos);
+			if (in_class->GetType() == zPAR_TYPE_PROTOTYPE )
+				in_class = in_class->GetParent();
+		}
+		return node->next;
+	}
+
+	if ( tok == zPAR_TOK_INSTANCEEND ) {
+		in_funcnr = 0;
+		in_func = 0;
+		in_classnr = 0;
+		in_class = 0;
+		return node->next;
+	}
+
+	if ( tok == zPAR_TOK_CALL ) {
+		auto findx = symtab.GetIndex();
+		auto sym = symtab.GetSymbol(&node->name);
+		if ( !sym < 0 )
+			Error(ParErr_UnknownVar + node->name, 0);
+
+		int stpos;
+		if (sym->GetType() != zPAR_TYPE_FUNC || !sym->HasFlag(zPAR_FLAG_EXTERNAL) ) {
+			stack.PushByte(zPAR_TOK_CALL);
+			sym->GetStackPos(&stpos, 0);
+			stack.PushInt(stpos);
+			return node->next;
+		}
+		stack.PushByte(zPAR_TOK_CALLEXTERN);
+		stack.PushInt(findx);
+		return node->next;
+	}
+
+	if ( tok == zPAR_TOK_PUSHINDEX ) {
+		stack.PushByte(0x40u);
+		auto idx = FindIndex(&node->name);
+		auto sym = symtab.GetSymbol(idx);
+		if (!sym) {
+			Error(ParErr_UnknownVar + node->name, 0);
+			return nullptr;
+		}
+
+		if (!in(sym->GetType(), zPAR_TYPE_FUNC, zPAR_TYPE_INSTANCE, zPAR_TYPE_PROTOTYPE)) {
+			Error("Wrong type : " + node->name);
+			return nullptr;
+		}
+
+		stack.PushInt(idx);
+		return node->next;
+	}
+
+	if ( tok == zPAR_TOK_PUSHINST ) {
+		stack.PushByte(zPAR_TOK_PUSHINST);
+		if (node->name == "NULL") {
+			stack.PushInt(0);
+			return node->next;
+		}
+
+		auto idx = FindIndex(node->name);
+		auto sym = symtab.GetSymbol(idx);
+		if (!sym) {
+			Error(ParErr_UnknownVar + node->name, 0);
+			return nullptr;
+		}
+
+		if (sym->GetType() != node->stack_index ) {
+			Error("Wrong type : " + node->name, 0);
+			return nullptr;
+		}
+
+		if ( node->label_index <= 0 ) {
+			stack.PushInt(idx);
+			return node->next;
+		}
+
+		auto base = GetBaseClass(sym);
+		auto bidx = symtab.GetIndex(base->name);
+		if (bidx == node->label_index) {
+			stack.PushInt(idx);
+			return node->next;
+		}
+
+		auto msg = "Wrong type : " + node->name;
+		sym = symtab.GetSymbol(node->label_index);
+		if (sym)
+			msg += " - Expected " + sym->name;
+		Error(msg, 0);
+		return nullptr;
+	}
+
+	if ( tok == zPAR_TOK_ASSIGNSTR ) {
+		stack.PushByte(0x46u);
+		return node->next;
+	}
+
+	if ( tok == zPAR_TOK_ASSIGNSTRP ) {
+		stack.PushByte(0x47u);
+		return node->next;
+	}
+
+	if ( tok == zPAR_TOK_ASSIGNFLOAT ) {
+		stack.PushByte(0x49u);
+		return node->next;
+	}
+
+	if ( tok == zPAR_TOK_ASSIGNINST ) {
+		stack.PushByte(0x4Au);
+		return node->next;
+	}
+
+	if ( tok == zPAR_TOK_NEWSTRING ) {
+		auto sym = new zCPar_Symbol();
+		sym->SetType(zPAR_TYPE_STRING);
+		sym->SetFlag(1);
+		++stringcount;
+
+		sym->name = ""_s + ((char)-1) + stringcount;
+
+		SetFlag(sym, 1);
+
+		symtab.InsertEnd(sym);
+
+		if ( node->name.Length() > 0 )
+			sym->SetValue(node->name, 0);
+
+		stack.PushByte(zPAR_TOK_PUSHVAR);
+		stack.PushInt(symtab.GetNumInList()-1);
+		return node->next;
+	}
+
+	if ( tok == zPAR_TOK_ASSIGNFUNC ) {
+		stack.PushByte(zPAR_TOK_ASSIGNFUNC);
+		return node->next;
+	}
+
+	if (in(tok, zPAR_TOK_JUMPF, zPAR_TOK_JUMP)) {
+		zCPar_Stack::PushByte(stack, node->tok_type);
+		node->stack_index = zCPar_Stack::GetDynSize(stack);
+		stack.PushInt(i);
+		return node->next;
+	}
+
+	if ( tok == zPAR_TOK_LABEL ) {
+		labelpos[node->label_index] = stack.GetDynSize();
+		return node->next;
+	}
+	if ( tok == zPAR_TOK_RET ) {
+		stack.PushByte(0x3Cu);
+		return node->next;
+	}
+	if ( tok == zPAR_TOK_SKIP ) {
+		return node->next;
+	}
+	Error("Error : Push on Stack.", 0);
+	return nullptr;
+}	
+
 zCPar_TreeNode* zCParser::PushTree(zCPar_TreeNode *node)
 {
 	while (node)
@@ -3252,4 +3522,181 @@ Return:
 	zfile->Close();
 	delete zfile;
 	return 0;
+}
+
+
+void zCParser::GetOperatorString(zPAR_TOK opcode, zSTRING& out)
+{
+	switch ( opcode ) {
+	case zPAR_OP_PLUS:
+		out = " +";
+		break;
+	case zPAR_OP_MINUS:
+		out = " -";
+		break;
+	case zPAR_OP_MUL:
+		out = " *";
+		break;
+	case zPAR_OP_DIV:
+		out = " /";
+		break;
+	case zPAR_OP_MOD:
+		out = " %";
+		break;
+	case zPAR_OP_OR:
+		out = " |";
+		break;
+	case zPAR_OP_AND:
+		out = " &";
+		break;
+	case zPAR_OP_LOWER:
+		out = " <";
+		break;
+	case zPAR_OP_HIGHER:
+		out = " >";
+		break;
+	case zPAR_OP_LOG_OR:
+		out = " ||";
+		break;
+	case zPAR_OP_LOG_AND:
+		out = " &&";
+		break;
+	case zPAR_OP_SHIFTL:
+		out = " <<";
+		break;
+	case zPAR_OP_SHIFTR:
+		out = " >>";
+		break;
+	case zPAR_OP_LOWER_EQ:
+		out = " <=";
+		break;
+	case zPAR_OP_EQUAL:
+		out = " ==";
+		break;
+	case zPAR_OP_NOTEQUAL:
+		out = " !=";
+		break;
+	case zPAR_OP_HIGHER_EQ:
+		out = " >=";
+		break;
+	case zPAR_OP_IS:
+		out = " =";
+		break;
+	case zPAR_OP_ISPLUS:
+		out = " +=";
+		break;
+	case zPAR_OP_ISMINUS:
+		out = " -=";
+		break;
+	case zPAR_OP_ISMUL:
+		out = " *=";
+		break;
+	case zPAR_OP_ISDIV:
+		out = " /=";
+		break;
+	case zPAR_OP_UN_PLUS:
+		out = " +";
+		break;
+	case zPAR_OP_UN_MINUS:
+		out = " -";
+		break;
+	case zPAR_OP_UN_NOT:
+		out = " !";
+		break;
+	case zPAR_OP_UN_NEG:
+		out = " ~";
+		break;
+	default:
+		out = "??";
+		break;
+	}
+}
+
+void zCParser::GetNextCommand(zSTRING& out)
+{
+	out = "";
+	out += stack.GetPopPos() + "."_s;
+
+	zSTRING tmp;
+	auto opcode = stack.PopByte();
+	if ( opcode <= zPAR_OP_UN_NEG ) {
+		GetOperatorString(opcode, tmp);
+		out += "Op " + tmp;
+	} else if ( opcode == zPAR_TOK_PUSHINT ) {
+		out += "Push "_s + stack.PopInt();
+	} else if ( opcode == zPAR_TOK_PUSH_ARRAYVAR ) {
+		auto sym = symtab.GetSymbol(stack.PopInt());
+		auto idx = stack.PopByte();
+		out +=  "Push "_s + sym->GetName() + "[" + idx +  "]";
+	} else if ( opcode == zPAR_TOK_PUSHVAR ) {
+		auto sym = symtab.GetSymbol(stack.PopInt());
+		out +=  "Push "_s + sym->GetName() + "                 ";
+
+		float fvalue;
+		int ivalue;
+		zSTRING svalue;
+		switch ( sym->GetType() ) {
+		case zPAR_TYPE_INT:
+			sym->GetValue(&ivalue, 0);
+			out += "("_s + value + ")";
+			break;
+		case zPAR_TYPE_FLOAT:
+			sym->GetValue(&value, 0);
+			out += "("_s + value + ")";
+			break;
+		case zPAR_TYPE_STRING:
+			if ( sym->HasFlag(4) )
+				svalue = sym->GetName();
+			else
+				sym->GetValue(svalue, 0);
+			out += "("_s + value + ")";
+			break;
+		}
+	} else if ( opcode == zPAR_TOK_RET ) {
+		out += "Ret";
+	} else if ( opcode == zPAR_TOK_POPINT ) {
+		out += "Pop";
+	} else if ( opcode == zPAR_TOK_CALLEXTERN ) {
+		out += "Call External ";
+		auto sym = GetSymbol(stack.PopInt());
+		if ( sym )
+			out += sym->GetName();
+	} else if ( opcode == zPAR_TOK_CALL ) {
+		out += "Call ";
+
+		auto idx = stack.PopInt();
+		for (auto i = 0; i < symtab.GetNumInList(); ++i) {
+			auto sym = symtab.GetSymbol(i);
+			if (in(sym->GetType(), zPAR_TYPE_FUNC, zPAR_TYPE_PROTOTYPE)) {
+				auto Value = 0;
+				sym->GetStackPos(&Value, 0);
+				if ( Value == idx ) {
+					out += sym->name;
+					break;
+				}
+			}
+		}
+	} else if (opcode == zPAR_TOK_ASSIGNSTR || opcode == zPAR_TOK_ASSIGNSTRP ) {
+		out += "String ="
+	} else if ( opcode == zPAR_TOK_ASSIGNFUNC ) {
+		out += "Func ="
+	} else if ( opcode == zPAR_TOK_JUMP ) {
+		out += "Jump "_s + stack.PopInt();
+	} else if ( opcode == zPAR_TOK_JUMPF ) {
+		out += "Jumpf "_s + stack.PopInt();
+	} else if ( opcode == zPAR_TOK_SETINSTANCE ) {
+		auto sym = symtab.GetSymbol(stack.PopInt);
+		out += "Set In : " + sym->GetName();
+	} else if ( opcode == zPAR_TOK_PUSHINST ) {
+		out += "Push Inst: ";
+		auto sym = GetSymbol(stack.PopInt());
+		if ( sym )
+			out += sym->GetName();
+	} else if ( opcode == zPAR_TOK_ASSIGNINST ) {
+		out += "Instance =";
+	} else if ( opcode == zPAR_TOK_ASSIGNFLOAT ) {
+		out += "Float =";
+	} else {
+		out += "??";
+	}
 }

@@ -3700,3 +3700,131 @@ void zCParser::GetNextCommand(zSTRING& out)
 		out += "??";
 	}
 }
+
+int zCParser::SaveInstance(int index, void *adr)
+{
+	if (files.GetNum() <= 0)
+		return 0;
+
+	auto sym = GetSymbol(index);
+	if ( !sym || sym->GetType() != zPAR_TYPE_INSTANCE )
+		return 0;
+
+	// too messy, didn't care
+	auto baseidx = GetBase(index);
+	auto base = GetSymbol(baseidx);
+
+	auto baseci = GetBase(base);
+	auto basec = GetSymbol(baseci);
+
+	zoptions->ChangeDir(DIR_SCRIPTS);
+
+	int l1, l2, lpos1, lpos2;
+	sym->GetLineData(&l1, &l2, &lpos1, &lpos2);
+	if ( lpos1 < 0 || lpos2 <= 0 )
+		return 0;
+	
+	zSTRING output = "INSTANCE " + sym->name + " (";
+
+	// something not right in too messy piece
+	if (base) {
+		output += base->GetName();
+	} else if (basec) {
+		output += basec->GetName();
+	}
+
+	output += ")" + newline;
+	output += "{" + newline;
+
+	auto line_anz = 2;
+
+	auto var = basec;
+	for (auto i = 0; i < basec->ele; ++i) {
+		var = var->GetNext();
+		auto mem = adr + var->GetOffset();
+
+		zSTRING varname = var->name;
+
+		auto pos = varname->name.Search(0, ".", 1u);
+		if ( pos > 0 )
+			varname = var->name.Copied(pos + 1, 0xFFu);
+
+		varname.Lower();
+
+		zSTRING out;
+		for (auto j = 0; j < var->ele; ++j) {
+			out = "     " + varname
+			if (var->ele > 1)
+				+= "[" + j + "]";
+
+			bool addl;
+			out += " = ";
+			switch (var->GetType()) {
+			case zPAR_TYPE_INT:
+				auto val = ((int*)mem)[j];
+				out += val;
+				addl = val != 0;
+				break;
+			case zPAR_TYPE_FLOAT:
+				out += ((float*)mem)[j];
+				addl = 1;
+				break;
+			case zPAR_TYPE_STRING:
+				auto val = ((zSTRING*)mem)[j];
+				out += "\"" + val + "\"";
+				addl = val != "";
+				break;
+			case zPAR_TYPE_FUNC:
+				{
+					auto idx = mem[j];
+					auto sym = symtab.GetSymbol(idx);
+					if ( idx > 0 && sym ) {
+						out += sym->name;
+						addl = 1;
+					} else {
+						addl = 0
+					}
+				}
+			default:
+				break;
+			}
+
+			out += ";" + newline;
+			if (addl) {
+				output += out;
+				++line_anz;
+			}
+		}
+	}
+
+	output +=  "};" + newline;
+
+	++line_anz;
+	if ( sym->filenr >= files.GetNum() || sym->filenr < 0 )
+		return 0;
+
+	zoptions->ChangeDir(DIR_SCRIPTS);
+
+	zfile = zfactory->CreateZFile(files[sym->filenr]->GetName());
+	zfile->UpdateBlock(&output, lpos1, l2);
+	zfile->Close();
+	delete zfile;
+
+	auto ldiff1 = output.Length() - lpos2;
+	auto ldiff2 = line_anz - l2;
+	zCPar_Symbol::SetLineData(sym, l1, line_anz, lpos1, output.Length());
+
+	int os1, os2
+	v61 = lpos1;
+	for (i = index; ++i) {
+		sym = symtab.GetSymbol(i + 1);
+		if ( !sym )
+			break;
+		sym->GetLineData(&ln1, &ln2, &os1, &os2);
+		if ( os1 <= v61 )
+			break;
+		sym->SetLineData(ldiff2 + ln1, ln2, ldiff1 + os1, os2);
+		v61 = os1;
+	}
+	return 1;
+}

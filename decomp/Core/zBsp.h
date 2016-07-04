@@ -32,11 +32,13 @@ struct zCBspBase {
 		if (nodeType == zBSP_LEAF)
 			return 1;
 
+		auto self = static_cast<zCBspNode*>(this);
+
 		int result = 0;
-		if ( left )
-			result += left->CountNodes();
-		if ( right )
-			result += right->CountNodes();
+		if (self->left)
+			result += self->left->CountNodes();
+		if (self->right)
+			result += self->right->CountNodes();
 		return result;
 	}
 
@@ -48,16 +50,6 @@ private:
 	int         numPolys = 0;
 
 	zTBspNodeType nodeType = 0;
-
-	int unk0[3];
-	int leafVobs;
-
-	zCBspNode* left  = nullptr;
-	zCBspNode* right = nullptr;
-
-	int leafLights;
-	int numLeafs = 0;
-	int unk1;
 };
 
 struct zCBspNode : zCBspBase {
@@ -67,6 +59,13 @@ struct zCBspNode : zCBspBase {
 		nodeType = zBSP_NODE;
 	}
 
+private:
+	zTPlane plane;
+	zCBspNode* left  = nullptr;
+	zCBspNode* right = nullptr;
+	zCBspLeaf* leafList = nullptr;
+	int numLeafs = 0;
+	char planeSignbits;
 };
 
 struct zCBspLeaf : zCBspBase {
@@ -74,6 +73,43 @@ struct zCBspLeaf : zCBspBase {
 		: zCBspBase()
 	{
 		nodeType = zBSP_LEAF;
-		numLeafs = -1;
+	}
+
+private:
+	int lastTimeLighted;
+	zCArray<zCVob*>      leafVobList;
+	zCArray<zCVobLight*> leafLightList;
+	int unk[6];
+}
+
+void zCBspBase::DescribeTree(int indent)
+{
+	auto msg = "D: BSP: "_s + Spaces(2 * indent);
+
+	if ( nodeType == zBSP_LEAF ) {
+		msg += "- Leaf";
+	} else {
+		msg += "- Node";
+	}
+
+	if (nodeType == zBSP_NODE ) {
+		auto self = static_cast<zCBspNode*>(this);
+		msg += ", numLeafs: " + self->numLeafs;
+	}
+
+	if (nodeType == zBSP_LEAF) {
+		auto self = static_cast<zCBspLeaf*>(this);
+		msg += ", leafVobs: "   + self->leafVobList.GetNum();
+		msg += ", leafLights: " + self->leafLightList.GetNum();
+	}
+
+	zINFO(3,msg); // 996,_dieter\\zBsp.cpp
+
+	if (nodeType == zBSP_NODE) {
+		auto self = static_cast<zCBspNode*>(this);
+		if (self->left)
+			self->left->DescribeTree(indent + 1);
+		if (self->right)
+			self->right->DescribeTree(indent + 1);
 	}
 }

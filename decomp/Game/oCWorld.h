@@ -22,7 +22,18 @@ public:
 	virtual void SearchVobByID(ulong,zCTree<zCVob> *);
 	virtual void SearchVobByName(zSTRING const &);
 	virtual void SearchVobListByName(zSTRING const &,zCArray<zCVob *> &);
-	virtual void CreateVob(zTVobType,int);
+
+	virtual void CreateVob(zTVobType type, int instanceId)
+	{
+		zINFO(10, "U: (oCWorld::CreateVob) "_s + instanceId); // 315, oWorld.cpp
+		if ( type == VOB_TYPE_ITEM ) {
+			auto ofactory = dynamic_cast<oCObjectFactory*>(zfactory);
+			ofactory->CreateItem(instanceId);
+		} else if ( type == VOB_TYPE_NPC ) {
+			auto ofactory = dynamic_cast<oCObjectFactory*>(zfactory);
+			ofactory->CreateNpc(instanceId);
+		}
+	}
 
 	virtual void InsertVobInWorld(zCVob* vob)
 	{
@@ -31,11 +42,37 @@ public:
 	}
 	virtual void EnableVob(zCVob *,zCVob *);
 	virtual void DisableVob(zCVob *);
-	virtual void TraverseVobList(zCVobCallback &,void *);
+	virtual void TraverseVobList(zCVobCallback& cb, void* cb_data)
+	{
+		for (auto vob : voblist)
+			if (vob)
+				cb->HandleVob(vob, cb_data);
+	}
+
+	void ClearNpcPerceptionVobLists()
+	{
+		for (auto npc : voblist_npcs) {
+			if (!npc->IsSelfPlayer()) {
+				npc->ClearPerceptionLists();
+				npc->SetEnemy(0);
+			}
+		}
+	}
 
 	virtual void DisposeVobs();
 
 	void InsertInLists(zCVob* vob);
+
+	zSTRING GetWorldFilename()
+	{
+		return worldFilename;
+	}
+
+	zSTRING GetWorldName()
+	{
+		return worldName;
+	}
+
 
 private:
 	zSTRING worldFilename;   //Pfad des aktuellen Levels

@@ -11,12 +11,6 @@ enum zTBspMode {
 struct zCBspBase {
 	zCBspBase() = default;
 
-	void CollectVobsInBBox3D(zCArray<zCVob> const& vobs, zTBBox3D const& bbox)
-	{
-		++bspCollectCtr;
-		CollectVobsInBBox3D_I(vobs, bbox);
-	}
-
 	bool IsLeaf()
 	{
 		return NodeType == zBSP_LEAF;
@@ -26,6 +20,8 @@ struct zCBspBase {
 	{
 		return NodeType == zBSP_NODE;
 	}
+
+	void DescribeTree(int indent);
 
 	int CountNodes()
 	{
@@ -40,6 +36,36 @@ struct zCBspBase {
 		if (self->right)
 			result += self->right->CountNodes();
 		return result;
+	}
+
+	void RenderTrivInIndoor()
+	{
+		if ( IsLeaf() ) {
+			auto self = static_cast<zCBspLeaf*>(this);
+			self->RenderLeafIndoor(0);
+		} else {
+			auto self = static_cast<zCBspNode*>(this);
+			for (auto i = 0; i < self->numLeafs; ++i)
+				self->leafList[i]->RenderLeafIndoor(0);
+		}
+	}
+
+	int CollectVobsSubtree(zCArray<zCVob *>& result)
+	{
+		++bspCollectCtr;
+		return CollectLightVobsSubtree_I(result);
+	}
+
+	int CollectLightVobsSubtree(zCArray<zCVob *>& result)
+	{
+		++bspCollectCtr;
+		return CollectLightVobsSubtree_I(result);
+	}
+
+	void CollectVobsInBBox3D(zCArray<zCVob> const& vobs, zTBBox3D const& bbox)
+	{
+		++bspCollectCtr;
+		CollectVobsInBBox3D_I(vobs, bbox);
 	}
 
 private:
@@ -75,12 +101,39 @@ struct zCBspLeaf : zCBspBase {
 		nodeType = zBSP_LEAF;
 	}
 
+	void RenderLeafIndoor(int clipFlags);
+
 private:
 	int lastTimeLighted;
 	zCArray<zCVob*>      leafVobList;
 	zCArray<zCVobLight*> leafLightList;
-	int unk[6];
+
+	int unk0 = -1;
+	short sectorNum = 0;
+	short unk2 = 0;
+	int   unk3 = 0;
+	zVEC3 unk4{-99,-99,-99};
 }
+
+struct zCBspSector {
+	zSTRING sectorName;
+
+	<zCBspBase*> sectorNodes;
+
+	int sectorIndex;
+
+	zCArray<zCPolygon*> sectorPortals;
+
+	zCArray<zTPortalInfo> sectorPortalInfo;
+
+	zBOOL activated;
+	zBOOL rendered;
+	zTBBox2D activePortal;
+
+	zVEC3 sectorCenter;
+
+	bool hasBigNoFade;
+};
 
 void zCBspBase::DescribeTree(int indent)
 {
@@ -111,5 +164,35 @@ void zCBspBase::DescribeTree(int indent)
 			self->left->DescribeTree(indent + 1);
 		if (self->right)
 			self->right->DescribeTree(indent + 1);
+	}
+}
+
+void zCBspLeaf::RenderLeafIndoor(int clipFlags)
+{
+	if (unk0 == bspFrameCtr ) {
+		zTBBox2D* actPortal;
+		if ( sectorNum == -1 ) {
+			actPortal = nullptr;
+		} else {
+			auto sector = actBspTree->sectorList[sectorNum];
+			actPortal = &sector->activePortal;
+
+			if (sector && !zCBspTree::s_showPortals) {
+				if (!zCCamera::activeCam->ScreenProjectionTouchesPortalRough(bbox3D, actPortal))
+					return;
+			}
+		}
+
+		AddVobsToRenderList(actPortal);
+		CollectNodeLights();
+
+		for (auto i = 0; i < numPolys; ++i ) {
+			auto poly = polyList[i];
+			if (poly->IsPortalPoly())
+				break;
+			poly->RenderPoly(clipFlags & 0xF);
+		}
+
+		++drawnLeafs;
 	}
 }

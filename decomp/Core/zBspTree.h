@@ -13,6 +13,11 @@ struct zCBspTree {
 	{
 		s_RayCache = cache;
 	}
+
+	static uint16_t GetFileVersion()
+	{
+		return 3;
+	}
 	
 	zCBspTree()
 	{

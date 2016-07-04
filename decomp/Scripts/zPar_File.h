@@ -1,4 +1,10 @@
 struct zCPar_File {
+	~zCPar_File()
+	{
+		delete[]startAddress;
+		Delete(tree);
+	}
+
 	static int IsNewerDate(zDATE& a, zDATE& b)
 	{
 		return a < b;
@@ -80,7 +86,7 @@ private:
 	int     fileNum  = 0;
 	zSTRING fileName;
 
-	void* startAddress = 0;
+	char* startAddress = 0;
 	int   fileSize     = 0;
 
 	int labelCount       = 0;
@@ -115,4 +121,29 @@ zCPar_TreeNode* zCPar_File::LoadTreeNode(zFILE *file)
 		node->next  = LoadTreeNode(file);
 
 	return node;
+}
+
+void zCPar_File::SaveTreeNode(zFILE *file, zCPar_TreeNode *node)
+{
+	if ( node ) {
+		file->Write(&node, 4);
+		if ( node ) {
+			zSTRING tmp = node->name + "\n";
+			file->Write(tmp);
+		}
+
+		file->Write(&node->tok_type, 1);
+		file->Write(&node->label_index, 4);
+		file->Write(&node->stack_index, 4);
+		file->Write(&node->left, 4);
+		file->Write(&node->right, 4);
+		file->Write(&node->next, 4);
+
+		if (node->left)
+			SaveTreeNode(file, node->left);
+		if (node->right)
+			SaveTreeNode(file, node->right);
+		if (node->next)
+			SaveTreeNode(file, node->next);
+	}
 }

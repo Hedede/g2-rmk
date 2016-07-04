@@ -85,6 +85,16 @@ struct zCBspNode : zCBspBase {
 		nodeType = zBSP_NODE;
 	}
 
+	void CalcPlaneSignbits(zCBspTree*)
+	{
+		if ( plane.normal.x != 0.0 )
+			planeSignbits = 0;
+		else if ( plane.normal.y != 0.0 )
+			planeSignbits = 1;
+		else
+			planeSignbits = 2;
+	}
+
 private:
 	zTPlane plane;
 	zCBspNode* left  = nullptr;
@@ -116,6 +126,16 @@ private:
 }
 
 struct zCBspSector {
+private:
+	static zCArray<zCBspSector*> s_activeSectorList;
+	static void RenderActiveSectorList()
+	{
+		for (auto sector : s_activeSectorList)
+			sector->RenderSector();
+		s_activeSectorList.Clear();
+	}
+
+private:
 	zSTRING sectorName;
 
 	<zCBspBase*> sectorNodes;

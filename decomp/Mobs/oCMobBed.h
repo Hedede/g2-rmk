@@ -9,6 +9,7 @@ public:
 		state_num = 1;
 	}
 	virtual ~oCMobBed() = default;
+
 	zSTRING GetScemeName() override
 	{
 		return sceme + "_" + addName;

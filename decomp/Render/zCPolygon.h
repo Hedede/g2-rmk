@@ -3,7 +3,7 @@
 //------------------------------------------------
 
 /* Bedeutung von zCPolygon.portalPoly:*/
-enum zTPortalType   {
+enum zTPortalType {
 	zPORTAL_TYPE_NONE         = 0,
 	zPORTAL_TYPE_SMALL        = 1,
 	zPORTAL_TYPE_BIG          = 2,

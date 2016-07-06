@@ -1987,14 +1987,14 @@ void zCParser::DoStack(int entry)
 
 			 sym->GetStackPos(entry, 0);
 
-			 symbol = zParSymbol::GetUseInstance();
+			 symbol = zCParSymbol::GetUseInstance();
 			 adr = stack.getPopPos();
 
 			 void(*func)() = (void(*func)())entry;
 			 func();
 
 			 stack.SetPopPos(adr);
-			 zParSymbol::SetUseInstance(symbol);
+			 zCParSymbol::SetUseInstance(symbol);
 
 			 debugmode = tmp;
 			 continue;
@@ -2015,7 +2015,7 @@ void zCParser::DoStack(int entry)
 		case zPAR_TOK_SETINSTANCE:
 			 adr = stack.PopInt();
 			 symbol = symtab.GetSymbol(adr);
-			 CPar_Symbol::SetUseInstance(symbol);
+			 zCPar_Symbol::SetUseInstance(symbol);
 			 continue;
 
 		case zPAR_TOK_ASSIGNSTR:

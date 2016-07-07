@@ -181,6 +181,12 @@ public: virtual void NpcInit();
 		return debugInstances.IsInList(vob);
 	}
 
+	void ResetObjectRoutineList()
+	{
+		currentObjectRoutine = 0;
+		oldRoutineDay = -1;
+	}
+
 private:
 	void SetCameraPosition();
 	oCNpc* RemovePlayerFromWorld();

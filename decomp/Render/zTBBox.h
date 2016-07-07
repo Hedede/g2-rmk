@@ -55,6 +55,16 @@ class zTBBox3D {
 		maxs[2] = std::numeric_limits<float>::min();
 	}
 
+	void InitZero()
+	{
+		mins[0] = 0;
+		mins[1] = 0;
+		mins[2] = 0;
+		maxs[0] = 0;
+		maxs[1] = 0;
+		maxs[2] = 0;
+	}
+
 	void SetMaximumBox()
 	{
 		mins[0] = std::numeric_limits<float>::min();

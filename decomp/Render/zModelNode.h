@@ -10,7 +10,7 @@ struct zCModelNode {
 	}
 
 	void *unk;
-	zSTRING __dunno;
+	zSTRING name; // e.g. ZS_POS (attachment slot)
 
 	zCVisual* visual;
 

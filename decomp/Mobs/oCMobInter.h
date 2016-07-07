@@ -39,6 +39,7 @@ public:
 	virtual void CallOnStateFunc(oCNpc *,int);
 	virtual void SendCallOnStateFunc(oCNpc *,int);
 	virtual void SearchFreePosition(oCNpc *,float);
+
 private:
 	//Optimale Positionen sind wohl die, zu denen der Held bei der Benutzung hinploppt. Ich bin aber kein Animierer, hab wenig Ahnung davon.
 	zCList<TMobOptPos>    optimalPosList; // List of all Optimal Positions

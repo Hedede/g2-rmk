@@ -14,10 +14,25 @@ enum zTViewFX {
 	VIEW_FX_FORCE_DWORD = 0xffffffff
 };
 
-enum zTviewID { VIEW_SCREEN,VIEW_VIEWPORT,VIEW_ITEM };
-class zCView : public zCInputCallback {
-public:
-	virtual void HandleEvent(int);
+enum zTviewID {
+	VIEW_SCREEN,
+	VIEW_VIEWPORT,
+	VIEW_ITEM
+};
+
+struct zCView : zCInputCallback {
+	static int GetShowDebug()
+	{
+		return zCView::showDebug;
+	}
+
+	static void SetShowDebug(int val)
+	{
+		zCView::showDebug = val;
+	}
+
+	void HandleEvent(int key) override;
+
 	virtual void anx(int);
 	virtual void any(int);
 	virtual void nax(int);
@@ -28,12 +43,57 @@ public:
 	virtual void GetCode(int,int);
 	virtual ~zCView();
 	virtual void Blit();
-	virtual void DrawItems();
+	virtual void DrawItems()
+	{
+		Blit();
+		for (auto child : childs)
+			child->DrawItems();
+		zrenderer->SetViewport(0, 0, zrenderer->view_xdim, zrenderer->view_ydim);
+	}
+
+	void Render()
+	{
+		DrawItems();
+	}
+
+	void SetTransparency(int val)
+	{
+		alpha = val;
+	}
+
+	void SetAlphaBlendFunc(zTRnd_AlphaBlendFunc const& func)
+	{
+		alphafunc = func;
+	}
+
+	void SetColor(zCOLOR const& _color)
+	{
+		color = _color;
+	}
+
+	zCOLOR GetColor() const
+	{
+		return color;
+	}
+
+	void SetFontColor(zCOLOR const& color)
+	{
+		fontColor = color;
+	}
+
+	zCFont* GetFont() const
+	{
+		return font;
+	}
+
+	void ChangeMode() {}
+	void SetNextMode() {}
+
 private:
-	void* _zCInputCallBack_vtbl; //Noch eine _vtbl, weil zCView von zwei Klassen erbt.
+	//Noch eine _vtbl, weil zCView von zwei Klassen erbt.
+	void* _zCInputCallBack_vtbl; 
 
-
-	zBOOL m_bFillZ;               //zBOOL
+	zBOOL m_bFillZ;
 	zCView* next;
 
 	zTviewID viewID;
@@ -46,7 +106,7 @@ private:
 	int alpha;                  //int
 
 	// Childs
-	zList <zCView>            childs
+	zList <zCView>  childs;
 
 	zCView* owner;
 	zCTexture* backTex;
@@ -101,7 +161,3 @@ private:
 	zVEC2 posOpenClose[2];
 };
 
-int zCView::GetShowDebug()
-{
-  return zCView::showDebug;
-}

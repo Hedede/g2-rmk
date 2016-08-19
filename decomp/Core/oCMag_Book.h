@@ -13,6 +13,38 @@ struct oCMag_Book {
 		return (sin(t * Pi - HalfPi) + 1.0) * 0.5 * (b - a) + a;
 	}
 
+	static zVEC3 EasePos(float t, zVEC3& a, zVEC3& b)
+	{
+		return {Ease(t, a.x, b.x), Ease(t, a.y, b.y), Ease(t, a.z, b.z)};
+	}
+
+	static int KeyMask(int key)
+	{
+		return 1 << (key - 1);
+	}
+
+	void SetWorld(zCWorld* wld)
+	{
+		owner_world = wld;
+	}
+
+	void SetOwner(zCVob* vob)
+	{
+		owner = vob;
+		SetWorld(owner->vob);
+		owner_model = vob->GetModel();
+		mag_height = owner->bbox3D.maxs.y - owner->trafoObjToWorld[1][3] + 10.0;
+	}
+
+private:
+	int Register(oCSpell* spell, int active);
+public:
+	int Register(oCItem* item, int active);
+
+	int DeRegister(int nr);
+	int DeRegister(oCItem* item);
+
+
 	int GetSelectedSpellNr() const
 	{
 		return spellnr;
@@ -29,6 +61,7 @@ struct oCMag_Book {
 			return spells[idx];
 		return nullptr;
 	}
+	oCSpell* GetSpell(oCItem* item, int& no);
 
 	oCItem* GetSpellItem(int idx)
 	{
@@ -64,7 +97,7 @@ struct oCMag_Book {
 
 	int GetNoOfSpellByKey(int key)
 	{
-		if (keys & (1 << (key - 1))) {
+		if (keys & KeyMask(key)) {
 			for (int i = 0; i < GetNoOfSpells(); ++i)
 				if (spells[i]->spellSlot == key)
 					return i;
@@ -84,6 +117,8 @@ struct oCMag_Book {
 		return 0x7F35;
 	}
 
+	oCSpell* GetSelectedSpell();
+
 	bool IsIn(int spellId)
 	{
 		for (auto& sp : spells)
@@ -97,16 +132,15 @@ struct oCMag_Book {
 		return inMovement;
 	}
 
-	void SetWorld(zCWorld* wld)
-	{
-		owner_world = wld;
-	}
-
 	void NextRegisterAt(int slot)
 	{
 		if ( slot >= 0; && slot < 0x7000 )
 			keys = slot;
 	}
+
+	void Right();
+	void Left();
+
 
 	bool Spell_InCast() { return false; }
 	bool IsActive() { return false; }
@@ -165,3 +199,80 @@ private:
 	//auf (nicht bei 9)
 	int keys;
 };
+
+void oCMag_Book::Right()
+{
+	if (open && !IsInMovement() && GetNoOfSpells() != 1) {
+		inMovement = 1;
+
+		Spell_Stop(spellnr);
+
+		int rightId = spellnr - 1;
+		if (rightId < 0)
+			spellnr = GetNoOfSpells() - 1;
+		else
+			spellnr = rightId;
+
+		action = true;
+		t1 = 0.0;
+		targetdir = step;
+	}
+}
+
+void oCMag_Book::Left()
+{
+	if (open && !IsInMovement() && GetNoOfSpells() != 1) {
+		inMovement = true;
+
+		Spell_Stop(spellnr);
+
+		int leftId = spellnr + 1;
+		if (leftId < 0)
+			spellnr = 0;
+		else
+			spellnr = leftId;
+
+		action = true;
+		t1 = 0.0;
+		targetdir = -step;
+	}
+}
+
+oCSpell* oCMag_Book::GetSelectedSpell()
+{
+	if (spellnr < 0)
+		return nullptr;
+	auto spell = GetSpell(spellnr);
+	// no idea why there's a dynamic cast
+	return zDYNAMIC_CAST<oCSpell>(spell);
+}
+
+oCSpell* oCMag_Book::GetSpell(oCItem* item, int& no)
+{
+	for (int i = 0; i < GetNoOfSpells(); ++i) {
+		if (spell_items[i] == item) {
+			no = i;
+			return spells[i];
+		}
+	}
+	no = 0x7F35;
+	return nullptr;
+}
+
+int oCMag_Book::DeRegister(int nr)
+{
+	auto spell = spells[nr];
+	auto item = spell_itmes[nr];
+
+	keys &= ~KeyMask(spell->spellSlot);
+	spell_items.Remove(nr);
+	spells.RemoveIndex(nr);
+	Release(spell);
+	return 1;
+}
+
+int oCMag_Book::DeRegister(oCItem* item)
+{
+	int nr = spell_items.Search(item);
+	return DeRegister(nr);
+}

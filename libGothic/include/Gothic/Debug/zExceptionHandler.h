@@ -8,7 +8,7 @@ zBOOL& zExHandler = *reinterpret_cast<zBOOL*>(0x89D9F4);
 struct zCExceptionHandler {
 	static void SetIsActive(bool active)
 	{
-		Cdecl<void(int)> func{0x4C887C};
+		Cdecl<void(int)> func{0x4C8860};
 
 		zExHandler = active;
 		func(active);

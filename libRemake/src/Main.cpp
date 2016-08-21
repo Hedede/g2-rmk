@@ -91,7 +91,7 @@ void GameLoop()
 
 	sysEvent();
 
-	game.Init((void*)0x8D422C);
+	game.Init(hWndApp);
 	game.Run();
 	game.Done();
 }

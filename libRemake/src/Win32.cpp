@@ -1,4 +1,3 @@
-#define WIN32_LEAN_AND_MEAN
 #include <Gothic/System/System.h>
 #include <Gothic/System/Win32.h>
 #include <Gothic/System/Video.h>
@@ -7,7 +6,18 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-auto Frequency = Value<LARGE_INTEGER>(0x8D3FE0);
+auto& Frequency = Value<LARGE_INTEGER>(0x8D3FE0);
+auto& hIconApp = Value<HICON>(0x8D4228);
+
+WNDPROC AppWndProc    = (WNDPROC)0x503770;
+WNDPROC netWindowProc = (WNDPROC)0x4562F0;
+
+int& winExtraX = Value<int>(0x8D3980);
+int& winExtraY = Value<int>(0x8D3988);
+int& winPosX = Value<int>(0x8D40E8);
+int& winPosY = Value<int>(0x8D40EC);
+int& nWidth  = Value<int>(0x8D40F0);
+int& nHeight = Value<int>(0x8D40F4);
 
 void InitWin32Stuff(char const* cmdLine)
 {
@@ -42,7 +52,7 @@ void InitWin32Stuff(char const* cmdLine)
 	hHandle = CreateMutexA(0, 0, 0);
 	GetModuleFileNameA(0, winModuleName, 0x104u);
 
-	memset((char*)&mouseInf, 0, 0x18Cu);
+	memset((char*)0x8D3BA0, 0, 0x18Cu);
 
 	checkWinVersion();
 
@@ -60,24 +70,23 @@ void InitWin32Stuff(char const* cmdLine)
 	hIconApp = LoadIconA((HINSTANCE)hInstApp, (LPCSTR)0xA3);
 
 	WndClass.style = 512;
-	WndClass.lpfnWndProc = (WNDPROC)AppWndProc;
-	WndClass.hInstance = (HINSTANCE)hInstApp;
-	WndClass.hIcon = (HICON)hIconApp;
+	WndClass.lpfnWndProc   = AppWndProc;
+	WndClass.hInstance     = (HINSTANCE)hInstApp;
+	WndClass.hIcon         = (HICON)hIconApp;
 	WndClass.hbrBackground = (HBRUSH)GetStockObject(4);
 	WndClass.lpszClassName = "DDWndClass";
 
 	if ( !RegisterClassA(&WndClass) )
 		sysHardExit("Could not register window class");
-/* network is unused
+
 	memset(&WndClass, 0, sizeof(WndClass));
 
 	WndClass.lpfnWndProc = netWindowProc;
-	WndClass.hInstance = hInstApp;
+	WndClass.hInstance   = (HINSTANCE)hInstApp;
 	WndClass.lpszClassName = "DDWinSock";
 
 	if ( !RegisterClassA(&WndClass) )
-		sysHardExit(Format);
-	*/
+		sysHardExit("Could not register window class");
 
 	RECT rect;
 	winPosX = 0;
@@ -92,6 +101,7 @@ void InitWin32Stuff(char const* cmdLine)
 	nWidth  = winExtraX + 800;
 	nHeight = winExtraY + 600;
 
+	print("-- Creating window --\n");
 	hWndApp = CreateWindowExA(
 	                WS_EX_WINDOWEDGE|WS_EX_CLIENTEDGE,
 			"DDWndClass",
@@ -100,4 +110,5 @@ void InitWin32Stuff(char const* cmdLine)
 	                winPosX, winPosY,
 			nWidth, nHeight,
 	                0, 0, (HINSTANCE)hInstApp, 0);
+	println("hWndApp is ", uintptr_t(hWndApp));
 }

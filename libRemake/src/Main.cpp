@@ -31,22 +31,64 @@ void println(Args... args)
 	( put(args), ..., put("\n"));
 }
 
-#include <Debug/zERROR.h>
 
-void*& hInstApp = *reinterpret_cast<void**>(0x8D4220);
 void*& sysInstLock = *reinterpret_cast<void**>(0x8D426C);
-char(&sysLogName)[260] = *reinterpret_cast<char*>(0x8D3A90);
 
-unsigned& winMainThreadID = *reinterpret_cast<unsigned*>(0x8D3D34);
-void*& winMainThread = *reinterpret_cast<void**>(0x8D3ED0);
-
+/*
 #include <new>
 void* sysAlloc(size_t bytes)
 u
 	return ::operator new(bytes);
 }
 
-#include <aw/utility/string.h>
+#include <cstdlib>
+void* sysAlloc(size_t bytes)
+{
+	return std::malloc(bytes);
+}
+
+void* sysFree(void* mem)
+{
+	return std::free(mem);
+}
+
+void* sysReAlloc(void* mem, size_t bytes)
+{
+	if (mem)
+		return std::malloc(bytes);
+	return std::realloc(mem, bytes);
+}
+
+#include <chrono>
+std::chrono::steady_clock::time_point startTime;
+int sysGetTime()
+{
+	auto now = std::chrono::steady_clock::now();
+	std::chrono::milliseconds elapsed = now - startTime;
+	return elapsed.count();
+}
+
+void InitFunctions()
+{
+	*reinterpret_cast<void**>(0x5021E8) = (void*)sysAlloc;
+	*reinterpret_cast<void**>(0x502A47) = (void*)sysReAlloc;
+	*reinterpret_cast<void**>(0x502A97) = (void*)sysFree;
+	*reinterpret_cast<void**>(0x505288) = (void*)sysGetTime;
+}*/
+
+#include <aw/utility/string/case.h>
+
+#include <System/Win32.h>
+extern void InitWin32Stuff(char const* cmdLine);
+extern void InitCommonControls();
+
+#include <Game/CGameManager.h>
+#include <Debug/zERROR.h>
+#include <Debug/zExceptionHandler.h>
+
+
+void GameLoop();
+char(&sysLogName)[260] = Value<char[260]>(0x8D3A90);
 extern "C" void aw_main(void* hinst, char const* args)
 {
 	freopen("log.txt", "wb", stdout);
@@ -68,14 +110,11 @@ extern "C" void aw_main(void* hinst, char const* args)
 	std::string log = "DemoW.log";
 	std::copy(begin(log), end(log), std::begin(sysLogName));
 
-	winMainThreadID = GetCurrentThreadId();
-	void* a = GetCurrentProcess();
-	void* b = GetCurrentThread();
-	void* c = GetCurrentProcess();
-	DuplicateHandle(a, b, c, &winMainThread, 0, 0, 2u);
+	InitWin32Stuff(cmdLine.c_str());
 
+	GameLoop();
 
-	exit(0);
+	libExit();
 }
 
 void GameLoop()
@@ -87,6 +126,4 @@ void GameLoop()
 	game.Init((void*)0x8D422C);
 	game.Run();
 	game.Done();
-
-	libExit();
 }

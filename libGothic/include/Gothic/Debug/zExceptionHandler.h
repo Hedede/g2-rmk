@@ -1,7 +1,7 @@
 #ifndef GOTHIC_ZCEXCEPTIONHANDLER
 #define GOTHIC_ZCEXCEPTIONHANDLER
-#include <Types/Base.h>
 #include <Hook/func.h>
+#include <Gothic/Types/Base.h>
 
 zBOOL& zExHandler = *reinterpret_cast<zBOOL*>(0x89D9F4);
 

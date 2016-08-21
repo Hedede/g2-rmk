@@ -196,7 +196,7 @@ void sysSetWindowMode(int FullScreen, int Show)
 		}
 
 		SetWindowLongA(hWndApp, GWL_STYLE, WS_BORDER|WS_SYSMENU|WS_DLGFRAME);
-		SetWindowLongA(hWndApp, GWL_EXSTYLE, WS_EX_CLIENTWEDGE|WS_EX_CLIENTEDGE);
+		SetWindowLongA(hWndApp, GWL_EXSTYLE, WS_EX_WINDOWEDGE|WS_EX_CLIENTEDGE);
 		winCreateMenu();
 		SetWindowPos(hWndApp, 0, 0, 0, 0, 0, 3u);
 		winMode = 1;
@@ -511,7 +511,7 @@ int HandledWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	/**/
 
 	hWndApp = CreateWindowExA(
-	                WS_EX_CLIENTWEDGE|WS_EX_CLIENTEDGE,
+	                WS_EX_WINDOWEDGE|WS_EX_CLIENTEDGE,
 			"DDWndClass",
 			APP_NAME,
 			WS_BORDER|WS_SYSMENU|WS_DLGFRAME,

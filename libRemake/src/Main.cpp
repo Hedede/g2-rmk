@@ -1,5 +1,4 @@
 #include <string>
-#include <System/System.h>
 
 #include <cstdio>
 
@@ -32,7 +31,6 @@ void println(Args... args)
 }
 
 
-void*& sysInstLock = *reinterpret_cast<void**>(0x8D426C);
 
 /*
 #include <new>
@@ -78,13 +76,13 @@ void InitFunctions()
 
 #include <aw/utility/string/case.h>
 
-#include <System/Win32.h>
+#include <Gothic/System/System.h>
+#include <Gothic/System/Win32.h>
 extern void InitWin32Stuff(char const* cmdLine);
-extern void InitCommonControls();
 
-#include <Game/CGameManager.h>
-#include <Debug/zERROR.h>
-#include <Debug/zExceptionHandler.h>
+#include <Gothic/Game/CGameManager.h>
+#include <Gothic/Debug/zERROR.h>
+#include <Gothic/Debug/zExceptionHandler.h>
 
 
 void GameLoop();
@@ -95,7 +93,6 @@ extern "C" void aw_main(void* hinst, char const* args)
 
 	print("-- LIBRARY LOADED --\n");
 
-	InitCommonControls();
 
 	hInstApp = hinst;
 

@@ -1,9 +1,11 @@
 #ifndef ZCINPUTCALLBACK_H
 #define ZCINPUTCALLBACK_H
-#include <Types/zCList.h>
+#include <Hook/value.h>
+#include <Gothic/Types/zCList.h>
 struct zCInputCallback {
 	static void GetInput();
 private:
-	zCList<zCInputCallback> callbacksList;
+	// TODO:
+	static callbacksList = Value<zCList<zCInputCallback>>(0);
 };
 #endif//ZCINPUTCALLBACK_H

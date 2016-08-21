@@ -1,7 +1,7 @@
 #ifndef G2_CGAMEMANAGER_H
 #define G2_CGAMEMANAGER_H
 #include <Hook/func.h>
-#include <Types/zSTRING.h>
+#include <Gothic/Types/zSTRING.h>
 
 struct oCGame;
 struct oCSavegameManager;

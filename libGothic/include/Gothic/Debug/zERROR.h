@@ -1,7 +1,7 @@
 #ifndef GOTHIC_ZERROR_H
 #define GOTHIC_ZERROR_H
 #include <Hook/value.h>
-#include <Types/zSTRING.h>
+#include <Gothic/Types/zSTRING.h>
 
 struct zERROR {
 	void Init(std::string const& cmdLine)

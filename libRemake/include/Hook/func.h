@@ -5,7 +5,6 @@
 template<typename T>
 using func = T;
 
-
 template<typename F>
 struct Cdecl;
 

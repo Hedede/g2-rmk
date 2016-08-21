@@ -1,7 +1,7 @@
 #ifndef G2_zSTRING_h
 #define G2_zSTRING_h
 #include <string>
-#include <Types/Base.h>
+#include <Gothic/Types/Base.h>
 
 char const spaceChar = ' ';
 

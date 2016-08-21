@@ -6,7 +6,7 @@ unsigned sysGetTime()
 		return = PerformanceCount.QuadPart / pTimeDiv - BeginTime;
 	}
 
-	return = timeGetTime() - BeginTime;
+	return timeGetTime() - BeginTime;
 }
 
 void libExit()
@@ -161,6 +161,8 @@ void sysFree(void* mem)
 	LocalFree(mem);
 }
 
+int winMode;
+bool wasInFullScreen;
 void sysSetWindowMode(int FullScreen, int Show)
 {
 	tagRECT Rect;
@@ -168,11 +170,11 @@ void sysSetWindowMode(int FullScreen, int Show)
 		if ( winMode == 1 ) {
 			GetWindowRect(hWndApp, &Rect);
 
-			iwPos = Rect.left;
-			Y = Rect.top;
+			iwPos.X = Rect.left;
+			iwPos.Y = Rect.top;
 			nWidth = Rect.right - Rect.left;
 			nHeight = Rect.bottom - Rect.top;
-			byte_8D4110 = 1;
+			wasInFullScreen = 1;
 		}
 
 		SetMenu(hWndApp, 0);
@@ -186,15 +188,15 @@ void sysSetWindowMode(int FullScreen, int Show)
 				ShowWindow(hWndApp, 5);
 		}
 	} else {
-		if ( winMode == 2 && byte_8D4110 ) {
+		if ( winMode == 2 && wasInFullScreen ) {
 			ShowWindow(hWndApp, 0);
-			MoveWindow(hWndApp, iwPos, Y, nWidth, nHeight, 1);
+			MoveWindow(hWndApp, iwPos.X, iwPos.Y, nWidth, nHeight, 1);
 			winResizeMainWindow();
 			ccRenderCaption(hWndApp, &ccMain);
 		}
 
-		SetWindowLongA(hWndApp, -16, 13107200);
-		SetWindowLongA(hWndApp, -20, 768);
+		SetWindowLongA(hWndApp, GWL_STYLE, WS_BORDER|WS_SYSMENU|WS_DLGFRAME);
+		SetWindowLongA(hWndApp, GWL_EXSTYLE, WS_EX_CLIENTWEDGE|WS_EX_CLIENTEDGE);
 		winCreateMenu();
 		SetWindowPos(hWndApp, 0, 0, 0, 0, 0, 3u);
 		winMode = 1;
@@ -360,6 +362,25 @@ void sysEvent()
 	}
 }
 
+int winDialogPara(uint16_t resID, DLGPROC Proc, LPARAM Param)
+{
+	int beginTime = sysGetTime();
+	if ( byte_89C86C == 5 )
+		vidMinimize(0);
+	auto dialog = DialogBoxParamA(hInstApp, resID, hWndApp, Proc, Param);
+	if ( dialog )
+		vidRestore();
+	sysTimeGap += sysGetTime() - beginTime;
+	return dialog;
+}
+
+int winSuspendThreads()
+{
+	int result = GetCurrentThreadId();
+	if ( result != winMainThreadID )
+		result = SuspendThread(winMainThread);
+	return result;
+}
 
 HANDLE sysInstLock;
 
@@ -375,6 +396,11 @@ void winDoInstanceCheck()
 			ExitProcess(1u);
 	}
 }
+
+// unnamed struct on debug info
+struct {
+	int X,Y;
+} iwPos;
 
 int HandledWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
@@ -459,31 +485,38 @@ int HandledWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	if ( !RegisterClassA(&WndClass) )
 		sysHardExit(Format);
 
-	byte_8D4110 = 0;
+	WS_DLGFRAME = 0;
 
-	Y = 0;
-	iwPos = 0;
+	RECT rect;
+	iwPos.Y = 0;
+	iwPos.X = 0;
 
-	if ( SystemParametersInfoA(0x30u, 0, &pvParam, 0) && pvParam >= 0 && v16 >= 0 )
-	{
-		iwPos = pvParam;
-		Y = v16;
+	auto res = SystemParametersInfoA(SPI_GETWORKAREA, 0, &rect, 0);
+	if ( res && rect.left >= 0 && rect.top >= 0 ) {
+		iwPos.X = rect.left;
+		iwPos.Y = rect.top;
 	}
 
+	nWidth  = winExtraX + 800;
+	nHeight = winExtraY + 600;
+
+	/* Completely useless: */
 	dword_8D4100 = 0x90000000;
 	dword_8D40FC = 0x90000000;
 	dword_8D4108 = 0x90000000;
 	dword_8D4104 = 0x90000000;
 
-	nWidth  = winExtraX + 800;
-	nHeight = winExtraY + 600;
-
 	dword_8D410C = 0;
 	dword_8D40F8 = 0;
+	/**/
 
 	hWndApp = CreateWindowExA(
-	                0x300u, "DDWndClass", APP_NAME, 0xC80000u,
-	                iwPos, Y, winExtraX + 800, winExtraY + 600,
+	                WS_EX_CLIENTWEDGE|WS_EX_CLIENTEDGE,
+			"DDWndClass",
+			APP_NAME,
+			WS_BORDER|WS_SYSMENU|WS_DLGFRAME,
+	                iwPos.X, iwPos.Y,
+			winExtraX + 800, winExtraY + 600,
 	                0, 0, hInstApp, 0);
 
 	if ( hWndApp ) {

@@ -1,14 +1,7 @@
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #include <string>
+#include <System/System.h>
 
-auto libExit = func<void(*)()>(0x502AB0);
-auto sysEvent = func<void(*)()>(0x5053E0);
-
-#include <dirent.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string>
+#include <cstdio>
 
 void put(std::string s)
 {

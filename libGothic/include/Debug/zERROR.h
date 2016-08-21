@@ -1,5 +1,6 @@
 #ifndef GOTHIC_ZERROR_H
 #define GOTHIC_ZERROR_H
+#include <Hook/value.h>
 #include <Types/zSTRING.h>
 
 struct zERROR {
@@ -10,6 +11,6 @@ struct zERROR {
 	}
 };
 
-zERROR& zerr = *static_cast<zERROR*>(0x8CDCD0);
+zERROR& zerr = Value<zERROR>(0x8CDCD0);
 
 #endif//GOTHIC_ZERROR_H

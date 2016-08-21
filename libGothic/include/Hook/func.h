@@ -5,6 +5,7 @@
 template<typename T>
 using func = T;
 
+
 template<typename F>
 struct Cdecl;
 
@@ -17,7 +18,7 @@ struct Cdecl<R(Args...)> {
 
 	R operator()(Args... args)
 	{
-		func<R(__cdecl*)(Args...)>(addr)(args...);
+		(func<R(__cdecl*)(Args...)>(addr))(args...);
 	}
 };
 
@@ -33,7 +34,7 @@ struct Stdcall<R(Args...)> {
 
 	R operator()(Args... args)
 	{
-		func<R(__stdcall*)(Args...)>(addr)(args...);
+		(func<R(__stdcall*)(Args...)>(addr))(args...);
 	}
 
 };
@@ -67,7 +68,7 @@ struct Fastcall<R(Args...)> {
 
 	R operator()(Args... args)
 	{
-		func<R(__fastcall*)(Args...)>(addr)(args...);
+		(func<R(__fastcall*)(Args...)>(addr))(args...);
 	}
 
 };

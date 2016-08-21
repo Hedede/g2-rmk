@@ -1,37 +1,6 @@
 #include <string>
 
-#include <cstdio>
-
-void put(std::string s)
-{
-	fwrite(s.c_str(), s.size(), 1, stdout);
-}
-
-void put(char const* w)
-{
-	put(std::string(w));
-}
-
-template<typename T>
-void put(T t)
-{
-	put(std::to_string(t));
-}
-
-template<typename... Args>
-void print(Args... args)
-{
-	( put(args), ... );
-}
-
-template<typename... Args>
-void println(Args... args)
-{
-	( put(args), ..., put("\n"));
-}
-
-
-
+#include <Hook/log.h>
 /*
 #include <new>
 void* sysAlloc(size_t bytes)
@@ -93,14 +62,16 @@ extern "C" void aw_main(void* hinst, char const* args)
 
 	print("-- LIBRARY LOADED --\n");
 
-
 	hInstApp = hinst;
 
 	std::string cmdLine{args};
+	println("Command line: ", cmdLine);
+
 	aw::string::toupper(cmdLine);
 	zerr.Init(cmdLine);
 
 	bool handler = cmdLine.find("ZNOEXHND") == std::string::npos;
+	println("Exception handler is: ", handler ? "active" : "disabled");
 	zCExceptionHandler::SetIsActive(handler);
 
 	// TODO: remove k chertyam sobachim

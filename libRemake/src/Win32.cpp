@@ -2,15 +2,16 @@
 #include <Gothic/System/System.h>
 #include <Gothic/System/Win32.h>
 #include <Gothic/System/Video.h>
+#include <Hook/log.h>
+
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include <commctrl.h>
 
 auto Frequency = Value<LARGE_INTEGER>(0x8D3FE0);
 
 void InitWin32Stuff(char const* cmdLine)
 {
-	InitCommonControls();
-
+	print("-- Initializing Win32 --\n");
 	winMainThreadID = GetCurrentThreadId();
 	auto a = GetCurrentProcess();
 	auto b = GetCurrentThread();

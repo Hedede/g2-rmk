@@ -1,4 +1,5 @@
 sources=\
+Log.cpp \
 Main.cpp \
 Win32.cpp
 

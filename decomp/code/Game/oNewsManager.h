@@ -1,0 +1,3 @@
+struct oCNewsManager {
+	~oCNewsManager() = default;
+};

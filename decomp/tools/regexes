@@ -1,0 +1,8 @@
+s/\vLP[A-Z0-9_]+/void*/g
+s/THIS/IDirectDrawGammaControl* this
+s/THIS_/IDirectDrawGammaControl* this,
+s/STDMETHOD\v\(/int (__stdcall*
+s/STDMETHOD_\v\(([A-Z0-9]+),/\1 (__stdcall*
+
+s/\v([A-Za-z_][A-Za-z_0-9]*)::([A-Za-z_][A-Za-z_0-9]*)\(\&(this-\>)?([A-Za-z_][A-Za-z_0-9.->]*)(, )?/\4.\2(
+s/\v([A-Za-z_][A-Za-z_0-9]*)::([A-Za-z_][A-Za-z_0-9]*)\((this-\>)?([A-Za-z_][A-Za-z_0-9.->]*)(, )?/\4->\2(

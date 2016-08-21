@@ -1,0 +1,3 @@
+struct zCViewFont {
+	~zCViewFont() = default;
+};

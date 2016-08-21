@@ -1,0 +1,21 @@
+#!/usr/bin/bash
+file=$1
+class=$1
+echo "struct "${class}"_vt {" > ${file}.c
+sed -r 's/^.*\s;//' ${file}                  |\
+sed -r 's/.C[a-zA-Z_]+::/void (__thiscall*/' |\
+sed -r 's/([^ ])\('/'\1)('${class}'*,/'      |\
+sed -r 's/,void\)/)/'                        |\
+sed -r 's/$/;/'                              |\
+sed -r "s/\`.+'/dtor/" >> ${file}.c
+echo "};" >> ${file}.c
+
+echo "class "${class}" {" > ${file}.h
+sed -r -e 's/.*\s;//' ${file} |\
+sed -r -n '/'${class}'::/p' |\
+sed -r -e's/'${class}'::/virtual void /' \
+       -e 's/void\)/)/' \
+       -e 's/$/;/' \
+       -e "s/\`.+'/~"${class}"/" >> ${file}.h
+
+echo "};" >> ${file}.h

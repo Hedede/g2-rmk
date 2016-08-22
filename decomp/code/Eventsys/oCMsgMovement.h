@@ -42,6 +42,11 @@ public:
 		if (target)
 			targetPos = target->GetPositionWorld();
 	}
+	oCMsgMovement(TMovementSubType subtype, zVEC3 const& target)
+		: oCMsgMovement(subtype)
+	{
+		targetPos = target;
+	}
 	oCMsgMovement(TMovementSubType type, zSTRING const& target)
 		: oCMsgMovement(type)
 	{

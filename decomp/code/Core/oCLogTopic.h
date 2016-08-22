@@ -1,5 +1,6 @@
-class oCLogEntry {
-public:
+struct oCLogEntry {
+	~oCLogEntry() = default;
+
 	void Archive(zCArchiver& arc)
 	{
 		arc.WriteString("ENTRYDESCRIPTION", description);
@@ -9,12 +10,12 @@ public:
 	{
 		arc.ReadString("ENTRYDESCRIPTION", description);
 	}
+
 private:
 	zSTRING description;
 };
 
-class oCLogTopic {
-public:
+struct oCLogTopic {
 	void Archive(zCArchiver& arc);
 	void Unarchive(zCArchiver& arc);
 

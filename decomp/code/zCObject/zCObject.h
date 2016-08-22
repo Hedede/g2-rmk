@@ -1,7 +1,3 @@
-#ifndef G2_zCObject
-#define G2_zCObject
-#include <Gothic/zobject/zCClassDef.h>
-
 template <class T>
 T const* zDYNAMIC_CAST(zCObject const* obj);
 
@@ -95,7 +91,9 @@ public:
 		return objectName;
 	}
 
-	//zCObject* zCObject::CreateCopy();
+	void GetMemStats(int& numBytesTotal, int& numObjTotal, zCClassDef* parentClassDef);
+
+	zCObject* zCObject::CreateCopy();
 private:
 	int  refCtr;
 	int  hashIndex;
@@ -151,7 +149,7 @@ inline void Delete(T*& ptr)
 	}
 }
 
-#if 0
+
 zCObject* zCObject::CreateCopy()
 {
 	zCObject* copy = GetClassDef()->CreateNewInstance();
@@ -174,5 +172,24 @@ zCObject* zCObject::CreateCopy()
 	}
 	return copy;
 }
-#endif
-#endif//G2_zCObject
+
+
+void zCObject::GetMemStats(int& numBytesTotal, int& numObjTotal, zCClassDef* parentClassDef)
+{
+	zCArraySort__zCClassDef *v3; // ecx@3
+	int v4; // ebx@3
+	struct zCClassDef *v5; // eax@4
+
+	if ( !parentClassDef ) {
+		numBytesTotal = 0;
+		numObjTotal = 0;
+	}
+
+	for (auto& cd : zCClassDef::classDefList) {
+		if ( cd->baseClassDef == parentClassDef ) {
+			numBytesTotal += cd->numLiving;
+			numObjTotal   += cd->numLiving * cd->classSize;
+			GetMemStats(numBytesTotal, numObjTotal, cd);
+		}
+	}
+}

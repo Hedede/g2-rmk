@@ -159,6 +159,11 @@ struct oCWay : public zCWay {
 		return ladder;
 	}
 
+	oCMobDoor* GetDoor() const
+	{
+		return door;
+	}
+
 private:
 	//Unterklasse von zCWay.
 

@@ -1,3 +1,10 @@
+void Game_OpenConsole()
+{
+	if ( !game_con )
+		Game_InitConsole();
+	zcon.Toggle();
+}
+
 int oCGame::TestKeys(int key)
 {
 	if ( !oCNpc::player )

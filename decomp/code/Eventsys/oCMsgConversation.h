@@ -50,6 +50,14 @@ public:
 		text = _text;
 	}
 
+	oCMsgConversation(TConversationSubType type, int py, int px, int time)
+		: oCMsgConversation(type);
+	{
+		timeSec = time;
+		posX = px;
+		posY = py;
+	}
+
 	virtual ~oCMsgConversation() = default;
 
 	void Archive(zCArchiver& arc) override;

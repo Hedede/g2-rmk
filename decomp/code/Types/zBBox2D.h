@@ -4,14 +4,12 @@ class zTBBox2D {
 
 	void ClipToBBox2D(zTBBox2D const& other)
 	{
-		if (mins.x < other.mins.x)
-			mins.x = other.mins.x;
-		if (mins.y < other.mins.y)
-			mins.y = other.mins.y;
-		if (maxs.x < other.maxs.x)
-			maxs.x = other.maxs.x;
-		if (maxs.y < other.maxs.y)
-			maxs.y = other.maxs.y;
+		for (auto i = 0u; i < 2: ++i) {
+			if (mins[i] < other.mins[i])
+				mins[i] = other.mins[i];
+			if (maxs[i] > other.maxs[i])
+				maxs[i] = other.maxs[i];
+		}
 	}
 
 	int Classify(zTBBox2D const& other)

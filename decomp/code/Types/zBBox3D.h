@@ -52,6 +52,25 @@ class zTBBox3D {
 		}
 	}
 
+	int Classify(zTBBox3D const& other)
+	{
+		if ( other->maxs[0] < this->mins[0]
+		||   other->mins[0] > this->maxs[0]
+		||   other->maxs[2] < this->mins[2]
+		||   other->mins[2] > this->maxs[2]
+		||   other->maxs[1] < this->mins[1]
+		||   other->mins[1] > this->maxs[1] )
+			return 1;
+		if ( other->maxs[0] >= this->maxs[0]
+		||   other->mins[0] <= this->mins[0]
+		||   other->maxs[2] >= this->maxs[2]
+		||   other->mins[2] <= this->mins[2]
+		||   other->maxs[1] >= this->maxs[1]
+		||   other->mins[1] <= this->mins[1] )
+			return 2;
+		return 0;
+	}
+
 	void CalcGreaterBBox3D(zTBBox3D const& other)
 	{
 		for (auto i = 0u; i < 3: ++i) {
@@ -105,10 +124,17 @@ class zTBBox3D {
 		}
 	}
 
-	float GetVolume()
+	float GetVolume() const
 	{
 		auto dim = maxs - mins;
 		return dim.x * dim.y * dim.z;
+	}
+
+	zSTRING GetDescription() const
+	{
+		zSTRING desc  = mins[0] + " "_s + mins[1] + " " + mins[2];
+		desc += " "_s + maxs[0] + " "_s + maxs[1] + " " + maxs[2];
+		return desc;
 	}
 
 	bool IsIntersecting(zTBBox3D const& other)
@@ -143,11 +169,27 @@ class zTBBox3D {
 	bool IsTrivIn(zTBBox3D const& other)
 	{
 		return     other.maxs[0] < maxs[0]
-			&& other.mins[0] > mins[0]
-			&& other.maxs[1] < maxs[1]
-			&& other.mins[1] > mins[1]
-			&& other.maxs[2] < maxs[2]
-			&& other.mins[2] > mins[2];
+		        && other.mins[0] > mins[0]
+		        && other.maxs[1] < maxs[1]
+		        && other.mins[1] > mins[1]
+		        && other.maxs[2] < maxs[2]
+		        && other.mins[2] > mins[2];
+	}
+
+	bool IsTrivInLine(zVEC3 const& linea, zVEC3 const& lineb)
+	{
+		return     mins[0] <= linea->x
+		        && maxs[0] >= linea->x
+		        && mins[1] <= linea->y
+		        && maxs[1] >= linea->y
+		        && mins[2] <= linea->z
+		        && maxs[2] >= linea->z
+		        && mins[0] <= lineb->x
+		        && maxs[0] >= lineb->x
+		        && mins[1] <= lineb->y
+		        && maxs[1] >= lineb->y
+		        && mins[2] <= lineb->z
+		        && maxs[2] >= lineb->z;
 	}
 
 	int IsIntersectingSweep(zTBBox3D const& thisTransEnd, zTBBox3D const& box2, zTBBox3D const& box2TransEnd, float& maxenter)
@@ -160,8 +202,6 @@ class zTBBox3D {
 	}
 
 	int IsIntersectingSweep(zVEC3 const& trans, zTBBox3D const& box2, float& maxenter);
-
-
 
 	void SaveBIN(zCFileBIN& bin)
 	{
@@ -219,4 +259,3 @@ int zTBBox3D::IsIntersectingSweep(zVEC3 const& trans, zTBBox3D const& box2, floa
 		maxenter = 0.0;
 	return 1;
 }
-

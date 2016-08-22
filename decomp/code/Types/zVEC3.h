@@ -1,4 +1,4 @@
-class zVEC3 {
+struct zVEC3 {
 	zVEC3() = default;
 
 	zVEC3(zVEC3 const& other)
@@ -124,16 +124,31 @@ class zVEC3 {
 		return *this;
 	}
 
-	friend zVEC3 operator*(zVEC3 const& vec, float val)
-	{
-		zVEC3 tmp = vec;
-		return tmp *= val;;
-	}
-
-	friend float operator*(zVEC3 const& a, zVEC3 const& b)
-	{
-		return a.x * b.x + a.y * b.y + a.z * b.z;
-	}
-
 	float x, y, z;
 };
+
+zVEC3 operator*(zVEC3 const& vec, float val)
+{
+	zVEC3 tmp = vec;
+	return tmp *= val;
+}
+
+zVEC3 operator-(zVEC3 const& a, zVEC3 const& b);
+{
+	zVEC3 tmp = a;
+	return a -= b;
+}
+
+// dot product
+float operator*(zVEC3 const& a, zVEC3 const& b)
+{
+	return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+// cross product
+zVEC3 operator^(zVEC3 const& a, zVEC3 const& b)
+{
+	return {a->y * b->z - a->z * b->y,
+                a->z * b->x - b->z * a->x,
+                a->x * b->y - a->y * b->x};
+}

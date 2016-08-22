@@ -9,4 +9,6 @@ public:
 	virtual void ScreenInit();
 	virtual void ScreenDone();
 	virtual void ExecCommand(zSTRING const&);
+
+	void InitForDisplay() {}
 };

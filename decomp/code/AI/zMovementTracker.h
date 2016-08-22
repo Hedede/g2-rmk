@@ -1,4 +1,13 @@
+struct zCPose {
+	~zCPose() = default;
+};
+
 struct zCMovementTracker {
+
+private:
+	void CheckKeys() {}
+
+private:
 	zTAICamMsg __msg;
 	float unk0[4];
 	zVEC3 __sampledPos;

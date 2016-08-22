@@ -51,6 +51,8 @@ struct zCParticleEmitter {
 		str23.Clear();
 	}
 
+	void UpdateVelocity() {}
+
 public:
 	int unk;
 	zSTRING str1;

@@ -122,6 +122,8 @@ public:
 	}
 
 	bool HasEnoughSpace(zVEC3& newPos);
+
+	void StartParticleEffects(zCTree<zCVob>*) {}
 };
 
 bool oCVob::GetFloorPosition(zVEC3& floorPos)

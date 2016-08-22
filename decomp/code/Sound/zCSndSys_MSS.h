@@ -32,4 +32,6 @@ public:
 	virtual void GetSpeakerType();
 	virtual void SetGlobalOcclusion(float);
 	virtual void GetCPULoad();
+
+	void SfxCon_ParamChanged(zSTRING const&) { }
 };

@@ -40,6 +40,30 @@ public:
 		return v[index];
 	}
 
+	float LengthApprox()
+	{
+		float x = fabs(v[0]);
+		float y = fabs(v[1]);
+		float z = fabs(v[2]);
+		float v = fabs(v[3]);
+		if ( x < y ) std::swap(x, y);
+		if ( z < w ) std::swap(z, w);
+		if ( x < z ) std::swap(x, z);
+		if ( y < w ) std::swap(y, w)
+		if ( y < z ) std::swap(y, z)
+		return x + (w * 16.0 + z * 19.0 + y * 25.0) / 60.0;
+	}
+
+	zVEC4& Normalize()
+	{
+		float inv = 1.0 / Length();
+		v[0] *= Length();
+		v[1] *= Length();
+		v[2] *= Length();
+		v[3] *= Length();
+		return *this;
+	}
+
 
 	zVEC4* Apply(float (__cdecl *func)(float))
 	{

@@ -5,7 +5,9 @@ public:
 	virtual void Init(zSTRING const &,zSTRING const &);
 	virtual void SetName(zSTRING const &);
 	virtual void SetPlayerVob(zCVob *);
-	virtual void Reset();
+
+	virtual void Reset() {}
+
 	virtual void Deactivate(int);
 	virtual void IsDeactivated();
 	virtual void SetReady(int);
@@ -18,7 +20,9 @@ class oCPlayerInfo : public zCPlayerInfo {
 public:
 	virtual ~oCPlayerInfo();
 	virtual void Init(zSTRING const &, zSTRING const &);
-	virtual void Reset();
+
+	void Reset() override { zCPlayerInfo::Reset(); }
+
 	virtual void Pack(zCBuffer &);
 	virtual void Unpack(zCBuffer &);
 	virtual void SetInstance(TPlayerInstance);

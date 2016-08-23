@@ -1,3 +1,5 @@
+include ../../config.mk
+
 sources=\
 Log.cpp \
 Main.cpp \
@@ -6,7 +8,6 @@ Clobber.cpp
 
 objects=$(patsubst %.cpp, %.o, $(sources))
 
-awlib_path=/home/awdev/awlib
 
 includes=\
 -I../../libGothic/include \

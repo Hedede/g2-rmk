@@ -1,12 +1,11 @@
 #ifndef G2_zCArray
 #define G2_zCArray
 /* zCArray ist eine sehr einfache und gleichzeitig sehr wichtige Datenstruktur. */
-template <class T> 
-class zCArray {
-public:
+template <class T>
+struct zCArray {
 	zCArray() = default;
 	zCArray(int size)
-		: numAlloc(size), numInArray(0)
+		: numAlloc(size)
 	{
 		array = new T[size];
 	}
@@ -106,9 +105,24 @@ public:
 	void Resize(int newSize)
 	{
 		AllocAbs(newSize);
-		numInArray = newSize;
-		for (int i = 0; i < numInArray; ++i)
+		for (int i = newSize; i < numInArray; ++i)
 			array[i] = {};
+		numInArray = newSize;
+	}
+
+	void ShrinkToFit()
+	{
+		if (numAlloc > numInArray) {
+			T* new_alloc = new T[numInArray];
+
+			for (int i = 0; i < num; ++i)
+				new_alloc[i] = array[i];
+			delete[] array;
+
+			array = new_alloc;
+		} else {
+			DeleteList();
+		}
 	}
 
 	int InsertEnd(T const& val)
@@ -199,9 +213,12 @@ public:
 		return array[idx];
 	}
 private:
-	T* array;            //Zeiger auf Speicherbereich
-	int numAlloc;        //Für wieviele Elemente ist gerade Speicher reserviert?
-	int numInArray;      //Anzahl der Elemente in diesem Speicherbereich
+	//Zeiger auf Speicherbereich
+	T* array = nullptr;
+	//Für wieviele Elemente ist gerade Speicher reserviert?
+	int numAlloc = 0;
+	//Anzahl der Elemente in diesem Speicherbereich
+	int numInArray = 0;
 };
 
 

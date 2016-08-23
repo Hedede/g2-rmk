@@ -53,13 +53,13 @@ private:
 	zTRnd_AlphaBlendFunc   oldAlphaBlendFunc;
 	zTSystemContextHandle  sysContextHandle;
 
-	oCGame*            gameSession;
-	oCGame*            backLoop;
-	zBOOL              exitGame;
-	zBOOL              exitSession;
-	zBOOL              gameIdle;
-	zBOOL              lastWorldWasGame;
-	oCSavegameManager* savegameManager;
+	oCGame*            gameSession = nullptr;
+	oCGame*            backLoop    = nullptr;
+	zBOOL              exitGame    = false;
+	zBOOL              exitSession = false;
+	zBOOL              gameIdle    = true;
+	zBOOL              lastWorldWasGame = false;
+	oCSavegameManager* savegameManager = nullptr;
 
 	zCArray<zSTRING>	lastDatFileList;
 	zCArray<zSTRING>	lastWorldList;
@@ -67,22 +67,22 @@ private:
 	zSTRING backWorldRunning;
 	zSTRING backDatFileRunning;
 
-	zCView*        vidScreen;
-	zCView*        initScreen;
+	zCView*        vidScreen  = nullptr;
+	zCView*        initScreen = nullptr;
 
-	zBOOL          introActive;
-	zBOOL          dontStartGame;
+	zBOOL          introActive   = false;
+	zBOOL          dontStartGame = false;
 
-	oCBinkPlayer*  videoPlayer;
-	zBOOL          videoPlayInGame;
+	oCBinkPlayer*  videoPlayer = new oCBinkPlayer{};
+	zBOOL          videoPlayInGame = false;
 
-	zCMenu*         menu_chgkeys;
-	zCMenu*         menu_chgkeys_ext;
-	oCMenuSavegame* menu_save_savegame;
-	oCMenuSavegame* menu_load_savegame;
+	zCMenu*         menu_chgkeys       = nullptr;
+	zCMenu*         menu_chgkeys_ext   = nullptr;
+	oCMenuSavegame* menu_save_savegame = nullptr;
+	oCMenuSavegame* menu_load_savegame = nullptr;
 
 	//wird selten (?) aktualisiert. Mindestens aber beim Speichern und Laden.
-	int playTime;
+	int playTime = 0;
 };
 
 bool chapBool;
@@ -162,26 +162,6 @@ CGameManager::CGameManager()
 	: zCInputCallback()
 {
 	gameMan = this;
-
-	gameSession = 0;
-	backLoop = 0;
-	vidScreen = 0;
-	initScreen = 0;
-	menu_chgkeys = 0;
-	menu_save_savegame = 0;
-	menu_load_savegame = 0;
-	exitGame = 0;
-	exitSession = 0;
-	gameIdle = 1;
-	lastWorldWasGame = 0;
-	introActive = 0;
-	dontStartGame = 0;
-	savegameManager = 0;
-
-	videoPlayer = new oCBinkPlayer();
-	videoPlayInGame = 0;
-
-	playTime = 0;
 }
 
 // static

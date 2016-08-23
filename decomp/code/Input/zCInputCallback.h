@@ -1,5 +1,5 @@
-class zCInputCallback {
-public:
+struct zCInputCallback {
+	zCInputCallback() = default;
 	virtual int HandleEvent(int);
 	static void GetInput();
 private:

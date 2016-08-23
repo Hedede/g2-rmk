@@ -1,5 +1,9 @@
 struct oCBinkPlayer : zCBinkPlayer {
-	virtual ~oCBinkPlayer();
+	oCBinkPlayer() : zCBinkPlayer()
+	{
+		extendedVideoKeys = false;
+	}
+	virtual ~oCBinkPlayer() = default;
 	virtual void OpenVideo(zSTRING);
 
 	virtual int PlayInit(int frameNr)
@@ -12,10 +16,17 @@ struct oCBinkPlayer : zCBinkPlayer {
 		return ret;
 	}
 
-	virtual void PlayFrame();
-	virtual void PlayDeinit();
+	void PlayFrame() override;
+	{
+		zCBinkPlayer::PlayFrame();
+	}
+	void PlayDeinit() override
+	{
+		zCBinkPlayer::PlayDeinit();
+	}
 	virtual void PlayHandleEvents();
 
 private:
-	bool disallowVideoInput;
+	zBOOL extendedVideoKeys;
+	zBOOL disallowVideoInput;
 };

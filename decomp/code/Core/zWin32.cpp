@@ -183,7 +183,7 @@ void sysSetWindowMode(int FullScreen, int Show)
 		winMode = 2;
 
 		if ( Show ) {
-			SetWindowPos(hWndApp, HWND_MESSAGE|0x2, 0, 0, GetSystemMetrics(0), GetSystemMetrics(1), 0x20u);
+			SetWindowPos(hWndApp, HWND_MESSAGE|0x2, 0, 0, GetSystemMetrics(0), GetSystemMetrics(1), SWP_FRAMECHANGED);
 			if ( !IsZoomed(hWndApp) )
 				ShowWindow(hWndApp, 5);
 		}
@@ -198,7 +198,7 @@ void sysSetWindowMode(int FullScreen, int Show)
 		SetWindowLongA(hWndApp, GWL_STYLE, WS_BORDER|WS_SYSMENU|WS_DLGFRAME);
 		SetWindowLongA(hWndApp, GWL_EXSTYLE, WS_EX_WINDOWEDGE|WS_EX_CLIENTEDGE);
 		winCreateMenu();
-		SetWindowPos(hWndApp, 0, 0, 0, 0, 0, 3u);
+		SetWindowPos(hWndApp, 0, 0, 0, 0, 0, SWP_NOSIZE|SWP_NOMOVE);
 		winMode = 1;
 		ShowWindow(hWndApp, 5);
 		SetForegroundWindowEx(hWndApp);
@@ -292,7 +292,7 @@ void sysProcessIdle()
 
 void sysSetFocus()
 {
-	SetWindowPos(hWndApp, 0, 0, 0, 0, 0, 0x40Bu);
+	SetWindowPos(hWndApp, 0, 0, 0, 0, 0, SWP_NOSIZE|SWP_NOMOVE|SWP_NOREDRAW|SWP_NOSENDCHANGING);
 	SetForegroundWindowEx(hWndApp);
 	SetFocus(hWndApp);
 	ShowWindow(hWndApp, 9);
@@ -311,7 +311,7 @@ void HandleFocusLoose()
 
 		zrenderer->Vid_SetScreenMode(&zrenderer->vtab, zRND_SCREEN_MODE_WINDOWED);
 
-		SetWindowPos(hWndApp, 0, 0, 0, 0, 0, 0x40B);
+		SetWindowPos(hWndApp, 0, 0, 0, 0, 0, SWP_NOSIZE|SWP_NOMOVE|SWP_NOREDRAW|SWP_NOSENDCHANGING);
 		focusLost = 1;
 	}
 }
@@ -552,4 +552,310 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	}
 
 	return Main(hInstance, hPrevInstance, lpCmdLine, nShowCmd);
+}
+
+
+int HandleResize(WPARAM wParam, RECT* rect)
+{
+	// INCOMPLETE, kinda don't need it
+	if ( vidFreeStretch == 1 || VideoW <= 0 || VideoH <= 0 )
+		return 1;
+
+	RECT workarea;
+	SystemParametersInfoA(SPI_GETWORKAREA, 0, &workarea, 0);
+	if ( !vidWindowStretch )
+	{
+		if ( wParam == WMSZ_LEFT || wParam == WMSZ_BOTTOMLEFT || wParam == WMSZ_TOPLEFT )
+			rect->left = rect->right - winExtraX - VideoW;
+		if ( wParam == WMSZ_RIGHT || wParam == WMSZ_BOTTOMRIGHT || wParam == WMSZ_TOPRIGHT )
+			rect->right = VideoW + winExtraX + rect->left;
+		if ( wParam == WMSZ_TOP || wParam == WMSZ_TOPLEFT || wParam == WMSZ_TOPRIGHT )
+			rect->top = rect->bottom - winExtraY - VideoH;
+		if ( wParam == WMSZ_BOTTOM || wParam == WMSZ_BOTTOMLEFT || wParam == WMSZ_BOTTOMRIGHT )
+			rect->bottom = VideoH + winExtraY + rect->top;
+		return 1;
+	}
+	if ( vidWindowStretch == 4 )
+		return 1;
+	if ( wParam == WMSZ_LEFT || wParam == WMSZ_BOTTOMLEFT || wParam == WMSZ_TOPLEFT ) {
+		auto wl = winExtraX + VideoW * ((rect->right + VideoW / 2 - rect->left - winExtraX) / VideoW);
+		for ( i = rect->right - wl; i < workarea.left; wl -= VideoW )
+			i += VideoW;
+		rect->left = rect->right - wl;
+	}
+	if ( wParam == WMSZ_RIGHT || wParam == WMSZ_BOTTOMRIGHT || wParam == WMSZ_TOPRIGHT ) {
+		auto wr = winExtraX + VideoW * ((rect->right + VideoW / 2 - rect->left - winExtraX) / VideoW);
+		for ( j = rect->left + wr; j > workarea.right; wr -= VideoW )
+			j -= VideoW;
+		rect->right = wr + rect->left;
+	}
+	if ( wParam == WMSZ_TOP || wParam == WMSZ_TOPLEFT || wParam == WMSZ_TOPRIGHT ) {
+		auto wt = winExtraY + VideoH * ((rect->bottom + VideoH / 2 - rect->top - winExtraY) / VideoH);
+		for ( k = rect->bottom - wt; k < workarea.top; wt -= VideoH )
+			k += VideoH;
+		rect->top = rect->bottom - wt;
+	}
+	if ( wParam == WMSZ_BOTTOM || wParam == WMSZ_BOTTOMLEFT || wParam == WMSZ_BOTTOMRIGHT ) {
+		auto wb = winExtraY + VideoH * ((rect->bottom + VideoH / 2 - rect->top - winExtraY) / VideoH);
+		for ( l = rect->top + wb; l > workarea.bottom; wb -= VideoH )
+			l -= VideoH;
+		rect->bottom = wb + rect->top;
+	}
+	auto ww = (rect->right - rect->left - winExtraX) / VideoW;
+	auto wh = (rect->bottom - rect->top - winExtraY) / VideoH;
+	if ( ww != 1 || wh  != 1 ) {
+		if ( winSnapSizes ) {
+			while ( VideoW != winSnapSize[i].x | VideoH != winSnapSize[i].y )
+			{
+				if ( ++i >= winSnapSizes ) {
+					winSnapSize[i].x = VideoW;
+					winSnapSize[i].y = VideoH;
+					if ( winSnapSizes < 0x20 )
+						++winSnapSizes;
+				}
+			}
+			winSnapSize[i].w = ww;
+			winSnapSize[i].h = wh;
+		}
+	} else {
+		if ( winSnapSizes ) {
+			int num = winSnapSizes;
+			do {
+				if ( VideoW == winSnapSize[i].x && VideoH == winSnapSize[i].y ) {
+					if ( i != num - 1 )
+						winSnapSize[i].x = winSnapSize[winSnapSizes];
+					--num;
+				}
+				++i;
+			} while ( i < winSnapSizes );
+			winSnapSizes = num;
+			return 1;
+		}
+	}
+}
+
+int AppWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	if ( sysStopProcessingMessages )
+		return DefWindowProcA(hWnd, msg, wParam, lParam);
+
+	switch (msg) {
+	case WM_INITMENU:
+		winCreateMenu();
+		return 0;
+	case WM_ENTERMENULOOP:
+		winInMenu = 1;
+		return 0;
+	case WM_EXITMENULOOP:
+		winInMenu = 0;
+		return 0;
+	case WM_SIZING:
+		HandleResize();
+		return 1;
+	case WM_LBUTTONDOWN:
+	case WM_RBUTTONDOWN:
+	case WM_MBUTTONDOWN:
+		SetForegroundWindowEx(hWnd);
+	case WM_MOUSEMOVE:
+	case WM_LBUTTONUP:
+	case WM_MBUTTONUP:
+		inCreateMouseMessage(wParam, lParam);
+		return 1;
+
+	case WM_SYSCOMMAND:
+		switch (wParam & 0xFFF0) {
+		case SC_MONITORPOWER:
+		case SC_SCREENSAVE:
+			return 0;
+		case SC_MINIMIZE:
+			if ( !vidAllowMinimizeWindow || byte_89C86C != 4 )
+				vidMinimize(1);
+			return 0;
+		case SC_KEYMENU:
+			if ( vidDisableMenuKeys )
+				return 0;
+		default:
+			return 1;
+		}
+
+	case WM_ERASEBKGND:
+		return 1;
+	case WM_CREATE:
+		ccMain.unk2 = 0;
+		ccMain.unk3 = 0;
+		ccMain.icon = hIconApp;
+		ccMain.unk1 = 7;
+		ccMain.unk7 = 1;
+		ccMain.unk10 = 0;
+		ccRenderCaption(hWnd, &ccMain);
+		return 1;
+	case WM_CLOSE:
+		usrWantQuit = 1;
+		return 0;
+
+	case WM_PAINT:
+		if ( !zrenderer || zrenderer->Vid_GetScreenMode() )
+			return DefWindowProcA(hWnd, Msg, wParam, lParam);
+		BeginPaint(hWnd, &Paint);
+		EndPaint(hWnd, &Paint);
+		return 1;
+
+	case WM_SIZE:
+		RECT rect;
+		GetClientRect(hWnd, &winWindowSize);
+		GetWindowRect(hWnd, &rect);
+		if ( rect.right - rect.left != ccMain.width )
+		{
+			ccRenderCaption(hWnd, &ccMain);
+			ccMain.width = rect.right - rect.left;
+		}
+		if ( byte_89C86C != 4 || IsIconic(hWndApp) || vidBusyMode & 3 || vidWindowStretch != 4 )
+			return 0;
+		VIDMODE vm = VideoModeCur;
+		vm.width  = winWindowSize.right - 1;
+		vm.height = winWindowSize.bottom - 1;
+		winSetVideoMode(&vm);
+		return 0;
+	case WM_DESTROY:
+		sysKillWindowsKeys(0);
+		return 0;
+	case WM_DEADCHAR:
+		// possibly bug in original code
+	case WM_ACTIVATE:
+		zINFO(8, "C: WM_ACTIVATE received"); // 1720, _carsten, zWin32.cpp
+		HandleFocusLoose();
+		return 1;
+	case WM_CANCELMODE:
+		zINFO(8"C: WM_CANCELMODE received"); //1728,
+		HandleFocusLoose();
+		return 1;
+	case WM_ACTIVATEAPP:
+		zINFO(8, "C: WM_ACTIVATEAPP received"); //1738,
+		HandleFocusLoose();
+		return 1;
+	case WM_GETMINMAXINFO:
+		if ( VideoW <= 0 || VideoH <= 0 )
+			return 1;
+		if ( vidWindowStretch != 4 ) {
+			lParam->ptMinTrackSize.x = VideoW + winExtraX;
+			lParam->ptMinTrackSize.y = VideoH + winExtraY;
+		}
+		result = 0;
+		break;
+	case WM_NCPAINT:
+	case WM_NCACTIVATE:
+		if ( !zrenderer || zrenderer->Vid_GetScreenMode() )
+			return DefWindowProcA(hWnd, Msg, wParam, lParam);
+		break;
+	case WM_SETCURSOR:
+		lParam &= 0xFFFF;
+		if ( lParam == 1 ) {
+			if ( winShowMouse && (winShowMouse != 2 || byte_89C86C != 5) )
+			{
+				if ( winCursorShowState < 0 )
+					winCursorShowState = ShowCursor(1);
+				SetCursor(LoadCursorA(0, 0x7F00));
+			}
+			else
+			{
+				if ( winCursorShowState >= 0 )
+					winCursorShowState = ShowCursor(0);
+			}
+			return 1;
+		} else {
+			if ( winCursorShowState < 0 )
+				winCursorShowState = ShowCursor(1);
+			HCURSOR cursor;
+			switch ( lParam ) {
+			case 0xF:
+			case 0xC:
+				cursor = LoadCursorA(0, 0x7F85);
+				break;
+			case 0xA:
+			case 0xB:
+				cursor = LoadCursorA(0, 0x7F84);
+				break;
+			case 0xD:
+			case 0x11:
+				cursor = LoadCursorA(0, 0x7F82);
+				break;
+			case 0xE:
+			case 0x10:
+				cursor = LoadCursorA(0, 0x7F83);
+				break;
+			default:
+				cursor = LoadCursorA(0, 0x7F00);
+				break;
+			}
+			SetCursor(cursor);
+			return 1;
+		}
+		break;
+
+	case WM_COMMAND:
+		if ( in(wParam, 41000, 41001, 41003) ) {
+			TRACE("WIN: Switch to bit depth %u BPP", 8 * wParam - 327992);
+			VIDMODE vm = VideoModeCur;
+			vm.bpp = 8 * wParam - 56;
+			vm.unk1 = 0;
+			winSetVideoMode(&vm);
+			return 1;
+		}
+
+		if ( wParam >= 41010 && wParam <= 41109 ) {
+			if ( winSetVideoMode ) {
+				VIDMODE vm;
+				// some kind of bullshit, maybe screwed up binary patch?
+				unsigned val = "X: DirectDraw out of sync !"[4*wParam + 12];
+				vm.width = val
+				vm. = (val >> 28) & 0xF;
+				vm.height = (val >> 16) & 0xFFF;
+				winSetVideoMode(&vm);
+			}
+			return 1;
+		}
+		if ( wParam >= 40400 && wParam < 40656 ) {
+			auto menu = ENV_STDMENU[wParam - 40400];
+			// no idea what this is, doesn't match MENU's in winapi docs
+			switch ( menu ) {
+			case 0x46:
+				usrWantPause ^= 4u;
+				break;
+			case 0x45:
+				usrWantQuit = 3;
+				break;
+			case 0x21:
+				(*(menu + 2))(*(menu + 3));
+				break;
+			case 0x22:
+				**(menu + 2) = **(menu + 2);
+				break;
+			case 0x23:
+				**(menu + 2) ^= *(menu + 12);
+				break;
+			case 0x24:
+				**(menu + 2) ^= *(menu + 3);
+				break;
+			case 0x25:
+				**(menu + 2) = *(menu + 3);
+				break;
+			case 0x33:
+				vidFreeStretch ^= 1u;
+				if ( vidFreeStretch )
+					return 1;
+				winResizeMainWindow();
+				break;
+			}
+			return 1;
+		}
+		return 1;
+	}
+
+	default:
+		static auto WM_QUERY_CANCEL_AUTOPLAY = RegisterWindowMessageA("QueryCancelAutoPlay");
+		if ( msg == WM_QUERY_CANCEL_AUTOPLAY )
+			return 1;
+		return DefWindowProcA(hWnd, msg, wParam, lParam);
+	}
+	return 1;
 }

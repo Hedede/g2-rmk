@@ -14,7 +14,7 @@ class zMAT4 {
      * Koordinatensystem der Welt an M * (a1, a2, a3, 1)^T.
      * ("^T" soll nur bedeuten, dass der Vektor eigentlich senkrecht stehen muss).
      * Die vierte Zeile der Matrix ist ungenutzt und sinnlos. */
-    
+
     /* Zeilenweise */
     zREAL v0[4];
     zREAL v1[4];
@@ -22,9 +22,7 @@ class zMAT4 {
     zREAL v3[4];
 };
 
-//andere Formulierung, wer lieber alles in einem array haben will:
-class zMATRIX4 {
-    zREAL trafo[16];
-};
-
-
+zMAT4 Alg_Identity3D()
+{
+	return {{1,0,0,0}, {0,1,0,0}, {0,0,1,0}, {0,0,0,1}};
+}

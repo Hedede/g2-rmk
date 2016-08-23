@@ -12,7 +12,7 @@ struct zCVideoPlayer {
 	int soundEnabled  = 1;
 	float soundVolume = 1.0;
 	float unk2 = 1.0;
-}
+};
 
 struct zCBinkPlayer : zCVideoPlayer {
 	void* binkHandle = 0;
@@ -22,13 +22,12 @@ struct zCBinkPlayer : zCVideoPlayer {
 	int unkz3 = 0;
 	int handleEvents = 1;
 	int fullScreen = 1;
-	zSTRING unkz3;
-	int unkz4;
-	int unkz5[5];
+	zSTRING unkz4;
+	int unkz5;
+	int unkz6[5];
 };
 
-struct oCBinkPlayer : zCVideoPlayer {
-	static_assert(sizeof(oCBinkPlayer) == 0x88);
+struct oCBinkPlayer : zCBinkPlayer {
 
 	oCBinkPlayer()
 	{
@@ -42,4 +41,6 @@ struct oCBinkPlayer : zCVideoPlayer {
 	char unkz; 
 };
 
+#include <Hook/size_checker.h>
+size_checker<oCBinkPlayer, 0x88> CHECKER_NAME;
 #endif//GOTHIC_OCBINKPLAYER_H

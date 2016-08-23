@@ -96,15 +96,6 @@ void InitWin32Stuff(char const* cmdLine)
 	if ( !RegisterClassA(&WndClass) )
 		sysHardExit("Could not register window class");
 
-	memset(&WndClass, 0, sizeof(WndClass));
-
-	WndClass.lpfnWndProc = netWindowProc;
-	WndClass.hInstance   = (HINSTANCE)hInstApp;
-	WndClass.lpszClassName = "DDWinSock";
-
-	if ( !RegisterClassA(&WndClass) )
-		sysHardExit("Could not register window class");
-
 	RECT rect;
 	winPosX = 0;
 	winPosY = 0;

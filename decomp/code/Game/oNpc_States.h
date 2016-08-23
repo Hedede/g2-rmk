@@ -1,0 +1,42 @@
+class oCNpc_States {
+	virtual void Archive(zCArchiver& arc);
+	virtual void Unarchive(zCArchiver& arc);
+	virtual void PackState(zCBuffer&);
+	virtual void UnpackState(zCBuffer&);
+	int     state_vtbl;
+	zSTRING state_name;
+	oCNpc*  state_npc;
+	class TNpcAIState {
+		int      index;
+		int      loop;
+		int      end;
+		int      timeBehaviour;
+		zREAL    restTime;
+		int      phase;
+		zBOOL    valid;
+		zSTRING name;
+		zREAL    stateTime;
+		int      prgIndex;
+		zBOOL    isRtnState;
+	};
+	TNpcAIState curState;
+	TNpcAIState nextState;
+	int             lastAIState;
+	zBOOL           hasRoutine;
+	zBOOL           rtnChanged;
+	oCRtnEntry*     rtnBefore;
+	oCRtnEntry*     rtnNow;
+	zCRoute*        rtnRoute;
+	zBOOL           rtnOverlay;
+	int             rtnOverlayCount;
+	int             walkmode_routine;
+	zBOOL           weaponmode_routine;
+	zBOOL           startNewRoutine;
+	int             aiStateDriven;
+	zVEC3           aiStatePosition;
+	oCNpc*          parOther;
+	oCNpc*          parVictim;
+	oCItem*         parItem;
+	int             rntChangeCount;
+};
+

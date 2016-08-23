@@ -44,56 +44,17 @@ enum NpcPercId {
 	PERC_MAX = 33;
 };
 
+zSTRING strPlayerStatesEnabled[] = {
+	"ZS_ASSESSMAGIC", "ZS_ASSESSSTOPMAGIC", "ZS_MAGICFREEZE",
+	"ZS_WHIRLWIND", "ZS_SHORTZAPPED", "ZS_ZAPPED",
+	"ZS_PYRO", "ZS_MAGICSLEEP"
+};
+
 enum Sense {
 	SENSE_SEE = 1,
 	SENSE_HEAR = 2,
 	SENSE_SMELL = 4,
 };
-
-class oCNpc_States {
-	virtual void Archive(zCArchiver&);
-	virtual void Unarchive(zCArchiver&);
-	virtual void PackState(zCBuffer&);
-	virtual void UnpackState(zCBuffer&);
-	int     state_vtbl;
-	zSTRING state_name;
-	oCNpc*  state_npc;
-	class TNpcAIState {
-		int      index;
-		int      loop;
-		int      end;
-		int      timeBehaviour;
-		zREAL    restTime;
-		int      phase;
-		zBOOL    valid;
-		zSTRING name;
-		zREAL    stateTime;
-		int      prgIndex;
-		zBOOL    isRtnState;
-	};
-	TNpcAIState curState;
-	TNpcAIState nextState;
-	int             lastAIState;
-	zBOOL           hasRoutine;
-	zBOOL           rtnChanged;
-	oCRtnEntry*     rtnBefore;
-	oCRtnEntry*     rtnNow;
-	zCRoute*        rtnRoute;
-	zBOOL           rtnOverlay;
-	int             rtnOverlayCount;
-	int             walkmode_routine;
-	zBOOL           weaponmode_routine;
-	zBOOL           startNewRoutine;
-	int             aiStateDriven;
-	zVEC3           aiStatePosition;
-	oCNpc*          parOther;
-	oCNpc*          parVictim;
-	oCItem*         parItem;
-	int             rntChangeCount;
-};
-
-const int oCMagFrontier_bitfield_isWarning  = ((1 << 1) - 1) << 0;
-const int oCMagFrontier_bitfield_isShooting = ((1 << 1) - 1) << 1;
 
 
 
@@ -1337,7 +1298,7 @@ private:
 	zCArray<oCNpcTalent*>     talents;
 	int    spellMana = 0;
 
-	class oCMagFrontier {
+	struct oCMagFrontier {
 		SetNPC(oCNpc *npc)
 		{
 			this->npc = npc;
@@ -1345,7 +1306,11 @@ private:
 		oCVisualFX*     warningFX;
 		oCVisualFX*     shootFX;
 		oCNpc*          npc;
-		int    bitfield;                                      // 0x0584 oCMagFrontier_bitfield_Xxx
+
+		struct {
+			unsigned isWarning  : 1;
+			unsigned isShooting : 1;
+		} flags;
 	} magFrontier;
 
 	oCNpc_States states; // ok

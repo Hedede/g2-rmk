@@ -17,6 +17,6 @@ auto& BeginTime   = Value<int>(0x8D4178);
 auto& BeginTime70 = Value<int>(0x8D3ED4);
 }
 
-static char const APP_NAME[] = "Gothic II — Remake 0";
+static char const APP_NAME[] = "Gothic II — REMAKE — [ver.0] ывфыав вфыв";
 
 #endif//GOTHIC2_SYSTEM_H

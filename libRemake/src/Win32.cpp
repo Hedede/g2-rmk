@@ -3,6 +3,8 @@
 #include <Gothic/System/Video.h>
 #include <Hook/log.h>
 
+#include <aw/utility/unicode/convert.h>
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
@@ -18,6 +20,20 @@ int& winPosX = Value<int>(0x8D40E8);
 int& winPosY = Value<int>(0x8D40EC);
 int& nWidth  = Value<int>(0x8D40F0);
 int& nHeight = Value<int>(0x8D40F4);
+
+using WINAPI_STRING = std::basic_string<WCHAR>;
+
+WINAPI_STRING widen(std::string const& str)
+{
+	using namespace aw::unicode;
+	return convert<WINAPI_STRING>(str, utf8{}, utf16{});
+}
+
+std::string narrow(WINAPI_STRING const& str)
+{
+	using namespace aw::unicode;
+	return convert<std::string>(str, utf16{}, utf8{});
+}
 
 void InitWin32Stuff(char const* cmdLine)
 {
@@ -67,7 +83,7 @@ void InitWin32Stuff(char const* cmdLine)
 	WNDCLASSA WndClass;
 	memset(&WndClass, 0, sizeof(WndClass));
 
-	hIconApp = LoadIconA((HINSTANCE)hInstApp, (LPCSTR)0xA3);
+	hIconApp = LoadIconW((HINSTANCE)hInstApp, (LPCWSTR)0xA3);
 
 	WndClass.style = 512;
 	WndClass.lpfnWndProc   = AppWndProc;
@@ -92,7 +108,7 @@ void InitWin32Stuff(char const* cmdLine)
 	winPosX = 0;
 	winPosY = 0;
 
-	auto res = SystemParametersInfoA(SPI_GETWORKAREA, 0, &rect, 0);
+	auto res = SystemParametersInfoW(SPI_GETWORKAREA, 0, &rect, 0);
 	if ( res && rect.left >= 0 && rect.top >= 0 ) {
 		winPosX = rect.left;
 		winPosY = rect.top;
@@ -102,10 +118,10 @@ void InitWin32Stuff(char const* cmdLine)
 	nHeight = winExtraY + 600;
 
 	print("-- Creating window --\n");
-	hWndApp = CreateWindowExA(
-	                WS_EX_WINDOWEDGE|WS_EX_CLIENTEDGE,
-			"DDWndClass",
-			APP_NAME,
+
+	hWndApp = CreateWindowW(
+			L"DDWndClass",
+			widen(APP_NAME).data(),
 			WS_BORDER|WS_SYSMENU|WS_DLGFRAME,
 	                winPosX, winPosY,
 			nWidth, nHeight,

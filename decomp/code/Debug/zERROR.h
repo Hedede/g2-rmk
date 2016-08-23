@@ -61,6 +61,7 @@ struct zERROR {
 	}
 
 	void SetTarget(int _target);
+
 private:
 	void (*onexit)();
 

@@ -68,7 +68,9 @@ extern "C" void aw_main(void* hinst, char const* args)
 	println("Command line: ", cmdLine);
 
 	aw::string::toupper(cmdLine);
-	zerr.Init(cmdLine);
+	zerr.SetTarget(2);
+	zerr.SetFilterLevel(3);
+	//zerr.SetFilterAuthors("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 
 	bool handler = cmdLine.find("ZNOEXHND") == std::string::npos;
 	println("Exception handler is: ", handler ? "active" : "disabled");

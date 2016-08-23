@@ -55,6 +55,8 @@ void GameLoop()
 
 	sysEvent();
 
+	println("GameLoop(): hWndApp: ", uintptr_t(hWndApp));
+
 	game.Init(hWndApp);
 	game.Run();
 	game.Done();

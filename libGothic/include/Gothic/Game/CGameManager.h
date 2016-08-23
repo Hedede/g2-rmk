@@ -1,7 +1,11 @@
 #ifndef G2_CGAMEMANAGER_H
 #define G2_CGAMEMANAGER_H
 #include <Hook/func.h>
+#include <Hook/value.h>
+#include <Gothic/Types/zArray.h>
 #include <Gothic/Types/zSTRING.h>
+#include <Gothic/Input/zCInputCallback.h>
+#include <Gothic/Video/oBinkPlayer.h>
 
 struct oCGame;
 struct oCSavegameManager;
@@ -11,13 +15,14 @@ struct zCMenu;
 struct oCMenuSavegame;
 
 struct CGameManager;
-CGameManager*& gameMan = *(CGameManager**)0x8C2958;
+auto& gameMan = Value<CGameManager*>(0x8C2958);
 
-struct CGameManager {
+struct CGameManager : zCInputCallback {
 	CGameManager()
+		: zCInputCallback()
 	{
-		Thiscall<void(CGameManager*)> ctor{0x4244E0};
-		ctor(this);
+		_vtab = reinterpret_cast<void*>(0x82F0EC);
+		gameMan = this;
 	}
 
 	~CGameManager()
@@ -44,34 +49,38 @@ struct CGameManager {
 		func(this);
 	}
 
-	void* _vbtl;
-	int oldAlphaBlendFunc;
-	void* sysContextHandle;
-	oCGame *gameSession = 0;
-	oCGame *backLoop  = 0;
-	zBOOL exitGame    = 0;
-	zBOOL exitSession = 0;
-	zBOOL gameIdle = 1;
-	int lastWorldWasGame = 0;
-	oCSavegameManager *savegameManager = 0;
-	zSTRING *lastDatFileList_array = 0;
-	int lastDatFileList_numAlloc   = 0;
-	int lastDatFileList_numInArray = 0;
-	zSTRING *lastWorldList_array   = 0;
-	int lastWorldList_numAlloc     = 0;
-	int lastWorldList_numInArray   = 0;
+	int    oldAlphaBlendFunc;
+	void*  sysContextHandle;
+
+	oCGame*            gameSession = nullptr;
+	oCGame*            backLoop    = nullptr;
+	zBOOL              exitGame    = false;
+	zBOOL              exitSession = false;
+	zBOOL              gameIdle    = true;
+	zBOOL              lastWorldWasGame = false;
+	oCSavegameManager* savegameManager = nullptr;
+
+	zCArray<zSTRING>	lastDatFileList;
+	zCArray<zSTRING>	lastWorldList;
+
 	zSTRING backWorldRunning;
 	zSTRING backDatFileRunning;
-	zCView *vidScreen;
-	zCView *initScreen;
-	int introActive;
-	int dontStartGame;
-	oCBinkPlayer *videoPlayer;
-	int videoPlayInGame;
-	zCMenu *menu_chgkeys;
-	zCMenu *menu_chgkeys_ext;
-	oCMenuSavegame *menu_save_savegame;
-	oCMenuSavegame *menu_load_savegame;
-	int playTime;
+
+	zCView*        vidScreen  = nullptr;
+	zCView*        initScreen = nullptr;
+
+	zBOOL          introActive   = false;
+	zBOOL          dontStartGame = false;
+
+	oCBinkPlayer*  videoPlayer = new oCBinkPlayer{};
+	zBOOL          videoPlayInGame = false;
+
+	zCMenu*         menu_chgkeys       = nullptr;
+	zCMenu*         menu_chgkeys_ext   = nullptr;
+	oCMenuSavegame* menu_save_savegame = nullptr;
+	oCMenuSavegame* menu_load_savegame = nullptr;
+
+	//wird selten (?) aktualisiert. Mindestens aber beim Speichern und Laden.
+	int playTime = 0;
 };
 #endif

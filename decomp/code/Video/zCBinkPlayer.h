@@ -1,5 +1,4 @@
-class zCBinkPlayer {
-public:
+struct zCBinkPlayer : zCVideoPlayer {
 	virtual ~zCBinkPlayer();
 	virtual void OpenVideo(zSTRING);
 	virtual void CloseVideo();
@@ -12,6 +11,16 @@ public:
 	virtual void ToggleSound();
 	virtual void SetSoundVolume(float);
 	virtual void PlayGotoNextFrame();
-	virtual void PlayWaitNextFrame();
-	virtual void PlayHandleEvents();
+	virtual void PlayWaitNextFrame()
+	{
+		BinkNextFrame(binkHandle);
+		return 1;
+	}
+	virtual bool PlayHandleEvents()
+	{
+		return handleEvents == 0;
+	}
+
+private:
+	BINK* binkHandle;
 };

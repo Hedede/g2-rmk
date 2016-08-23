@@ -2,7 +2,7 @@
 #define G2_CGAMEMANAGER_H
 #include <Hook/func.h>
 #include <Hook/value.h>
-#include <Hook/log.h>
+#include <Logging/Log.h>
 #include <Gothic/Types/zArray.h>
 #include <Gothic/Types/zSTRING.h>
 #include <Gothic/Input/zCInputCallback.h>
@@ -34,7 +34,8 @@ struct CGameManager : zCInputCallback {
 
 	void Init(void* hwnd)
 	{
-		println("CGameManager::Init(): hwnd: ", uintptr_t(hwnd));
+		using namespace g2r;
+		Log("CGameManager::Init", "hwnd: ", uintptr_t(hwnd));
 
 		Thiscall<void(CGameManager*,void**)> func{0x424C70};
 		func(this, &hwnd);

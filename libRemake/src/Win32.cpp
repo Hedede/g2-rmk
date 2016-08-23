@@ -1,7 +1,7 @@
 #include <Gothic/System/System.h>
 #include <Gothic/System/Win32.h>
 #include <Gothic/System/Video.h>
-#include <Hook/log.h>
+#include <Logging/Log.h>
 
 #include <aw/utility/unicode/convert.h>
 
@@ -37,7 +37,8 @@ std::string narrow(WINAPI_STRING const& str)
 
 void InitWin32Stuff(char const* cmdLine)
 {
-	print("-- Initializing Win32 --\n");
+	using namespace g2r;
+	Log("Win32", "Initializing");
 	winMainThreadID = GetCurrentThreadId();
 	auto a = GetCurrentProcess();
 	auto b = GetCurrentThread();
@@ -117,7 +118,7 @@ void InitWin32Stuff(char const* cmdLine)
 	nWidth  = winExtraX + 800;
 	nHeight = winExtraY + 600;
 
-	print("-- Creating window --\n");
+	Log("Win32", "Creating window");
 
 	hWndApp = CreateWindowW(
 			L"DDWndClass",
@@ -126,5 +127,9 @@ void InitWin32Stuff(char const* cmdLine)
 	                winPosX, winPosY,
 			nWidth, nHeight,
 	                0, 0, (HINSTANCE)hInstApp, 0);
-	println("hWndApp is ", uintptr_t(hWndApp));
+
+	if (hInstApp)
+		Log("Win32", "Window created: ", uintptr_t(hWndApp));
+	else
+		Error("Win32", "Could not create window: ", GetLastError());
 }

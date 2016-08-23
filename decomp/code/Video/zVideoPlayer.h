@@ -58,9 +58,9 @@ struct zCVideoPlayer {
 	{
 		return playing;
 	}
-	virtual void ToggleSound()
+	virtual int ToggleSound()
 	{
-		soundEnabled = !soundEnabled;
+		return soundEnabled = !soundEnabled;
 	}
 	virtual void SetSoundVolume(float vol)
 	{

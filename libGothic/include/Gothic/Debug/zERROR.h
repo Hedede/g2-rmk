@@ -4,7 +4,7 @@
 #include <Gothic/Types/zSTRING.h>
 
 struct zERROR {
-	void Init(std::string cmdLine);
+	void Init(std::string cmdLine) {}
 
 	void SetFilterLevel(int max_level)
 	{

@@ -1,7 +1,7 @@
 #include <string>
 
-#include <Hook/log.h>
-
+#include <Logging/Log.h>
+#include <Logging/Logger.h>
 
 #include <aw/utility/string/case.h>
 
@@ -18,22 +18,23 @@ void GameLoop();
 char(&sysLogName)[260] = Value<char[260]>(0x8D3A90);
 extern "C" void aw_main(void* hinst, char const* args)
 {
-	freopen("log.txt", "wb", stdout);
+	using namespace g2r;
+	LogFile file_log;
+	logger.setLogger(&file_log);
 
-	print("-- LIBRARY LOADED --\n");
+	Log("Main", "Successfully hooked.");
 
 	hInstApp = hinst;
 
 	std::string cmdLine{args};
-	println("Command line: ", cmdLine);
+	Log("Main", "Command line: ", cmdLine);
 
 	aw::string::toupper(cmdLine);
 	zerr.SetTarget(2);
 	zerr.SetFilterLevel(3);
-	//zerr.SetFilterAuthors("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 
 	bool handler = cmdLine.find("ZNOEXHND") == std::string::npos;
-	println("Exception handler is: ", handler ? "active" : "disabled");
+	Log("Main", "Exception handler is ", handler ? "active" : "disabled");
 	zCExceptionHandler::SetIsActive(handler);
 
 	// TODO: remove k chertyam sobachim
@@ -51,11 +52,12 @@ extern "C" void aw_main(void* hinst, char const* args)
 
 void GameLoop()
 {
+	using namespace g2r;
 	CGameManager game;
 
 	sysEvent();
 
-	println("GameLoop(): hWndApp: ", uintptr_t(hWndApp));
+	Log("GameLoop", "Gameloop starting.");
 
 	game.Init(hWndApp);
 	game.Run();

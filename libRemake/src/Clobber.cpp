@@ -1,4 +1,4 @@
-#include <Hook/log.h>
+#include <Logging/Log.h>
 
 /*
 #include <new>
@@ -42,6 +42,7 @@ int sysGetTime()
 #include <windows.h>
 void InitFunctions()
 {
+	using namespace g2r;
 	constexpr uintptr_t text_start = 0x401000;
 	constexpr uintptr_t text_end   = 0x82E000;
 

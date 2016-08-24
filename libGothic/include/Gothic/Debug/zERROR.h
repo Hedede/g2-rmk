@@ -45,5 +45,4 @@ private:
 };
 
 static zERROR& zerr = Value<zERROR>(0x8CDCD0);
-
 #endif//GOTHIC_ZERROR_H

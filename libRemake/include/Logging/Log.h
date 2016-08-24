@@ -14,11 +14,24 @@ void Log(std::string const& src, Args... args)
 }
 
 template<typename... Args>
+void Warning(std::string const& src, Args... args)
+{
+	std::string msg = ( aw::as_string(args) + ... + std::string("\n") );
+	logger.log(aw::Log::Warning, src, msg);
+}
+
+template<typename... Args>
 void Error(std::string const& src, Args... args)
 {
 	std::string msg = ( aw::as_string(args) + ... + std::string("\n") );
 	logger.log(aw::Log::Error, src, msg);
 }
 
+template<typename... Args>
+void Fatal(std::string const& src, Args... args)
+{
+	std::string msg = ( aw::as_string(args) + ... + std::string("\n") );
+	logger.log(aw::Log::Critical, src, msg);
+}
 } // namespace g2r
 #endif//g2remake_Log_h

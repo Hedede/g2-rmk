@@ -31,8 +31,16 @@ struct zSTRING {
 		return operator=(str.c_str());
 	}
 
+	explicit operator std::string() const
+	{
+		return std::string(ptr, len);
+	}
+
 private:
-	void* _vtab;
-	void* data[4];
+	void* _vtab; 
+	char alloc;
+	char *ptr;
+	size_t len;
+	int res;
 };
 #endif//G2_zSTRING_h

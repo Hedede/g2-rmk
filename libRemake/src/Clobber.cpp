@@ -40,6 +40,44 @@ int sysGetTime()
 
 #define _WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <Gothic/Debug/zERROR.h>
+
+
+#include <Logging/Log.h>
+int __thiscall zERROR_Report(void*, int type, int id, zSTRING& msg, char levelPrio, char flag, int line, char *file, const char *function)
+{
+	enum zERROR_TYPE {
+		zERR_TYPE_OK = 0x0,
+		zERR_TYPE_MESSAGE = 0x1,
+		zERR_TYPE_WARNING = 0x2,
+		zERR_TYPE_FAULT = 0x3,
+		zERR_TYPE_FATAL = 0x4,
+	};
+
+	std::string src(file);
+	auto last = file.find_last_of("\\/");
+	src.erase(0, last);
+	if (src.empty())
+		src = "Gothic";
+
+	switch(type) {
+	default:
+	case zERR_TYPE_OK:
+	case zERR_TYPE_MESSAGE:
+		Log(src, std::string(msg));
+		break;
+	case zERR_TYPE_WARNING:
+		Warning(src, std::string(msg));
+		break;
+	case zERR_TYPE_FAULT:
+		Error(src, std::string(msg));
+		break;
+	case zERR_TYPE_FATAL:
+		Fatal(src, std::string(msg));
+		break;
+	};
+}
+
 #include "Thread/zThread.h"
 
 void InitFunctions()
@@ -63,8 +101,9 @@ void InitFunctions()
 
 	make_jump((char*)0x5F9370, (uintptr_t)zCThread_vt::SuspendThread_thunk, x86::eax);
 	make_jump((char*)0x5F93A0, (uintptr_t)zCThread_vt::ResumeThread_thunk, x86::eax);
+	make_jump((char*)0x44C8D0, (uintptr_t)zERROR_Report, x86::eax);
 
-	Log("Clobber", "-- Restoring memory protection --");
+	Log("Clobber", "Restoring memory protection");
 	ret = VirtualProtect((void*)text_start, text_length, prot, &prot);
 	if (!ret)
 		Error("Clobber", "Could not change memory protection! Error:", GetLastError());

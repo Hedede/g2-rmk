@@ -27,8 +27,8 @@ struct oCSavegameManager {
 		Init();
 	}
 
-	zCArray< void* > __saves;
-	oCSavegameInfo* info;
+	zCArray<oCSavegameInfo*> saves;
+	oCSavegameInfo*          current;
 	bool initialized;
 	int unk[6];
 };

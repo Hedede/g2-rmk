@@ -116,7 +116,42 @@ void CGameManager::PreGraphicsInit()
 	if (!splash.IsRunning())
 		Warning("Engine", "Could not create splash window.");
 
-	zCEngine::Init(sysContextHandle);
+	zCClassDef::EndStartup();
+
+	if ( !zfactory )
+		zfactory = new zCObjectFactory;
+
+	zInitOptions();
+
+	bool memProfiler = zoptions->Parm("ZMEMPROFILER");
+	//stub in .exe
+	//zCMallocGeneric::Init(memProfiler);
+
+	zFILE_VDFS::InitFileSystem();
+
+	sysEvent();
+
+	zresMan = new zCResourceManager;
+	bool noResThread = zoptions->Parm("ZNORESTHREAD");
+	zresMan->SetThreadingEnabled(!noResThread);
+
+	zBert_StartUp();
+	zUlfi_StartUp();
+
+	sysEvent();
+
+	zDieter_StartUp(sysContextHandle);
+	zCarsten_StartUp(sysContextHandle);
+
+	bool texConvert = zoptions->Parm("ZTEXCONVERT");
+	if ( texConvert ) {
+		zSTRING val = zoptions->ParmValue("ZTEXCONVERT");
+		zCTexture::ScanConvertTextures(val);
+	}
+
+	// zfpuControler->RestoreDefaultControlWord()
+	// zfpuControler->SaveCurrentControlWord();
+	
 
 	if (zoptions->ReadBool("GAME", "playLogoVideos", 1)) {
 		PlayVideo("logo1.bik");
@@ -156,6 +191,5 @@ void CGameManager::PreGraphicsInit()
 	bool convertAll = zoptions->Parm("ZCONVERTALL");
 	if ( convertAll )
 		Tool_ConvertData();
-
 }
 

@@ -9,7 +9,7 @@
 namespace g2r {
 void InitSound()
 {
-	Log("Engine", "Initializing Sound");
+	Log("Startup", "Initializing Sound");
 	float masterVol = zoptions->ReadReal("SOUND", "soundVolume", 1.0);
 	if ( zsound )
 		zsound->SetMasterVolume(masterVol);
@@ -18,7 +18,7 @@ void InitSound()
 auto ChangeMusicEnabled = func<zCOptions::ChangeHandler>(0x42D240);
 void InitMusic()
 {
-	Log("Engine", "Initializing Music");
+	Log("Startup", "Initializing Music");
 	zoptions->InsertChangeHandler("SOUND", "musicEnabled", ChangeMusicEnabled);
 	float musicVol = zoptions->ReadReal("SOUND", "musicVolume", 0.8);
 	if ( zmusic )
@@ -28,7 +28,7 @@ void InitMusic()
 auto DefineMenuScriptFunctions = Cdecl<int()>(0x42C1D0);
 void InitMenu()
 {
-	Log("Engine", "Initializing the menu-system");
+	Log("Startup", "Initializing the menu-system");
 	zoptions->ReadBool("INTERNAL", "extendedMenu" , 0);
 	zCMenu::CreateParser();
 	DefineMenuScriptFunctions();
@@ -56,7 +56,7 @@ void CGameManager::Init(void* hwnd)
 
 	sysContextHandle = hwnd;
 
-	Log("Engine", "Initializing GameManager");
+	Log("Startup", "Initializing GameManager");
 
 	SDL_Init(SDL_INIT_VIDEO|SDL_INIT_EVENTS);
 
@@ -96,16 +96,15 @@ void CGameManager::Init(void* hwnd)
 	// TODO: move into InitMenu
 	zCMenu::Startup();
 
-	Log("Engine", "GameManager initializing done");
-}
-
-namespace zCEngine {
-auto Init = Cdecl<int(void*&)>(0x558BE0);
+	Log("Startup", "GameManager initializing done");
 }
 
 
 #include <Graphics/SplashWindow.h>
+#include <Gothic/System/zFILE_VDFS.h>
+#include <Gothic/Graphics/zTexture.h>
 #include <Gothic/Game/oObjectFactory.h>
+#include <Gothic/Game/zResourceManager.h>
 #include <Gothic/Menu/zView.h>
 void CGameManager::PreGraphicsInit()
 {
@@ -114,13 +113,15 @@ void CGameManager::PreGraphicsInit()
 	SplashWindow splash;
 
 	if (!splash.IsRunning())
-		Warning("Engine", "Could not create splash window.");
+		Warning("Startup", "Could not create splash window.");
 
 	zCClassDef::EndStartup();
 
-	if ( !zfactory )
-		zfactory = new zCObjectFactory;
+	if ( zfactory )
+		zfactory->Release();
+	zfactory = new oCObjectFactory;
 
+	Cdecl<void()> zInitOptions{0x4701F0};
 	zInitOptions();
 
 	bool memProfiler = zoptions->Parm("ZMEMPROFILER");
@@ -135,25 +136,29 @@ void CGameManager::PreGraphicsInit()
 	bool noResThread = zoptions->Parm("ZNORESTHREAD");
 	zresMan->SetThreadingEnabled(!noResThread);
 
+	Cdecl<void()> zBert_StartUp{0x471230};
 	zBert_StartUp();
+	Cdecl<void()> zUlfi_StartUp{0x7B4260};
 	zUlfi_StartUp();
 
 	sysEvent();
 
+	Cdecl<void(void*&)> zDieter_StartUp{0x630580};
 	zDieter_StartUp(sysContextHandle);
+	Cdecl<void(void*&)> zCarsten_StartUp{0x509580};
 	zCarsten_StartUp(sysContextHandle);
 
 	bool texConvert = zoptions->Parm("ZTEXCONVERT");
 	if ( texConvert ) {
-		zSTRING val = zoptions->ParmValue("ZTEXCONVERT");
+		std::string val = zoptions->ParmValue("ZTEXCONVERT");
 		zCTexture::ScanConvertTextures(val);
 	}
 
 	// zfpuControler->RestoreDefaultControlWord()
 	// zfpuControler->SaveCurrentControlWord();
 	
-
 	if (zoptions->ReadBool("GAME", "playLogoVideos", 1)) {
+		Log("Startup", "Playing videos");
 		PlayVideo("logo1.bik");
 		PlayVideo("logo2.bik");
 	}
@@ -168,14 +173,9 @@ void CGameManager::PreGraphicsInit()
 
 	InitScreen_Open();
 
-	if ( zfactory )
-		zfactory->Release();
-
-	zfactory = new oCObjectFactory;
 
 	Cdecl<void()> oBert_StartUp{0x430540};
 	oBert_StartUp();
-
 
 	vidScreen = screen;
 	vidScreen->SetEnableHandleEvent(1);

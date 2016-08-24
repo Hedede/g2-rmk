@@ -13,6 +13,8 @@ auto& hIconApp = Value<HICON>(0x8D4228);
 
 WNDPROC AppWndProc    = (WNDPROC)0x503770;
 WNDPROC netWindowProc = (WNDPROC)0x4562F0;
+//auto& sysStopProcessingMessages = Value<int>(0x8D4234);
+//auto HandleFocusLoose = Cdecl<void()>(0x503630);
 
 int& winExtraX = Value<int>(0x8D3980);
 int& winExtraY = Value<int>(0x8D3988);
@@ -81,19 +83,19 @@ void InitWin32Stuff(char const* cmdLine)
 	if ( !vidHideMenu )
 		winExtraY += GetSystemMetrics(15);
 
-	WNDCLASSA WndClass;
+	WNDCLASSW WndClass;
 	memset(&WndClass, 0, sizeof(WndClass));
 
 	hIconApp = LoadIconW((HINSTANCE)hInstApp, (LPCWSTR)0xA3);
 
 	WndClass.style = 512;
-	WndClass.lpfnWndProc   = AppWndProc;
+	WndClass.lpfnWndProc   = DefWindowProcW; //AppWndProc;
 	WndClass.hInstance     = (HINSTANCE)hInstApp;
 	WndClass.hIcon         = (HICON)hIconApp;
 	WndClass.hbrBackground = (HBRUSH)GetStockObject(4);
-	WndClass.lpszClassName = "DDWndClass";
+	WndClass.lpszClassName = L"DDWndClass";
 
-	if ( !RegisterClassA(&WndClass) )
+	if ( RegisterClassW(&WndClass) )
 		sysHardExit("Could not register window class");
 
 	RECT rect;

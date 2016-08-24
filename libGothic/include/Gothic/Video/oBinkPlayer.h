@@ -42,5 +42,5 @@ struct oCBinkPlayer : zCBinkPlayer {
 };
 
 #include <Hook/size_checker.h>
-size_checker<oCBinkPlayer, 0x88> CHECKER_NAME;
+namespace { size_checker<oCBinkPlayer, 0x88> sc_obinkp; }
 #endif//GOTHIC_OCBINKPLAYER_H

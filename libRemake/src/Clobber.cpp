@@ -82,7 +82,7 @@ int __thiscall zERROR_Report(void*, int type, int id, zSTRING& message, char lev
 	};
 }
 
-#include "Thread/zThread.h"
+#include "Clobber/zThread.h"
 
 void InitFunctions()
 {

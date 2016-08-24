@@ -1,5 +1,5 @@
-#ifndef G2_zCArray
-#define G2_zCArray
+#ifndef Gothic_zArray_H
+#define Gothic_zArray_H
 /* zCArray ist eine sehr einfache und gleichzeitig sehr wichtige Datenstruktur. */
 template <class T>
 struct zCArray {
@@ -12,4 +12,11 @@ struct zCArray {
 	//Anzahl der Elemente in diesem Speicherbereich
 	int numInArray = 0;
 };
-#endif//G2_zCArray
+
+template <class T>
+struct zCArraySort : zCArray<T> {
+	zCArraySort() = default;
+
+	bool (*Compare)(T const&,T const&);
+};
+#endif//Gothic_zArray_H

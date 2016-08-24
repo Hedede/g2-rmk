@@ -4,7 +4,9 @@ sources=\
 Log.cpp \
 Main.cpp \
 Win32.cpp \
-Clobber.cpp
+Clobber.cpp \
+Game/CGameManager.cpp \
+Menu/zMenu.cpp
 
 objects=$(patsubst %.cpp, %.o, $(sources))
 

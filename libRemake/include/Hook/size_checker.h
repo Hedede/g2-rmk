@@ -1,10 +1,14 @@
 #ifndef SIZE_CHECKER_H
 #define SIZE_CHECKER_H
 
-#define COUNTER #__COUNTER__
-#define CHECKER_NAME checker ## COUNTER
+#define CONCAT1(a,b) a ## b
+#define CONCAT(a,b) CONCAT1(a,b)
+#define COUNTER __COUNTER__
+#define CHECKER_NAME CONCAT(checker_,COUNTER)
 
-template <size_t size, size_t required>
+#define CHECK_SIZE(T,S) namespace { size_checker<T,S> CHECKER_NAME; }
+
+template <size_t size>
 struct size_printer;
 
 template <typename T, size_t required>

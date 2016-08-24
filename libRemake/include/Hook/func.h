@@ -43,6 +43,8 @@ struct Thiscall;
 
 template<typename R, typename...Args>
 struct Thiscall<R(Args...)> {
+	static_assert(sizeof...(Args) > 0, "Thicall must have at least one arg.");
+
 	uintptr_t addr;
 	Thiscall(uintptr_t addr)
 		: addr(addr)

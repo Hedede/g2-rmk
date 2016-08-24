@@ -16,7 +16,7 @@ struct zCMenu;
 struct oCMenuSavegame;
 
 struct CGameManager;
-auto& gameMan = Value<CGameManager*>(0x8C2958);
+static auto& gameMan = Value<CGameManager*>(0x8C2958);
 
 struct CGameManager : zCInputCallback {
 	CGameManager()
@@ -32,18 +32,30 @@ struct CGameManager : zCInputCallback {
 		dtor(this);
 	}
 
-	void Init(void* hwnd)
-	{
-		using namespace g2r;
-		Log("CGameManager::Init", "hwnd: ", uintptr_t(hwnd));
+	void Init(void* hwnd);
 
-		Thiscall<void(CGameManager*,void**)> func{0x424C70};
-		func(this, &hwnd);
+	void GameInit()
+	{
+		Thiscall<void(CGameManager*)> func{0x4267D0};
+		func(this);
 	}
 
 	void Run()
 	{
 		Thiscall<void(CGameManager*)> func{0x425830};
+		func(this);
+	}
+
+	void Tool_ConvertData()
+	{
+		Thiscall<void(CGameManager*)> func{0x4248F0};
+		func(this);
+
+	}
+
+	void GameSessionInit()
+	{
+		Thiscall<void(CGameManager*)> func{0x426E10};
 		func(this);
 	}
 

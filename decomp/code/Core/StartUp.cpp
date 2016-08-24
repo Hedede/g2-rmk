@@ -16,10 +16,61 @@ void Trg_Init()
 {
 }
 
+void oBert_Options()
+{
+	zSTRING parse;
+	if ( zoptions->Parm("PARSE") )
+		parse = zoptions->ParmValue( "PARSE" );
+
+	zSTRING world;
+	if ( zoptions->Parm("3D") )
+		world = zoptions->ParmValue( "3D" );
+
+	zSTRING player;
+	if ( zoptions->Parm("PLAYER") )
+		player = zoptions->ParmValue("PLAYER");
+
+	if ( parse.Length() > 0 ) {
+		auto file = zfactory->CreateZFile(parse);
+		if ( file ) {
+			auto ext = file->GetExt();
+			if ( ext.Upper() == "SRC" )
+				parse.DeleteRight(4);
+
+			if ( parse.Length() ) {
+				if ( zgameoptions ) {
+					zgameoptions->WriteString(zOPT_SEC_FILES, "Game", parse, 1);
+				} else {
+					zoptions->WriteString(zOPT_SEC_INTERNAL, "gameScript", parse, 1);
+				}
+			}
+			file->Close();
+			delete file;
+		}
+	}
+	if ( world.Length() ) {
+		if ( zgameoptions ) {
+			zgameoptions->WriteString(zOPT_SEC_SETTINGS, "World", world, 1);
+		} else {
+			zoptions->WriteString(zOPT_SEC_INTERNAL, "gamePath", world, 1);
+		}
+	}
+	if ( player.Length() ) {
+		if ( zgameoptions ) {
+			zgameoptions->WriteString(zOPT_SEC_SETTINGS, "Player", player, 1);
+		} else {
+			zoptions->WriteString(zOPT_SEC_INTERNAL, "playerInstanceName", player, 1);
+		}
+	}
+
+	gLogStatistics = zoptions->ReadBool(zOPT_SEC_INTERNAL, "logStatistics", 0);
+}
+
+
 void oBert_StartUp()
 {
-	zSTRING command; // [sp+10h] [bp-5Ch]@1
-	zSTRING description; // [sp+24h] [bp-48h]@1
+	zSTRING command;
+	zSTRING description;
 
 	zcon.Register("SET CLIPPINGFACTOR", "Setting the clipping-factor. Default is 1. Usually check 0.1 ... 2.0");
 	zcon.Register("LIST CS", "List running cutscenes.");

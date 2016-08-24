@@ -5,6 +5,7 @@ class oCVisualFX : public zCEffect {
 private:
 	static zCParser* fxParser;
 public:
+	static void InitParser();
 	static oCVisualFX* CreateAndPlay(zSTRING const& nameVfx,
 	               zCVob const* origin, zCVob const* target,
 	               int level, float damage, int damageType, int isProjectile);
@@ -218,4 +219,38 @@ oCVisualFX* oCVisualFX::CreateAndPlay(
 	visFx->Cast(1);
 
 	return visFx;
+}
+
+// _carsten\\oVisFx.cpp
+void oCVisualFX::InitParser()
+{
+	if ( oCVisualFX::fxParser ) {
+		fxParser->Reset();
+	} else {
+		zINFO(5, "C: *** Visual FX Implementation " + "v0.5");
+		fxParser = new zCParser(100);
+	}
+
+	bool oldEnable = zCParser::enableParsing;
+	zCParser::enableParsing = oldEnable || zoptions->Parm("REPARSEVIS");
+	zSTRING path;
+	if ( zgameoptions )
+		path = zgameoptions->ReadString(zOPT_SEC_FILES, "VisualEffects", 0);
+
+	if ( !path )
+		path = "System\\VisualFx";
+
+	zINFO(4, "N: VFX: Loading file " + path + ".src or .dat"); // 863
+
+	oCVisualFX::fxParser->Parse(path + ".src");
+	oCVisualFX::fxParser->CreatePCode();
+
+	oCEmitterKey key;
+
+	oCVisualFX::fxParser->CheckClassSize("C_PARTICLEFXEMITKEY", 352);
+
+	auto vfx = new oCVisualFX();
+	Release(vfx)
+	oCVisualFX::fxParser->CheckClassSize("CFX_BASE", 616);
+	zCParser::enableParsing = oldEnable;
 }

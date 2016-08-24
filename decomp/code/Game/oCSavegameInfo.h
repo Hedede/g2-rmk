@@ -1,12 +1,17 @@
 class oCSavegameInfo : public zCObject {
 	Z_OBJECT(zCObject);
 public:
-	virtual void Archive(zCArchiver&);
-	virtual void Unarchive(zCArchiver&);
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
 	virtual ~oCSavegameInfo();
+
+	bool DoesSavegameExist() const
+	{
+		return timeDay >= 0;
+	}
 private:
 	zSTRING dir;
-	zCObject* unk;
+	zCTexture* thumbPic;
 	int slot;
 	zSTRING title;
 	zSTRING worldName;

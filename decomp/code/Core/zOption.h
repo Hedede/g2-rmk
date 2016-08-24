@@ -42,6 +42,7 @@ enum zTOptionPaths {
 	_UNKNOWN_,
 	DIR_ROOT,
 	DIR_EXECUTABLE,
+	DIR_NUM_ENTRIES
 };
 
 using EntryChangeHanlder = int (*)(struct zCOptionEntry *);
@@ -70,6 +71,21 @@ class zCOptionSection {
 	//the entries in this section.
 	zCArray<zCOptionEntry*> entryList;
 };
+
+zSTRING const zOPT_SEC_SOUND         = "SOUND"
+zSTRING const zOPT_SEC_INTERNAL      = "INTERNAL";
+zSTRING const zOPT_SEC_FILES         = "FILES";
+zSTRING const zOPT_SEC_VIDEO         = "VIDEO";
+zSTRING const zOPT_SEC_KEYS          = "KEYS";
+zSTRING const zOPT_SEC_INFO          = "INFO";
+zSTRING const zOPT_SEC_MUSIC         = "MUSIC";
+zSTRING const zOPT_SEC_PERFORMANCE   = "PERFORMANCE";
+zSTRING const zOPT_SEC_GAME          = "GAME";
+zSTRING const zOPT_SEC_SETTINGS      = "SETTINGS"
+zSTRING const zOPT_SEC_OPTIONS       = "OPTIONS";
+zSTRING const zOPT_SEC_KEYS_DEFAULT1 = "KEYSDEFAULT1";
+zSTRING const zOPT_SEC_KEYS_DEFAULT0 = "KEYSDEFAULT0";
+
 
 class zCOptionEntry {
 	zCOptionEntry(zSTRING const& name, zSTRING const& value) // _name, _value
@@ -106,10 +122,47 @@ class zCOptionEntry {
 	int varFlag = 0;
 };
 
-const int NUM_ENTRIES = 26;
+zSTRING const ZOPT_SND_3DPROV            = "";
+zSTRING const ZOPT_SND_SAMPLERATE        = "";
+zSTRING const ZOPT_SND_USEREVERB         = "";
+zSTRING const ZOPT_SND_SPEAKERTYPE       = "";
+zSTRING const ZOPT_SND_SPEECH_VOL        = "";
+zSTRING const ZOPT_SND_MUSIC_VOL         = "musicVolume";
+zSTRING const ZOPT_SND_SFX_VOL           = "soundVolume";
+zSTRING const ZOPT_GAMEKEY_RIGHT         = "";
+zSTRING const ZOPT_GAMEKEY_ACTIONRIGHT   = "";
+zSTRING const ZOPT_GAMEKEY_SLOW          = "";
+zSTRING const ZOPT_GAMEKEY_LAME_HEAL     = "";
+zSTRING const ZOPT_GAMEKEY_STRAFELEFT    = "";
+zSTRING const ZOPT_GAMEKEY_INVENTORY     = "";
+zSTRING const ZOPT_GAMEKEY_SCREEN_LOG    = "";
+zSTRING const ZOPT_GAMEKEY_SCREEN_MAP    = "";
+zSTRING const ZOPT_GAMEKEY_LOCK_TARGET   = "";
+zSTRING const ZOPT_GAMEKEY_LOOK_FP       = "";
+zSTRING const ZOPT_GAMEKEY_UP            = "";
+zSTRING const ZOPT_GAMEKEY_DOWN          = "";
+zSTRING const ZOPT_GAMEKEY_SMOVE         = "";
+zSTRING const ZOPT_GAMEKEY_PARADE        = "";
+zSTRING const ZOPT_JOY_ENABLE            = "";
+zSTRING const ZOPT_LANGUAGE              = "";
+zSTRING const zOPT_SEC_INFO              = "";
+zSTRING const zOPT_SEC_MUSIC             = "";
+zSTRING const ZOPT_VID_GAMMA             = "";
+zSTRING const ZOPT_DEF_LANGUAGE          = "";
+zSTRING const zOPT_SEC_GAME              = "";
+zSTRING const ZOPT_GAMEKEY_SNEAK         = "";
+zSTRING const ZOPT_GAMEKEY_WEAPON        = "";
+zSTRING const ZOPT_GAMEKEY_LOOK          = "";
+zSTRING const ZOPT_GAMEKEY_STRAFERIGHT   = "";
+zSTRING const ZOPT_VID_RES               = "";
+zSTRING const ZOPT_GAMEKEY_LEFT          = "";
+zSTRING const ZOPT_GAMEKEY_ACTION        = "";
+zSTRING const ZOPT_GAMEKEY_LAME_POTION   = "";
+zSTRING const ZOPT_GAMEKEY_ACTIONLEFT    = "";
+zSTRING const ZOPT_GAMEKEY_SCREEN_STATUS = "";
+zSTRING const ZOPT_GAMEKEY_END           = "";
 
-class zCOption {
-public:
+struct zCOption {
 	zCOption();
 
 	static zCOptionEntry* GetEntry(zCOptionSection* section, int index)
@@ -172,8 +225,8 @@ private:
 	//an ini files consists of sections
 	zCArray<zCOptionSection*> sectionList;
 
-	zFILE* directory[NUM_ENTRIES];
-	zSTRING dir_string[NUM_ENTRIES];
+	zFILE* directory[DIR_NUM_ENTRIES];
+	zSTRING dir_string[DIR_NUM_ENTRIES];
 
 	//zCOptions is responsible for the command line as well.
 	zSTRING commandline;
@@ -181,3 +234,6 @@ private:
 
 void zInitOptions();
 void zDeinitOptions();
+
+zCOption* zoptions;
+zCOption* zgameoptions;

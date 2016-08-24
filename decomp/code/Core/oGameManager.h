@@ -368,7 +368,7 @@ void CGameManager::InitSettings() // static?
 
 void CGameManager::Tool_ConvertData()
 {
-	zINFO(1,"B: Converting all data ..."); // 453,
+	zINFO_B(1,"B: Converting all data ..."); // 453,
 
 	zCScanDir dirScanner;
 
@@ -380,7 +380,7 @@ void CGameManager::Tool_ConvertData()
 
 	dirScanner.Scan(zoptions->GetDirString(DIR_DATA));
 
-	zINFO(1,"B: finished") // 469,
+	zINFO_C(1,"B: finished") // 469,
 }
 
 
@@ -388,7 +388,7 @@ void CGameManager::Tool_ConvertData()
 void CGameManager::Init(HWND& hWndApp)
 {
 	sysContextHandle = hWndApp;
-	zINFO(3,"B: GMAN: Initialize GameManager"); // 476
+	zINFO_B(3,"B: GMAN: Initialize GameManager"); // 476
 
 	if (vidScreen)
 		delete vidScreen;
@@ -443,17 +443,12 @@ void CGameManager::Init(HWND& hWndApp)
 	zINFO(6,"B: GMAN: Analysing commandline-parameters"); // 550
 
 	player = zoptions->Parm("PLAYER");
-	if ( player )
-	{
+	if ( player ) {
 		zSTRING playerInst = zoptions->ParmValue("PLAYER");
 		if ( zgameoptions )
-		{
 			zgameoptions->WriteString(zOPT_SEC_SETTINGS, "Player", playerInst, 1);
-		}
 		else
-		{
 			zoptions->WriteString(zOPT_SEC_INTERNAL, "playerInstanceName", playerInst, 1);
-		}
 	}
 
 	sysEvent();
@@ -465,7 +460,7 @@ void CGameManager::Init(HWND& hWndApp)
 
 	zCMenu::Startup();
 
-	zINFO(3,""); // 572
+	zINFO_C(3,""); // 572
 }
 
 void CGameManager::Done()

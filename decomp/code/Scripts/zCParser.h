@@ -254,6 +254,7 @@ private:
 
 	// Symboltable
 	zCPar_SymbolTable     symtab;
+	zCPar_StringTable     strings;
 
 	zCPar_Stack stack;
 

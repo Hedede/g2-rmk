@@ -859,3 +859,25 @@ int AppWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	}
 	return 1;
 }
+
+DWORD SplashThreadProc(LPVOID lpThreadParameter)
+{
+	SplashHwnd = CreateDialogParamA(hSplashInstance, 0xA5, 0, SplashDialogProc, 0);
+	if ( SplashHwnd ) {
+		if ( auto it = GetDlgItem(SplashHwnd, 0x436) ) {
+			cy = splash_cy;
+			cx = splash_cx;
+			auto x = (GetSystemMetrics(0) - splash_cx) / 2;
+			auto y = (GetSystemMetrics(1) - splash_cy) / 2;
+			SetWindowPos(SplashHwnd, HWND_MESSAGE|0x2, x, y, cx, cy, SWP_SHOWWINDOW);
+			SetWindowPos(SplashHwnd, 0xFFFFFFFE, 0, 0, 0, 0, 3u);
+			SendMessageA(it, 0x172u, 0, lParam);
+			UpdateWindow(SplashHwnd);
+
+			MSS msg;
+			while ( GetMessageA(&msg, 0, 0, 0) )
+				DispatchMessageA(&msg);
+		}
+	}
+	return 0;
+}

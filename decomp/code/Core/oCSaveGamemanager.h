@@ -1,3 +1,10 @@
+
+void oCSavegameManager::Reinit()
+{
+	initialized = false;
+	Init();
+}
+
 void oCSavegameManager::ClearCurrent()
 {
 	zCOption::ChangeDir(zoptions, 2);

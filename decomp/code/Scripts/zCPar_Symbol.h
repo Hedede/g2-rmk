@@ -81,6 +81,8 @@ class zCPar_SymbolTable {
 	}
 
 private:
+	zCPar_Symbol *preAllocatedSymbols;
+	int nextPreAllocated;
 	zCArray<zCPar_Symbol*> table;
 	zCArraySort<int> tablesort;
 	zCPar_Symbol* lastsym;

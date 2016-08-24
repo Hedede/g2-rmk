@@ -4,9 +4,16 @@
 #include <Gothic/Types/zArray.h>
 
 struct oCSavegameManager_vt;
+
 struct oCSavegameInfo;
 struct oCSavegameManager {
 	oCSavegameManager_vt *vtab;
+
+	oCSavegameManager()
+	{
+		Thiscall<void(oCSavegameManager*)> ctor{0x4386F0};
+		ctor(this);
+	}
 
 	void Init()
 	{

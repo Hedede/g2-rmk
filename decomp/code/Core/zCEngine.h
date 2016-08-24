@@ -2,11 +2,11 @@ struct zCEngine {
 	zCEngine() = default;
 	virtual ~zCEngine() = default;
 
-	static int Init(HWND* wnd);
+	static int Init(HWND* initContextHandle);
 	static int ShutDown();
 };
 
-int zCEngine::Init(HWND* wnd)
+int zCEngine::Init(HWND* initContextHandle)
 {
 	zerr.onexit = sysExit;
 	zCClassDef::EndStartup();
@@ -29,7 +29,7 @@ int zCEngine::Init(HWND* wnd)
 
 	bool noResThread = zoptions->Parm("ZNORESTHREAD");
 
-	zresMan->SetThreadingEnabled(zresMan, !noResThread);
+	zresMan->SetThreadingEnabled(!noResThread);
 
 	zerr->Separator("");
 
@@ -43,8 +43,8 @@ int zCEngine::Init(HWND* wnd)
 
 	sysEvent();
 
-	zDieter_StartUp(wnd);
-	zCarsten_StartUp(wnd);
+	zDieter_StartUp(initContextHandle);
+	zCarsten_StartUp(initContextHandle);
 
 	zINFO("D: *** zEngine-Init ... Done !");
 

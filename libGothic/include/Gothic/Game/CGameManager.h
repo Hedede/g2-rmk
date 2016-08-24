@@ -34,10 +34,12 @@ struct CGameManager : zCInputCallback {
 
 	void Init(void* hwnd);
 
-	void GameInit()
+	void GameInit();
+
+	void InitSettings()
 	{
-		Thiscall<void(CGameManager*)> func{0x4267D0};
-		func(this);
+		Thiscall<void(CGameManager*)> call{0x426430};
+		call(this);
 	}
 
 	void Run()

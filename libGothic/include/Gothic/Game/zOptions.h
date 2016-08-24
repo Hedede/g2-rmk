@@ -92,8 +92,15 @@ struct zCOptions {
 
 	bool WriteString(std::string const& sec, std::string const& opt, std::string const& value, bool temp)
 	{
-		Thiscall<int(zCOptions*, zSTRING const&, const char*, zSTRING value, int temp)> call{0x461FD0};
+		Thiscall<int(zCOptions*, zSTRING const&, const char*, zSTRING, int)> call{0x461FD0};
 		return call(this, zSTRING{sec}, opt.data(), zSTRING{value}, temp);
+	}
+
+
+	bool WriteBool(std::string const& sec, std::string const& opt, bool value, bool temp)
+	{
+		Thiscall<int(zCOptions*, zSTRING const&, const char*, int, int)> call{0x461DE0};
+		return call(this, zSTRING{sec}, opt.data(), value, temp);
 	}
 };
 

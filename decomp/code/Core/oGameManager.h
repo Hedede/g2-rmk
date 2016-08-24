@@ -95,15 +95,15 @@ float chapTime;
 
 HANDLE CGameManager::ShowSplashScreen()
 {
-	lParam = (LPARAM)LoadBitmapA(hInstApp, (LPCSTR)0xA9);
-	hSplashThread = CreateThread(0, 0, SplashThreadProc, 0, 0, &idThread);
+	SplashBitmap = (LPARAM)LoadBitmapA(hInstApp, (LPCSTR)0xA9);
+	hSplashThread = CreateThread(0, 0, SplashThreadProc, 0, 0, &SplashThreadId);
 	return hSplashThread;
 }
 
 void CGameManager::RemoveSplashScreen()
 {
-	if ( idThread )
-		PostThreadMessageA(idThread, 0x12u, 0, 0);
+	if ( SplashThreadId )
+		PostThreadMessageA(SplashThreadId, WM_QUIT, 0, 0);
 }
 
 void CGameManager::ExitGame()
@@ -293,8 +293,7 @@ void CGameManager::GameInit()
 {
 	zerr.onexit = ExitGameFunc;
 
-	lParam = (LPARAM)LoadBitmapA(hInstApp, (LPCSTR)0xA9);
-	hSplashThread = CreateThread(0, 0, SplashThreadProc, 0, 0, &idThread);
+	ShowSplashScreen()
 
 	if ( !zengine )
 		zengine = new zCEngine;

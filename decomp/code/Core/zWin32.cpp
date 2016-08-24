@@ -858,9 +858,16 @@ int AppWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		return DefWindowProcA(hWnd, msg, wParam, lParam);
 	}
 	return 1;
+	}
+
+BOOL __stdcall SplashDialogProc(HWND, UINT msg, WPARAM, LPARAM)
+{
+	if ( msg == WM_DESTROY )
+		PostQuitMessage(0);
+	return 0;
 }
 
-DWORD SplashThreadProc(LPVOID lpThreadParameter)
+DWORD WINAPI SplashThreadProc(LPVOID lpThreadParameter)
 {
 	SplashHwnd = CreateDialogParamA(hSplashInstance, 0xA5, 0, SplashDialogProc, 0);
 	if ( SplashHwnd ) {
@@ -871,7 +878,7 @@ DWORD SplashThreadProc(LPVOID lpThreadParameter)
 			auto y = (GetSystemMetrics(1) - splash_cy) / 2;
 			SetWindowPos(SplashHwnd, HWND_MESSAGE|0x2, x, y, cx, cy, SWP_SHOWWINDOW);
 			SetWindowPos(SplashHwnd, 0xFFFFFFFE, 0, 0, 0, 0, 3u);
-			SendMessageA(it, 0x172u, 0, lParam);
+			SendMessageA(it, 0x172u, 0, SplashBitmap);
 			UpdateWindow(SplashHwnd);
 
 			MSS msg;

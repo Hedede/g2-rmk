@@ -1,6 +1,17 @@
 const int MAX_ITEMS = 150;
 const int MENU_EVENT_MAX = 9;
 
+enum zTMenuItemSelAction {
+	SEL_ACTION_UNDEF            = 0,
+	SEL_ACTION_BACK             = 1,
+	SEL_ACTION_STARTMENU        = 2,
+	SEL_ACTION_STARTITEM        = 3,
+	SEL_ACTION_CLOSE            = 4,
+	SEL_ACTION_CONCOMMANDS      = 5,
+	SEL_ACTION_PLAY_SOUND       = 6, //  -> console commands
+	SEL_ACTION_EXECCOMMANDS     = 7  // -> dynamic build in func.
+};
+
 struct zCMenu : zCInputCallback {
 	void HandleEvent(int) override;
 	virtual void HandleEnterItem(zCMenuItem *);
@@ -54,7 +65,9 @@ private:
 	zCViewWindow*  pWindow;
 	zCViewWindow*  pInnerWindow;
 
-	enum { NONE, BACK, GO, FINISHED } exitState;
+	enum {
+		NONE, BACK, GO, FINISHED
+	} exitState;
 
 	zSTRING name;
 
@@ -78,16 +91,6 @@ private:
 	int updateTimer;            //int
 	float fxTimer;                //float
 
-	enum zTMenuItemSelAction {
-		SEL_ACTION_UNDEF            = 0,
-		SEL_ACTION_BACK             = 1,
-		SEL_ACTION_STARTMENU        = 2,
-		SEL_ACTION_STARTITEM        = 3,
-		SEL_ACTION_CLOSE            = 4,
-		SEL_ACTION_CONCOMMANDS      = 5,
-		SEL_ACTION_PLAY_SOUND       = 6,
-		SEL_ACTION_EXECCOMMANDS     = 7 
-	};
 	zTMenuItemSelAction forceSelAction;
 
 	zSTRING forceSelAction_S;

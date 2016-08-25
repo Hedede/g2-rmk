@@ -40,20 +40,32 @@ int sysGetTime()
 
 #define _WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include "Thread/zThread.h"
+
 void InitFunctions()
 {
 	using namespace g2r;
 	constexpr uintptr_t text_start = 0x401000;
 	constexpr uintptr_t text_end   = 0x82E000;
+	constexpr auto text_length = text_end - text_start;
 
+	Log("Clobber", "Making .text segment writeable");
 	unsigned long prot = PAGE_EXECUTE_READWRITE;
-	VirtualProtect((void*)text_start, text_start - text_end, prot, &prot);
+	bool ret;
+	ret = VirtualProtect((void*)text_start, text_length, prot, &prot);
+	if (!ret)
+		Error("Clobber", "Could not change memory protection! Error:", GetLastError());
 
 	//*reinterpret_cast<void**>(0x5021E8) = (void*)sysAlloc;
 	//*reinterpret_cast<void**>(0x502A47) = (void*)sysReAlloc;
 	//*reinterpret_cast<void**>(0x502A97) = (void*)sysFree;
 	//make_jump((char*)0x505288, (uintptr_t)sysGetTime, x86::eax);
 
-	// restore protection
-	VirtualProtect((void*)text_start, text_start - text_end, prot, &prot);
+	make_jump((char*)0x5F9370, (uintptr_t)zCThread_vt::SuspendThread_thunk, x86::eax);
+	make_jump((char*)0x5F93A0, (uintptr_t)zCThread_vt::ResumeThread_thunk, x86::eax);
+
+	Log("Clobber", "-- Restoring memory protection --");
+	ret = VirtualProtect((void*)text_start, text_length, prot, &prot);
+	if (!ret)
+		Error("Clobber", "Could not change memory protection! Error:", GetLastError());
 }

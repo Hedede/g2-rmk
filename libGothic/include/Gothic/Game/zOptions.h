@@ -48,7 +48,7 @@ struct zCOptions {
 	using ChangeHandler = int(*)(zCOptionEntry* optentry);
 	void InsertChangeHandler(std::string const& sec, std::string name, ChangeHandler ccb)
 	{
-		Thiscall<void(zCOptions*,zSTRING const&,char const*,ChangeHandler)> call{00463310};
+		Thiscall<void(zCOptions*,zSTRING const&,char const*,ChangeHandler)> call{0x0463310};
 
 		call(this, zSTRING{sec}, name.data(), ccb);
 	}

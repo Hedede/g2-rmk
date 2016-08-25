@@ -19,30 +19,30 @@ LogFile::~LogFile()
 void LogFile::log(Level level, std::string const& src, std::string const& msg)
 {
 	if (logfile) {
-		constexpr size_t nsrc = 16;
-		constexpr size_t extra = sizeof("xxxx : ") + sizeof(" : ") + sizeof("\n");
+		constexpr size_t nsrc = 32;
+		constexpr size_t extra = sizeof(" :") + sizeof(" xxxx : ") + sizeof("\n");
 		std::string str;
 		str.reserve(nsrc + extra + msg.size());
 		str += src;
-		str.resize(nsrc, ' ');
+		str += " :";
+		str.resize(nsrc + sizeof(" :"), ' ');
 		switch (level) {
 		case Info:
-			str += "Info : ";
+			str += " Info : ";
 			break;
 		case Warning:
-			str += "Wrng : ";
+			str += " Wrng : ";
 			break;
 		case Error:
-			str += "Errr : ";
+			str += " Errr : ";
 			break;
 		case Critical:
-			str += "Crit : ";
+			str += " Crit : ";
 			break;
 		default:
-			str += "Unkn : ";
+			str += " Unkn : ";
 			break;
 		};
-		str += " : ";
 		str += msg;
 		str += "\n";
 		std::fwrite(str.data(), str.size(), 1, (FILE*)logfile);

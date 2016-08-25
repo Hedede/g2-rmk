@@ -9,7 +9,7 @@ extern aw::LogProvider logger;
 template<typename... Args>
 void Log(std::string const& src, Args... args)
 {
-	std::string msg = ( aw::as_string(args) + ... + std::string("\n") );
+	std::string msg = ( aw::as_string(args) + ... + std::string{} );
 	logger.log(aw::Log::Info, src, msg);
 }
 
@@ -23,7 +23,7 @@ void Warning(std::string const& src, Args... args)
 template<typename... Args>
 void Error(std::string const& src, Args... args)
 {
-	std::string msg = ( aw::as_string(args) + ... + std::string("\n") );
+	std::string msg = ( aw::as_string(args) + ... + std::string{} );
 	logger.log(aw::Log::Error, src, msg);
 }
 

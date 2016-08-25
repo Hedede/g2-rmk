@@ -33,8 +33,23 @@ void InitMenu()
 	zCMenu::CreateParser();
 	DefineMenuScriptFunctions();
 }
+
+void InitOptions()
+{
+	zoptions->ReadInt("PERFORMANCE", "sightValue" , 4);
+	zoptions->ReadReal("PERFORMANCE", "modelDetail" , 0.5);
+	zoptions->ReadReal("INTERNAL", "texDetailIndex" , 0.6);
+	zoptions->ReadInt("GAME", "skyEffects" , 1);
+	zoptions->ReadInt("GAME", "bloodDetail" , 2);
+	zoptions->ReadReal("VIDEO", "zVidBrightness" , 0.5);
+	zoptions->ReadReal("VIDEO", "zVidContrast"   , 0.5);
+	zoptions->ReadReal("VIDEO", "zVidGamma"      , 0.5);
+}
 } // namespace g2r
 
+
+
+#include <SDL2/SDL.h>
 void CGameManager::Init(void* hwnd)
 {
 	using namespace g2r;
@@ -43,13 +58,14 @@ void CGameManager::Init(void* hwnd)
 
 	Log("Engine", "Initializing GameManager");
 
-	sysEvent();
-	GameInit();
+	SDL_Init(SDL_INIT_VIDEO|SDL_INIT_EVENTS);
+
 	sysEvent();
 
-	bool convertAll = zoptions->Parm("ZCONVERTALL");
-	if ( convertAll )
-		Tool_ConvertData();
+	PreGraphicsInit();
+
+	sysEvent();
+
 
 	savegameManager = new oCSavegameManager();
 	savegameManager->Reinit();
@@ -59,15 +75,8 @@ void CGameManager::Init(void* hwnd)
 	g2r::InitSound();
 	g2r::InitMusic();
 	g2r::InitMenu();
+	g2r::InitOptions();
 
-	zoptions->ReadInt("PERFORMANCE", "sightValue" , 4);
-	zoptions->ReadReal("PERFORMANCE", "modelDetail" , 0.5);
-	zoptions->ReadReal("INTERNAL", "texDetailIndex" , 0.6);
-	zoptions->ReadInt("GAME", "skyEffects" , 1);
-	zoptions->ReadInt("GAME", "bloodDetail" , 2);
-	zoptions->ReadReal("VIDEO", "zVidBrightness" , 0.5);
-	zoptions->ReadReal("VIDEO", "zVidContrast"   , 0.5);
-	zoptions->ReadReal("VIDEO", "zVidGamma"      , 0.5);
 
 	if ( zoptions->Parm("PLAYER") ) {
 		zSTRING playerInst = zoptions->ParmValue("PLAYER");
@@ -94,39 +103,25 @@ namespace zCEngine {
 auto Init = Cdecl<int(void*&)>(0x558BE0);
 }
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
-void CGameManager::GameInit()
+
+#include <Graphics/SplashWindow.h>
+#include <Gothic/Game/oObjectFactory.h>
+#include <Gothic/Menu/zView.h>
+void CGameManager::PreGraphicsInit()
 {
 	using namespace g2r;
-	SDL_Init(SDL_INIT_VIDEO);
 
-	int screen = 0;
-	int posX = SDL_WINDOWPOS_CENTERED_DISPLAY(screen);
-	int posY = SDL_WINDOWPOS_CENTERED_DISPLAY(screen);
+	SplashWindow splash;
 
-	auto window = SDL_CreateWindow("Gothic — Loading", posX, posY, 502, 202, SDL_WINDOW_BORDERLESS);
-
-	if (window == nullptr) {
-		Warning("Engine", "Could not create splash window: ",  SDL_GetError());
-	} else {
-		auto surface = SDL_GetWindowSurface(window);
-
-		auto image = IMG_Load("splash.png");
-		SDL_BlitSurface(image, NULL, surface, NULL);
-		SDL_FreeSurface(image);
-
-		SDL_UpdateWindowSurface(window);
-	}
+	if (!splash.IsRunning())
+		Warning("Engine", "Could not create splash window.");
 
 	zCEngine::Init(sysContextHandle);
 
-	SDL_DestroyWindow(window);
-/*
 	if (zoptions->ReadBool("GAME", "playLogoVideos", 1)) {
 		PlayVideo("logo1.bik");
 		PlayVideo("logo2.bik");
-	}*/
+	}
 
 	sysEvent();
 
@@ -135,7 +130,7 @@ void CGameManager::GameInit()
 
 	if ( recalc )
 		InitSettings();
-	/*
+
 	InitScreen_Open();
 
 	if ( zfactory )
@@ -143,15 +138,24 @@ void CGameManager::GameInit()
 
 	zfactory = new oCObjectFactory;
 
+	Cdecl<void()> oBert_StartUp{0x430540};
 	oBert_StartUp();
+
 
 	vidScreen = screen;
 	vidScreen->SetEnableHandleEvent(1);
 
 	sysEvent();
+
+	Cdecl<void()> oCarsten_StartUp{0x4816F0};
 	oCarsten_StartUp();
 
-	zCMenu::EnterCallback = MenuEnterCallback;
-	zCMenu::LeaveCallback = MenuLeaveCallback;*/
+	zCMenu::EnterCallback = func<zCMenu::Callback>(0x426A80); // MenuEnterCallback;
+	zCMenu::LeaveCallback = func<zCMenu::Callback>(0x426B80); // MenuLeaveCallback;
+
+	bool convertAll = zoptions->Parm("ZCONVERTALL");
+	if ( convertAll )
+		Tool_ConvertData();
+
 }
 

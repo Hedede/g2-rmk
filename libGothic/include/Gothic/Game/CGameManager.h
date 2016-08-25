@@ -35,6 +35,7 @@ struct CGameManager : zCInputCallback {
 	void Init(void* hwnd);
 
 	void GameInit();
+	void PreGraphicsInit();
 
 	void InitSettings()
 	{
@@ -65,6 +66,18 @@ struct CGameManager : zCInputCallback {
 	{
 		Thiscall<void(CGameManager*)> func{0x4254E0};
 		func(this);
+	}
+
+	void InitScreen_Open()
+	{
+		Thiscall<void(CGameManager*)> func{0x425F60};
+		func(this);
+	}
+
+	void PlayVideo(std::string const& fileName)
+	{
+		Thiscall<int(CGameManager*, zSTRING)> call{0x42B940};
+		call(this, zSTRING{fileName});
 	}
 
 	int    oldAlphaBlendFunc;

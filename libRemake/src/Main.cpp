@@ -16,7 +16,8 @@ extern void InitFunctions();
 
 void GameLoop();
 char(&sysLogName)[260] = Value<char[260]>(0x8D3A90);
-extern "C" void aw_main(void* hinst, char const* args)
+
+extern "C" void __attribute__((dllexport)) aw_main(void* hinst, char const* args)
 {
 	using namespace g2r;
 	LogFile file_log;
@@ -49,6 +50,7 @@ extern "C" void aw_main(void* hinst, char const* args)
 
 	libExit();
 }
+
 
 void GameLoop()
 {

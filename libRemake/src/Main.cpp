@@ -31,7 +31,7 @@ extern "C" void aw_main(void* hinst, char const* args)
 
 	aw::string::toupper(cmdLine);
 	zerr.SetTarget(2);
-	zerr.SetFilterLevel(3);
+	zerr.SetFilterLevel(10);
 
 	bool handler = cmdLine.find("ZNOEXHND") == std::string::npos;
 	Log("Main", "Exception handler is ", handler ? "active" : "disabled");

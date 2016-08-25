@@ -42,9 +42,9 @@ int sysGetTime()
 #include <windows.h>
 #include <Gothic/Debug/zERROR.h>
 
-
+#include <aw/utility/string/as_string.h>
 #include <Logging/Log.h>
-int __thiscall zERROR_Report(void*, int type, int id, zSTRING& msg, char levelPrio, char flag, int line, char *file, const char *function)
+int __thiscall zERROR_Report(void*, int type, int id, zSTRING& message, char levelPrio, char flag, int line, char *file, const char *function)
 {
 	enum zERROR_TYPE {
 		zERR_TYPE_OK = 0x0,
@@ -54,26 +54,30 @@ int __thiscall zERROR_Report(void*, int type, int id, zSTRING& msg, char levelPr
 		zERR_TYPE_FATAL = 0x4,
 	};
 
-	std::string src(file);
-	auto last = file.find_last_of("\\/");
+	std::string src{file};
+	std::string msg{message};
+
+	auto last = src.find_last_of("\\/");
+	last = src.find_first_not_of("\\/", last);
 	src.erase(0, last);
 	if (src.empty())
 		src = "Gothic";
+	src += " [" + aw::as_string(levelPrio) + "]";
 
 	switch(type) {
 	default:
 	case zERR_TYPE_OK:
 	case zERR_TYPE_MESSAGE:
-		Log(src, std::string(msg));
+		g2r::Log(src, std::string(msg));
 		break;
 	case zERR_TYPE_WARNING:
-		Warning(src, std::string(msg));
+		g2r::Warning(src, std::string(msg));
 		break;
 	case zERR_TYPE_FAULT:
-		Error(src, std::string(msg));
+		g2r::Error(src, std::string(msg));
 		break;
 	case zERR_TYPE_FATAL:
-		Fatal(src, std::string(msg));
+		g2r::Fatal(src, std::string(msg));
 		break;
 	};
 }

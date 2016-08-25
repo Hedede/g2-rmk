@@ -79,11 +79,11 @@ void CGameManager::Init(void* hwnd)
 
 
 	if ( zoptions->Parm("PLAYER") ) {
-		zSTRING playerInst = zoptions->ParmValue("PLAYER");
+		std::string playerInst = zoptions->ParmValue("PLAYER");
 		if ( zgameoptions )
-			zgameoptions->WriteString("SETTINGS", "Player", std::string(playerInst), 1);
+			zgameoptions->WriteString("SETTINGS", "Player", playerInst, 1);
 		else
-			zoptions->WriteString("INTERNAL", "playerInstanceName", std::string(playerInst), 1);
+			zoptions->WriteString("INTERNAL", "playerInstanceName", playerInst, 1);
 	}
 
 	sysEvent();

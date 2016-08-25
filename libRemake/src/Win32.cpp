@@ -95,7 +95,7 @@ void InitWin32Stuff(char const* cmdLine)
 	WndClass.hbrBackground = (HBRUSH)GetStockObject(4);
 	WndClass.lpszClassName = L"DDWndClass";
 
-	if ( RegisterClassW(&WndClass) )
+	if ( !RegisterClassW(&WndClass) )
 		sysHardExit("Could not register window class");
 
 	RECT rect;

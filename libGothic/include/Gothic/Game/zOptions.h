@@ -97,8 +97,8 @@ struct zCOptions {
 	}
 };
 
-static auto zoptions     = Value<zCOptions*>(0x8CD988);
+static auto& zoptions     = Value<zCOptions*>(0x8CD988);
 // TODO: rename to modoptions?
-static auto zgameoptions = Value<zCOptions*>(0x8CD98C);
+static auto& zgameoptions = Value<zCOptions*>(0x8CD98C);
 
 #endif//GOTHIC_ZOPTIONS_H

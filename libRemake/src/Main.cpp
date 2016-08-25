@@ -1,7 +1,7 @@
 #include <string>
 
 #include <Logging/Log.h>
-#include <Logging/Logger.h>
+#include <Logging/LogFile.h>
 
 #include <aw/utility/string/case.h>
 

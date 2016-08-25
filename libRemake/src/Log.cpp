@@ -1,5 +1,5 @@
 #include <Logging/Log.h>
-#include <Logging/Logger.h>
+#include <Logging/LogFile.h>
 #include <cstdio>
 
 namespace g2r {

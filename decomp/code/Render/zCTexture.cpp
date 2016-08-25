@@ -71,10 +71,6 @@ private:
 	bool isTextureTile;
 };
 
-const int zCTex_D3D_bitfield_xtex_decompress = ((1 <<  1) - 1) << 17;
-const int zCTex_D3D_bitfield_xtex_locked     = ((1 <<  1) - 1) << 18;
-const int zCTex_D3D_bitfield_xtex_palsupport = ((1 <<  1) - 1) << 19;
-const int zCTex_D3D_bitfield_xtex_miplocked  = ((1 << 12) - 1) << 20;
 
 class zCTextureInfo {
 	zTRnd_TextureFormat texFormat;
@@ -114,7 +110,13 @@ public:
 
 private:
 	int xtex_textureflag; //tends to be 0xDEADFACE
-	int xtex_bitfield;
+	struct {
+		unsigned unk : 17;
+		unsigned decompress : 1;  // << 17
+		unsigned locked     : 1;  // << 18
+		unsigned palsupport : 1;  // << 19
+		unsigned miplocked  : 12; // << 20
+	} xtex_bitfield;
 
 	zCTextureInfo xtex_texinfo;
 

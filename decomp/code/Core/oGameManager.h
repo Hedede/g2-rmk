@@ -199,10 +199,10 @@ void CGameManager::Run()
 	if ( dontStartGame )
 		return;
 
-	menu_chgkeys = new oCMenu_ChgKeys("MENU_OPT_CONTROLS");
-	menu_chgkeys_ext = new oCMenu_ChgKeys("MENU_OPT_CONTROLS_EXTKEY");
-	menu_save_savegame = new oCMenuSavegame("MENU_SAVEGAME_SAVE");
-	menu_load_savegame = new oCMenuSavegame("MENU_SAVEGAME_LOAD");
+	menu_chgkeys       = new oCMenu_ChgKeys("MENU_OPT_CONTROLS");
+	menu_chgkeys_ext   = new oCMenu_ChgKeys("MENU_OPT_CONTROLS_EXTKEY");
+	menu_save_savegame = new oCMenuSavegame("MENU_SAVEGAME_SAVE", 0);
+	menu_load_savegame = new oCMenuSavegame("MENU_SAVEGAME_LOAD", 0);
 
 	menu_save_savegame->saveMan = this->savegameManager;
 	menu_load_savegame->saveMan = this->savegameManager;
@@ -510,7 +510,7 @@ void CGameManager::InitScreen_Open()
 		InitScreen_Close();
 
 	initScreen = new zCView(0, 0, 0x2000, 0x2000, 2);
-	zoptions->ChangeDir(13);
+	zoptions->ChangeDir(DIR_TEX_DESKTOP);
 	screen->InsertItem(initScreen, 0);
 
 	initScreen->InsertBack("startscreen.tga");

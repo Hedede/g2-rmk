@@ -1,9 +1,8 @@
 const int MAX_ITEMS = 150;
 const int MENU_EVENT_MAX = 9;
 
-class zCMenu {
-public:
-	virtual void HandleEvent(int);
+struct zCMenu : zCInputCallback {
+	void HandleEvent(int) override;
 	virtual void HandleEnterItem(zCMenuItem *);
 	virtual void HandleLeaveItem(zCMenuItem *);
 	virtual void HandleActivateItem(zCMenuItem *);
@@ -57,45 +56,45 @@ private:
 
 	enum { NONE, BACK, GO, FINISHED } exitState;
 
-    zSTRING name;
+	zSTRING name;
 
-    zCMusicTheme* musicTheme;
-    int mainSel;
-    zBOOL screenInitDone;
+	zCMusicTheme* musicTheme;
+	int mainSel;
+	zBOOL screenInitDone;
 
-    int use_dimx;
-    int use_dimy;
-    int use_posx;
-    int use_posy;
+	int use_dimx;
+	int use_dimy;
+	int use_posx;
+	int use_posy;
 
-    zCView*  pViewInfo;
-    zCVob*   cursorVob;
+	zCView*  pViewInfo;
+	zCVob*   cursorVob;
 
-    zBOOL eventOccured[MENU_EVENT_MAX];
-    zBOOL cursorEn;
-    zBOOL noneSelectable;
-    zBOOL registeredCPP;
-    
-    int updateTimer;            //int
-    float fxTimer;                //float
-    
-    enum zTMenuItemSelAction {
-        SEL_ACTION_UNDEF            = 0,
-        SEL_ACTION_BACK             = 1,
-        SEL_ACTION_STARTMENU        = 2,
-        SEL_ACTION_STARTITEM        = 3,
-        SEL_ACTION_CLOSE            = 4,
-        SEL_ACTION_CONCOMMANDS      = 5,
-        SEL_ACTION_PLAY_SOUND       = 6,
-        SEL_ACTION_EXECCOMMANDS     = 7 
-    };
-    zTMenuItemSelAction forceSelAction;
+	zBOOL eventOccured[MENU_EVENT_MAX];
+	zBOOL cursorEn;
+	zBOOL noneSelectable;
+	zBOOL registeredCPP;
 
-    zSTRING forceSelAction_S;
-    zCMenuItem* forceSelActionItem;     //
-    zBOOL forcedSelAction;        //zBOOL
+	int updateTimer;            //int
+	float fxTimer;                //float
 
-    zCArray <zCMenuItem *> listItems;
+	enum zTMenuItemSelAction {
+		SEL_ACTION_UNDEF            = 0,
+		SEL_ACTION_BACK             = 1,
+		SEL_ACTION_STARTMENU        = 2,
+		SEL_ACTION_STARTITEM        = 3,
+		SEL_ACTION_CLOSE            = 4,
+		SEL_ACTION_CONCOMMANDS      = 5,
+		SEL_ACTION_PLAY_SOUND       = 6,
+		SEL_ACTION_EXECCOMMANDS     = 7 
+	};
+	zTMenuItemSelAction forceSelAction;
+
+	zSTRING forceSelAction_S;
+	zCMenuItem* forceSelActionItem;     //
+	zBOOL forcedSelAction;        //zBOOL
+
+	zCArray <zCMenuItem *> listItems;
 };
 
 //#################################################################

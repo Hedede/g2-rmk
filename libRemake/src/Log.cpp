@@ -42,7 +42,6 @@ void LogFile::log(Level level, std::string const& src, std::string const& msg)
 			str += "Unkn : ";
 			break;
 		};
-		str += src;
 		str += " : ";
 		str += msg;
 		str += "\n";

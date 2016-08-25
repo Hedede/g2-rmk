@@ -1,7 +1,6 @@
 #ifndef ZCINPUTCALLBACK_H
 #define ZCINPUTCALLBACK_H
-#include <Hook/value.h>
-#include <Hook/func.h>
+#include <Hook/Externals.h>
 #include <Gothic/Types/zCList.h>
 struct zCInputCallback {
 	zCInputCallback()

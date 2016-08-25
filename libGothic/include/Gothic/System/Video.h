@@ -1,8 +1,7 @@
 #ifndef GOTHIC2_VIDEO_H
 #define GOTHIC2_VIDEO_H
 
-#include <Hook/func.h>
-#include <Hook/value.h>
+#include <Hook/Externals.h>
 
 namespace {
 auto& vidHideMenu = Value<int>(0x8D38D8);

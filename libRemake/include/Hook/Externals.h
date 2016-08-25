@@ -1,10 +1,29 @@
-#ifndef HOOK_FUNC_H
-#define HOOK_FUNC_H
+#ifndef Gothic_Remake_Externals_H
+#define Gothic_Remake_Externals_H
 #include <cstdint>
 
+/*!
+ * Obtain reference to object at address addr.
+ */
+template<typename T>
+constexpr T& Value(uintptr_t addr)
+{
+	return *reinterpret_cast<T*>(addr);
+}
+
+
+/*!
+ * Syntactic sugar for function pointers/references:
+ * auto T = func<void(*)()>(addr);
+ */
 template<typename T>
 using func = T;
 
+
+
+/*!
+ * __cdecl call wrapper
+ */
 template<typename F>
 struct Cdecl;
 
@@ -21,6 +40,9 @@ struct Cdecl<R(Args...)> {
 	}
 };
 
+/*!
+ * __stdcall call wrapper
+ */
 template<typename F>
 struct Stdcall;
 
@@ -38,6 +60,9 @@ struct Stdcall<R(Args...)> {
 
 };
 
+/*!
+ * __thiscall call wrapper
+ */
 template<typename F>
 struct Thiscall;
 
@@ -57,6 +82,9 @@ struct Thiscall<R(Args...)> {
 
 };
 
+/*!
+ * __fastcall call wrapper
+ */
 template<typename F>
 struct Fastcall;
 
@@ -73,4 +101,4 @@ struct Fastcall<R(Args...)> {
 	}
 
 };
-#endif//HOOK_FUNC_H
+#endif//Gothic_Remake_Externals_H

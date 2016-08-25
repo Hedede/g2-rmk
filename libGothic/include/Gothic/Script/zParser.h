@@ -1,6 +1,6 @@
 #ifndef Gothic_zParser_H
 #define Gothic_zParser_H
-#include <Hook/func.h>
+#include <Hook/Externals.h>
 #include <Gothic/Types/zArray.h>
 #include <Gothic/Types/zCList.h>
 #include <Gothic/Types/Base.h>

@@ -1,7 +1,6 @@
 #ifndef GOTHIC_ZSOUND_H
 #define GOTHIC_ZSOUND_H
-#include <Hook/value.h>
-#include <Hook/func.h>
+#include <Hook/Externals.h>
 #include <Gothic/Types/zSTRING.h>
 
 struct zCSoundSystem;

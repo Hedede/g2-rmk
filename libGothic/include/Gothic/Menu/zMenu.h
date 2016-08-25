@@ -1,6 +1,6 @@
 #ifndef GOTHIC_ZMENU_H
 #define GOTHIC_ZMENU_H
-#include <Hook/func.h>
+#include <Hook/Externals.h>
 
 struct zCParser;
 

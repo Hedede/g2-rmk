@@ -1,8 +1,7 @@
 #ifndef Gothic_zCClassDef_H
 #define Gothic_zCClassDef_H
 #include <new>
-#include <Hook/func.h>
-#include <Hook/value.h>
+#include <Hook/Externals.h>
 #include <Gothic/Types/zCObject.h>
 
 struct zCClassDef {

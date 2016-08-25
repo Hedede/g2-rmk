@@ -1,7 +1,6 @@
 #ifndef GOTHIC_ZOPTIONS_H
 #define GOTHIC_ZOPTIONS_H
-#include <Hook/func.h>
-#include <Hook/value.h>
+#include <Hook/Externals.h>
 #include <Gothic/Types/zSTRING.h>
 
 enum zTOptionPath {

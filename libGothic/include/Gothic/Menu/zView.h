@@ -1,6 +1,6 @@
 #ifndef Gothic_zView_H
 #define Gothic_zView_H
-#include <Hook/func.h>
+#include <Hook/Externals.h>
 #include <Gothic/Input/zCInputCallback.h>
 
 struct zCViewBase {

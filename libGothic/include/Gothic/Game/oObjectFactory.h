@@ -1,7 +1,6 @@
 #ifndef Gothic_oCObjectFactory_H
 #define Gothic_oCObjectFactory_H
-#include <Hook/func.h>
-#include <Hook/value.h>
+#include <Hook/Externals.h>
 #include <Gothic/Types/zCObject.h>
 #include <Gothic/Game/zCClassDef.h>
 struct zCObjectFactory : zCObject {

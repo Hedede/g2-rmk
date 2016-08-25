@@ -1,7 +1,6 @@
 #ifndef GOTHIC_ZMUSIC_H
 #define GOTHIC_ZMUSIC_H
-#include <Hook/value.h>
-#include <Hook/func.h>
+#include <Hook/Externals.h>
 #include <Gothic/Types/Base.h>
 #include <Gothic/Types/zSTRING.h>
 

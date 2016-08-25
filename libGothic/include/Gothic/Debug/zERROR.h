@@ -1,6 +1,6 @@
 #ifndef GOTHIC_ZERROR_H
 #define GOTHIC_ZERROR_H
-#include <Hook/value.h>
+#include <Hook/Externals.h>
 #include <Gothic/Types/zSTRING.h>
 
 struct zERROR {

@@ -1,6 +1,6 @@
 #ifndef GOTHIC_OCBINKPLAYER_H
 #define GOTHIC_OCBINKPLAYER_H
-#include <Hook/func.h>
+#include <Hook/Externals.h>
 #include <Gothic/Types/zSTRING.h>
 
 struct zCVideoPlayer {

@@ -1,7 +1,6 @@
 #ifndef G2_CGAMEMANAGER_H
 #define G2_CGAMEMANAGER_H
-#include <Hook/func.h>
-#include <Hook/value.h>
+#include <Hook/Externals.h>
 #include <Logging/Log.h>
 #include <Gothic/Types/zArray.h>
 #include <Gothic/Types/zSTRING.h>

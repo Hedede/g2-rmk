@@ -1,6 +1,6 @@
 #ifndef Gothic_oSaveGame_H
 #define Gothic_oSaveGame_H
-#include <Hook/func.h>
+#include <Hook/Externals.h>
 #include <Gothic/Types/zArray.h>
 
 struct oCSavegameManager_vt;

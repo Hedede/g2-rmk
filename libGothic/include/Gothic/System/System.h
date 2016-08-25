@@ -1,8 +1,7 @@
 #ifndef GOTHIC2_SYSTEM_H
 #define GOTHIC2_SYSTEM_H
 
-#include <Hook/func.h>
-#include <Hook/value.h>
+#include <Hook/Externals.h>
 
 namespace {
 auto libExit = func<void(*)()>(0x502AB0);

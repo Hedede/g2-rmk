@@ -2,8 +2,7 @@
 #define GOTHIC2_SYSTEM_WIN32_H
 
 #include <cstdint>
-#include <Hook/func.h>
-#include <Hook/value.h>
+#include <Hook/Externals.h>
 
 namespace {
 auto winDoInstanceCheck = func<void(*)()>(0x5035C0);

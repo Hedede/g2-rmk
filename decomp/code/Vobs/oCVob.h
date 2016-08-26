@@ -15,25 +15,22 @@ public:
 	oCVob() = default;
 	virtual ~oCVob() = default;
 
-	virtual void Archive(zCArchiver& arc)
+	void Archive(zCArchiver& arc) override
 	{
 		zCVob::Archive(arc);
 	}
-	virtual void Unarchive(zCArchiver& arc)
+	void Unarchive(zCArchiver& arc) override
 	{
 		zCVob::Unarchive(arc);
 	}
 
 
-	virtual void Render(zTRenderContext &);
-	virtual int GetCSStateFlags()
-	{
-		return 0;
-	}
+	void Render(zTRenderContext &) override;
+	int GetCSStateFlags() { return 0; }
 
-	virtual void Init() { }
+	void Init() override { }
 
-	virtual void ShowDebugInfo(zCCamera *);
+	void ShowDebugInfo(zCCamera *) override;
 
 	void ToggleShowDebug()
 	{
@@ -169,4 +166,59 @@ int oCVob::HasEnoughSpace(zVEC3& vec)
 
 	zWARNING("U: OVOB: Space-Test failed : Vob not in World."); // 381,_ulf
 	return false;
+}
+
+int oCVob::Render(zTRenderContext& ctx) // __fastcall
+{
+	ctx.flags &= 0xFB;
+
+	zCVob* focus = nullptr;
+	if ( oCNpc::player ) {
+		if ( !oCNpc::player->IsDead() && !oCNpc::player->IsUnconscious() )
+			focus = oCNpc::player->GetFocusVob();
+	}
+
+	if ( s_focusVob != focus )
+		s_focusTime = 0;
+
+	if ( focus != this ) {
+		if ( !focus )
+			s_focusTime = 0;
+		return zCVob::Render(ctx);
+	}
+
+	if ( !focus )
+		return zCVob::Render(ctx);
+
+	if (auto npc = zDYNAMIC_CAST<oCNpc>(focus)) {
+		if ( oCNpcFocus::s_iHightlightMeleeFocus < 2 || !oCNpcFocus::isHighLighted )
+			return zCVob::Render(ctx);
+	} else if (auto mob = zDYNAMIC_CAST<oCMob>(focus)) {
+		if (mob->GetName().IsEmpty())
+			return zCVob::Render(ctx);
+		if (auto mi = zDYNAMIC_CAST<oCMobInter>(mob)) {
+			if (mi->IsInteractingWith(oCNpc::player)) {
+				return zCVob::Render(ctx);
+			}
+		}
+	}
+
+	if ( oCNpcFocus::s_bHighlightInteractFocus || oCNpcFocus::s_iHightlightMeleeFocus >= 2 && oCNpcFocus::isHighLighted ) {
+		ctx->flags &= 0xFDu;
+		s_focusTime = ztimer.frameTimeFloat * 0.003 + s_focusTime;
+
+		if ( s_focusTime < 0.0 ) {
+			s_focusTime = 0
+		} else if ( s_focusTime > 1.0 ) {
+				s_focusTime = 1.0;
+		}
+
+
+		ctx->flags |= 4u;
+		ctx->__color = {-1,-1,-1, s_focusTime * 255.0};
+	}
+
+
+	s_focusVob = focus;
+	return zCVob::Render(ctx);
 }

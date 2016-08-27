@@ -285,6 +285,7 @@ private:
 
 	void SetInMovement(int inMovement);
 	void SetInMovementMode(zCVob::zTMovementMode mode);
+	void CheckEmergencyPutToSleep();
 
 public:/* Unused */
 	static uint32_t GetNextFreeVobID()
@@ -1688,4 +1689,87 @@ int zCVob::DetectCollision(zMAT4 *trafoObjToWorldNew)
 	}
 
 	return isColliding;
+}
+
+void zCVob::CalcGroundPoly()
+{
+	zVEC3 origin = bbox3D.GetExtents();
+	zVEC3 ray{0, -20000.0, 0};
+	zVEC3 inters;
+	float alpha;
+
+	if ( !groundPoly || groundPoly->material->matGroup == MAT_WATER ||
+	     !groundPoly.CheckRayPolyIntersection(origin, ray, inters, alpha))
+	{
+		homeWorld->TraceRayNearestHit(origin, ray, 0, 0x422);
+		auto foundPoly = homeWorld->traceRayReport.foundPoly;
+		if ( !foundPoly || foundPoly->polyPlane.normal.y <= 0.0 )
+			homeWorld->TraceRayNearestHit(inters, ray, 0, 0x22);
+		groundPoly = homeWorld->traceRayReport.foundPoly;
+	}
+}
+
+void zCVob::CheckEmergencyPutToSleep()
+{
+	if ( !flags1.physicsEnabled )
+		return;
+	if ( collisionObjectClass != &zCCollObjectCharacter::s_oCollObjClass ) {
+		auto t1 = collisionObject->trafo.GetTranslation();
+		auto t2 = collisionObject->trafoObjToWorld.GetTranslation();
+		if ( (t2 - t1).Length2() < 1.0 ) {
+			if ( ++flags3.collButNoMove > 8 ) {
+				if ( !flags1.staticVob ) {
+					flags1.physicsEnabled = false;
+					if ( rigidBody )
+						rigidBody->StopTransRot();
+				}
+				if ( callback_ai )
+					SetSleepingMode(2);
+				else
+					SetSleeping(1);
+
+				flags3.collButNoMove = 0;
+
+				zSTRING msg{"going to sleep .. emergencyStop"};
+			}
+		}
+	}
+}
+
+void zCVob::SetCollTypeDefaultFromVisual()
+{
+	if ( GetCharacterClass() == 1 || GetCharacterClass() == 2 )
+		return;
+
+	auto classDef = visual ? visual->_GetClassDef() : nullptr;
+	// just == classdefs, but I'm lazy
+	if (in(classdefs, &zCMesh::classDef, &zCModel::classDef,
+                          &zCMorphMesh::classDef, &zCProgMeshProto::classDef))
+	{
+		if (visual->GetBBox3D().GetVolume() > 200000.0)
+			SetCollisionClass(&zCCollObjectComplex::s_oCollObjClass);
+		} else {
+			SetCollisionClass(&zCCollObjectPoint::s_oCollObjClass);
+		}
+	} else {
+		SetAnimationsEnabled(zCCollObjectUndef);
+	}
+}
+
+zCOLOR zCVob::GetLightColorAtCenter()
+{
+	zCArray<zCVobLight*> lightList(vobLeafList.GetNum());
+
+	if ( homeWorld && !homeWorld->compiled )
+		return GFX_BLACK;
+
+	for (auto leaf : vobLeafList) {
+		for (auto light : leaf->leafLightList)
+			lightList.InsertEnd(light);
+	}
+
+	if (lightList.IsEmpty())
+		return GFX_BLACK;
+
+	return zCVobLight::SumLightsAtPositionWS(lightList, GetPositionWorld(), 0);
 }

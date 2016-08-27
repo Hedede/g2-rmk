@@ -7,14 +7,8 @@ void zUlfi_StartUp()
 	zCParser::enableParsing = zCOption::Parm(zoptions, "ZREPARSE");
 }
 
-void zUlfi_ShutDown()
-{
-	delete zfontman;
-}
 
-void Trg_Init()
-{
-}
+void Trg_Init() { }
 
 void oBert_Options()
 {
@@ -86,14 +80,6 @@ void oBert_StartUp()
 	zcon.Register("Imports your hero from the given file.", "HERO IMPORT");
 	zcon->AddEvalFunc(oBert_Console_EvalFunc);
 	oBert_Options();
-}
-
-void oBert_ShutDown()
-{
-}
-
-void zBert_ShutDown()
-{
 }
 
 int oBert_Console_EvalFunc(const zSTRING& cmdString, zSTRING& out)
@@ -388,9 +374,3 @@ void zCarsten_StartUp(HWND* wnd)
 	ztimer.SetMaxFPS(zCTimer::S_GetMaxFPS());
 }
 
-void oCarsten_ShutDown()
-{
-	if ( oCVisualFX::fxParser )
-		delete oCVisualFX::fxParser;
-	oCVisualFX::fxParser = 0;
-}

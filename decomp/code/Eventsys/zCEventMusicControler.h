@@ -4,23 +4,27 @@ public:
 	enum Type {
 		START_SPECIAL_SGT,
 		STOP_SPECIAL_SGT,
+		NUM_SUBTYPES
 	};
 
-	virtual void Archive(zCArchiver& arc)
+	void Archive(zCArchiver& arc) override
 	{
 		zCEventMessage::Archive(arc);
 		arc.WriteString("SGT", fileName);
 	}
 
-	virtual void Unarchive(zCArchiver& arc)
+	void Unarchive(zCArchiver& arc) override
 	{
 		zCEventMessage::Unarchive(arc);
 		arc.ReadString("SGT", fileName);
 	}
 
-	virtual ~zCEventMusicControler();
-	virtual void MD_GetNumOfSubTypes();
-	virtual zSTRING MD_GetSubTypeString(int type)
+	~zCEventMusicControler() override;
+	int MD_GetNumOfSubTypes() override
+	{
+		return NUM_SUBTYPES;
+	}
+	zSTRING MD_GetSubTypeString(int type) override
 	{
 		switch (type) {
 		case START_SPECIAL_SGT: return "START_SPECIAL_SGT";
@@ -29,8 +33,9 @@ public:
 		}
 	}
 
-	virtual void MD_GetTimeBehavior();
-	virtual void MD_GetMinTime();
+	int MD_GetTimeBehavior() override { return 0; }
+	void MD_GetMinTime() override { return 0.0; }
+
 private:
 	zSTRING fileName;
 };

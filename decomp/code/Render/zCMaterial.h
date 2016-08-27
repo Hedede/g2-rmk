@@ -22,7 +22,7 @@ public:
 		InitThisByMaterial(other);
 	}
 
-	virtual ~zCMaterial()
+	~zCMaterial() override
 	{
 		if ( texture )
 			texture.Release();
@@ -34,8 +34,8 @@ public:
 			delete detailObject;
 	}
 
-	virtual void Archive(zCArchiver& arc);
-	virtual void Unarchive(zCArchiver& arc);
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
 
 
 	zSTRING* GetName()
@@ -108,8 +108,8 @@ private:
 	zCOLOR color;
 	zREAL smoothAngle;
 	zTMat_Group  matGroup;
-	zCBspSector* bspSectorFront; // //outdoor
-	zCBspSector*  bspSectorBack; ////outdoor
+	zCBspSector*  bspSectorFront; //outdoor
+	zCBspSector*  bspSectorBack;  //outdoor
 	zCTexAniCtrl texAniCtrl;
 	zSTRING*  detailObjectVisualName;
 
@@ -119,14 +119,14 @@ private:
 	float environmentalMappingStrength;
 
 	struct {
-		uint8_t smooth : 1;
-		uint8_t dontUseLightmaps : 1;
-		uint8_t texAniMap : 1;
-		uint8_t lodDontCollapse : 1;
-		uint8_t noCollDet : 1;
-		uint8_t forceOccluder : 1;
-		uint8_t environmentalMapping: 1;
-		uint8_t polyListNeedsSort : 1;
+		uint8_t smooth               : 1; // 1
+		uint8_t dontUseLightmaps     : 1; // 2
+		uint8_t texAniMap            : 1; // 4
+		uint8_t lodDontCollapse      : 1; // 8
+		uint8_t noCollDet            : 1; // 0x10
+		uint8_t forceOccluder        : 1;
+		uint8_t environmentalMapping : 1;
+		uint8_t polyListNeedsSort    : 1;
 	} flags;
 
 	uint8_t matUsage;

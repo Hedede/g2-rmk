@@ -5,7 +5,7 @@ class zCLightMap : public zCObject {
 	Z_OBJECT(zCLightMap);
 public:
 	zCLightMap() = default;
-	virtual ~zCLightMap()
+	~zCLightMap() override
 	{
 		Release(texture);
 	}

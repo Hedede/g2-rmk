@@ -1,3 +1,4 @@
+// _dieter\\zArchiverGeneric.cpp
 class zCArchiverGeneric : public zCArchiver {
 	Z_OBJECT(zCArchiverGeneric);
 private:
@@ -322,6 +323,40 @@ void zCArchiverGeneric::DeleteBuffer()
 	if (arcOwnsMedium)
 		Delete(buffer);
 	buffer = 0
+}
+
+void zCArchiverGeneric::Close()
+{
+	if ( rwMode == 0 )
+		return;
+
+	if ( rwMode == 2 )
+		WriteHeaderNumObj();
+
+	if ( arcOwnsMedium ) {
+		DebugMessage("D: ARC: .. Closing ("_s + objectList.GetNum() + " objects)");
+
+		if ( useBuffer ) {
+			DeleteBuffer();
+		} else if ( file ) {
+			if ( file->IsOpened() )
+				file->close();
+			if ( arcOwnsMedium )
+				delete file;
+			file = 0;
+		}
+	}
+
+	for (auto& object : objectList)
+		Release(object);
+
+	objectList.Clear();
+	chunkRecords.Clear();
+	writeObjectEntries.Clear();
+
+	file = 0;
+	buffer = 0;
+	rwMode = 0;
 }
 
 void zCArchiverGeneric::RestoreBuffer(void* out, size_t size)
@@ -779,6 +814,77 @@ void zCArchiverGeneric::CheckObjectListSize(int numRequired)
 		objectList.Resize(numRequired + numRequired / 2);
 }
 
+void zCArchiverGeneric::WriteChunkEnd()
+{
+	auto numrec = chunkRecords.GetNum();
+	if ( numrec == 0 )
+		zFATAL("D: zArchiver(zCArchiverGeneric::WriteChunkEnd): write chunk end with no open chunk !"); // 625,
+
+	zTChunkRecord record = chunkRecords[numrec - 1];
+	/* shto za dermo
+	v7 = chunkRecords.GetNum();
+	v8 = v7 - 1;
+	if ( v7 - 1 < v7 ) {
+		v9 = v7 - 1;
+		if ( v8 != v9 ) {
+			v10 = v8;
+			if ( v8 < v9 ) {
+				v11 = v10;
+				do {
+				} while (v11 < chunkRecords.GetNum() - 1);
+			}
+		}
+	}*/
+
+	chunkRecords.RemoveOrderIndex(numrec - 1);
+
+	if ( inBinaryMode ) {
+		auto end = StoreGetPos();
+		size_t len = end - record.start;
+		auto savedpos = StoreGetPos();
+		StoreSeek(record.start);
+		StoreBuffer(&len, 4);
+		StoreSeek(savedpos);
+	} else {
+		StoreBuffer(spaces, chunkRecords.GetNum());
+		StoreStringEOL("[]");
+	}
+}
+
+void zCArchiverGeneric::ReadChunkStartASCII(const char *chunkName, zSTRING& resultLine)
+{
+	auto savedpos = RestoreGetPos();
+	resultLine.Clear();
+
+	zSTRING str;
+	while ( !EndOfArchive() ) {
+		RestoreStringEOL(str);
+		if (str[0] != '[')
+			continue;
+		if (str[1] == ']') {
+			auto pos = savedpos;
+			if ( !noReadSearchCycles) {
+				auto idx = chunkRecords.GetNum();
+				if (idx > 0)
+					pos = chunkRecords[idx].start;
+			}
+
+			RestoreSeek(pos);
+			continue;
+		}
+
+		auto word = str.PickWord(1u, ZSTR_LBRACKET, ZSTR_LBRACKET);
+		zSTRING cname = chunkName;
+
+		if (cname.IsEmpty() || word == cname ) {
+			resultLine = str;
+			return;
+		}
+
+		SkipChunk(0);
+	}
+}
+
 int zCArchiverGeneric::ReadChunkStart(zSTRING& chunkName, uint16_t& chunkVersion)
 {
 	int result = ReadChunkStart("");
@@ -985,6 +1091,28 @@ void zCArchiverGeneric::WriteHeaderNumObj()
 		StoreString( numobj );
 		StoreSeek(savedpos);
 	}
+}
+
+void zCArchiverGeneric::ReadHeader()
+{
+	zSTRING str;
+	while (!str)
+		RestoreStringEOL(str);
+
+	auto word1 = str.PickWord(1, " ", " ");
+	auto word2 = str.PickWord(2, " ", " ");
+	if ( word1 == "objects" ) {
+		auto num = word2.ToLong();
+		if ( num > objectList.GetNum() )
+			objectList.Resize(num);
+	} else {
+		zFATAL("D: zCArchiverGeneric: cannot read archive, 'objects' keyword expected"); // 963,
+	}
+
+	RestoreStringEOL(str);
+	RestoreStringEOL(str);
+
+	pos_headerEnd = RestoreGetPos();
 }
 
 void zCArchiverGeneric::GetBufferString(zSTRING& str)

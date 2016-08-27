@@ -1,20 +1,26 @@
-struct zCCriticalSection {
+struct zCSyncObject {
+	virtual ~zCSyncObject() = default;
+	virtual int Lock(unsigned timeOutMsec) = 0;
+	virtual int Unlock(unsigned) = 0;
+};
+
+struct zCCriticalSection : zCSyncObject {
 	zCCriticalSection()
 	{
 		InitializeCriticalSection(&critSect);
 	}
 
-	virtual ~zCCriticalSection()
+	~zCCriticalSection() override
 	{
 		DeleteCriticalSection(&critSect);
 	}
 
-	virtual int Lock(unsigned)
+	int Lock(unsigned) override
 	{
 		EnterCriticalSection(&critSect);
 	}
 
-	virtual void Unlock()
+	void Unlock() override
 	{
 		LeaveCriticalSection(&critSect);
 	}
@@ -23,7 +29,7 @@ private:
 	CRITICAL_SECTION critSect;
 };
 
-struct zCMutex {
+struct zCMutex : zCSyncObject {
 	zCMutex()
 	{
 		mutex = CreateMutexA(0, 0, 0);
@@ -32,19 +38,19 @@ struct zCMutex {
 		return v1;
 	}
 
-	virtual ~zCMutex()
+	~zCMutex() override
 	{
 		if (mutex)
 			CloseHandle(mutex);
 	}
 
-	virtual int Lock(unsigned long timeOutMsec)
+	int Lock(unsigned long timeOutMsec)
 	{
 		WaitForSingleObject(mutex, timeOutMsec);
 		return 1;
 	}
 
-	virtual void Unlock()
+	void Unlock() override
 	{
 		ReleaseMutex(mutex);
 		return 1;
@@ -54,8 +60,7 @@ private:
 };
 
 
-class zCThread {
-public:
+struct zCThread {
 	zCThread() = default;
 	virtual ~zCThread()
 	{

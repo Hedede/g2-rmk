@@ -8,9 +8,6 @@ struct oCSavegameManager {
 	char *unk[6];
 };
 
-zSTRING const SAVEGAME_CURRENT_DIR = "current";
-zSTRING const SAVEGAME_DIR = "savegame";
-zSTRING const SAVEGAME_HEADER_FILE = "saveinfo.sav";
 
 oCSavegameInfo::~oCSavegameManager();
 oCSavegameManager::oCSavegameManager()
@@ -41,7 +38,7 @@ zSTRING oCSavegameManager::GetSlotDirName(int slotNr)
 {
 	std::string result;
 	if ( slotNr == 0 ) {
-		result += SAVEGAME_DIR + '/';
+		result += SAVEGAME_QUICK_DIR + '/';
 	} else if ( slotNr > 0 && slotNr < 21 ) {
 			result += SAVEGAME_DIR + slotNr + '/';
 	} else if ( slotNr == -1 )

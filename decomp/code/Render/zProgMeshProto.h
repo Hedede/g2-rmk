@@ -30,9 +30,9 @@ public:
 
 	struct zCSubMesh {
 		  zCMaterial* material;
-		  int unk1;
 
-		  int numVerts;
+		  int unk1;
+		  int numTris;
 
 		  zCArrayAdapt<zTPMWedge> wedges;
 		  zCArrayAdapt<float> unk2;
@@ -103,7 +103,10 @@ public:
 	virtual void Save(zCFileBIN&);
 
 private:
-	int unk1[4];
+	int unk0;
+	int numVerts;
+
+	zCArrayAdapt<VEC3> unk1;
 
 	zTBBox3D bbox3d;
 	zCOBBox3D obbox3d;

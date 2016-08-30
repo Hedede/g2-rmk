@@ -789,3 +789,273 @@ int zDieter_EvalFunc(zSTRING const& cmd, zSTRING& msg)
 	msg.Clear();
 	return 0;
 }
+
+int zCarsten_Console_EvalFunc(zSTRING const& _cmd, zSTRING& msg)
+{
+	auto cmd = _cmd;
+	cmd.Upper();
+
+	// actually it is called in each if
+	auto cmd1 = cmd.PickWord(1, " ", zSTR_SKIP);
+	if (cmd1 == "ZTOGGLE") {
+		// and this pickword is also called in each if
+		// (HOW INEFFICIENT AAAAERGH)
+		auto cmd2 = cmd.PickWord(2, " ", zSTR_SKIP);
+		if (cmd2 == "RENDERORDER") {
+			if ( Toggle(zCWorld::s_bAlternateRenderOrder) ) {
+				msg = "alternate on";
+			} else {
+				msg = "alternate off";
+			}
+			return 1;
+		}
+
+		if (cmd2 == "ENVMAP") {
+			if ( Toggle(zCWorld::s_bEnvMappingEnabled) ) {
+				msg = "env on";
+			} else {
+				msg = "env off";
+			}
+			return 1;
+		}
+
+		if (cmd2 == "AMBIENTVOBS") {
+			if ( Toggle(zCWorld::s_bEnvMappingEnabled) ) {
+				msg = "ambient vobs on";
+			} else {
+				msg = "ambient vobs off";
+			}
+			return 1;
+		}
+
+		if (cmd2 == "AMBIENTPFX") {
+			if ( Toggle(zCParticleFX::s_bAmbientPFXEnabled) ) {
+				msg = "ambient pfx on";
+			} else {
+				msg = "ambient pfx off";
+			}
+			return 1;
+		}
+
+		if (cmd2 == "RENDERPORTALS") {
+			if ( Toggle( zCBspTree::s_renderAllPortals) ) {
+				msg = "render all portals on";
+			} else {
+				msg = "render all portals off";
+			}
+			return 1;
+		}
+
+		if (cmd2 == "FLUSHONAMBIENTCOL") {
+			zrenderer->SetSyncOnAmbientCol(zrenderer, !zrenderer->GetSyncOnAmbientCol());
+
+			if ( zrenderer->GetSyncOnAmbientCol() ) {
+				msg = "sync on";
+			} else {
+				msg = "sync off";
+			}
+			return 1;
+		}
+
+		if (cmd2 == "SHOWSPLINES") {
+			zCCSCamera::SetDrawEnabled(!zCCSCamera::draw);
+			return 1;
+		}
+
+		if (cmd2 ==  "TIMEDEMO") {
+			auto val = cmd.PickWord(" ", zSTR_SKIP).ToLong();
+
+			zSTRING num;
+			if ( val <= 0 ) {
+				num = "1";
+			} else {
+				num = val;
+			}
+
+			val += "TIMEDEMO_" + num;
+
+			if ( Toggle(zCCSCamera::evaluateAvgFPS) ) {
+				zCArray<zCVob*> vobs;
+				if ( zCCamera::activeCam ) {
+					auto cv = zCCamera::activeCam->connectedVob;
+					if ( cv )
+						cv->homeWorld->SearchVobListByClass(&zCCSCamera::classDef, vobs, 0);
+				}
+
+				zCCSCamera* cscam = nullptr;
+				for (auto vob : vobs) {
+					if (vob->GetObjectName() == "TIMEDEMO")
+						cscam = static_cast<zCCSCamera*>(vob);
+				}
+				if (cscam) {
+					cscam->OnTrigger(cscam, cscam);
+					msg = "timedemo camera triggered";
+				} else {
+					msg = "no timedemo camera found";
+				}
+			}
+			return 1;
+		}
+	} else if (cmd1 == "ZSET") {
+		// also not saved, but called in each if
+		auto cmd2 = cmd.PickWord(2, " ", zSTR_SKIP);
+
+		if (cmd2 ==  "NEARCLIPZ" ) {
+			auto val = cmd.PickWord(3, " ", zSTR_SKIP).ToFloat();
+
+			if ( zCCamera::activeCam ) {
+				zCCamera::activeCam->nearClipZ = val;
+				zCCamera::activeCam->UpdateProjectionMatrix();
+			}
+			msg = "set new znear value";
+			return 1;
+		}
+	} else if (cmd1 == "FORCECRASH") {
+		*(int*)0 = 0;
+	}
+
+	return 0;
+}
+
+// _carsten/ooCarsten.cpp
+int oCarsten_Console_EvalFunc(zSTRING const& _cmd, zSTRING& msg)
+{
+	zSTRING cmd = _cmd;
+	cmd.Upper();
+
+	auto cmd1 = cmd.PickWord(1, " ", zSTR_SKIP);
+	if (cmd1 == "PLAY") {
+		auto cmd2 = cmd.PickWord(2, " ", zSTR_SKIP);
+		if ( cmd2 == "FX" ) {
+			auto name = cmd.PickWord(3, " ", zSTR_SKIP);
+			ocarsten_vfx = oCVisualFX::CreateAndPlay(name, oCNpc::player, oCNpc::player->GetFocusVob(), 1, 0.0, 0, 0);
+			return 1;
+		}
+	}
+
+	if (cmd1 == "STOP") {
+		auto cmd2 = cmd.PickWord(2, " ", zSTR_SKIP);
+		if ( cmd2 == "FX" ) {
+			if ( ocarsten_vfx ) {
+				ocarsten_vfx->Stop();
+				Release(ocarsten_vfx);
+			}
+			return 1;
+		}
+		return 0;
+	}
+
+	if (cmd1 == "FIRSTPERSON") {
+		if ( zCAICamera::bCamChanges ) {
+			zCAICamera::GetCurrent()->SetMode(CamModFirstPerson, {});
+			zCAICamera::bCamChanges = 0;
+		} else {
+			zCAICamera::bCamChanges = 1;
+		}
+		return 1;
+	}
+
+	if (cmd1 == "GOTO") {
+		auto cmd2 = cmd.PickWord(2, " ", zSTR_SKIP);
+		if (cmd2 == "CAMERA") {
+			if ( !zCCamera::activeCam || !zCCamera::activeCam->connectedVob )
+				goto LABEL_85;
+			if ( oCGame::GetSelfPlayerVob() ) {
+				auto cd = oCGame::GetSelfPlayerVob()->GetCollDetDyn();
+				auto cs = oCGame::GetSelfPlayerVob()->GetCollDetStat();
+				oCGame::SetSelfPlayerVob()->GetCollDetDyn(0);
+				oCGame::SetSelfPlayerVob()->GetCollDetStat(0);
+
+				auto atvec = zCCamera::activeCam->connectedVob->trafoObjToWorld.GetAtVector();
+				auto trans = zCCamera::activeCam->connectedVob->trafoObjToWorld.GetTranslation();
+
+				oCGame::GetSelfPlayerVob()->SetPositionWorld(trans);
+				oCGame::SetSelfPlayerVob()->GetCollDetDyn(cd);
+				oCGame::SetSelfPlayerVob()->GetCollDetStat(cs);
+			}
+
+			if ( zCAICamera::GetCurrent() ) {
+				auto msg = 0x8000;
+				zCAICamera::GetCurrent()->ReceiveMsg(&msg);
+			}
+			return 1;
+		}
+
+		if (cmd2 == "POS") {
+			float x = cmd.PickWord(3, " ", zSTR_SKIP).ToFloat();
+			float y = cmd.PickWord(4, " ", zSTR_SKIP).ToFloat();
+			float z = cmd.PickWord(5, " ", zSTR_SKIP).ToFloat();
+
+			zINFO(5, "C: beaming player to position X: "_s + x + " Y: " + y + " Z: " + z); // 242
+
+			auto cd = oCGame::GetSelfPlayerVob()->GetCollDetDyn();
+			auto cs = oCGame::GetSelfPlayerVob()->GetCollDetStat();
+			oCGame::SetSelfPlayerVob()->GetCollDetDyn(0);
+			oCGame::SetSelfPlayerVob()->GetCollDetStat(0);
+
+			zVEC3 pos{x,y,z};
+
+			oCGame::GetSelfPlayerVob()->SetPositionWorld(pos);
+			oCGame::SetSelfPlayerVob()->GetCollDetDyn(cd);
+			oCGame::SetSelfPlayerVob()->GetCollDetStat(cs);
+			return 1;
+		}
+	}
+
+	if (cmd1 == "REPARSE") {
+		auto cmd2 = cmd.PickWord(2, " ", zSTR_SKIP);
+		zSTRING game;
+		if ( zgameoptions ) {
+			game = zgameoptions->ReadString(zOPT_SEC_FILES, "Game", "");
+		} else {
+			game = zoptions->ReadString(zOPT_SEC_INTERNAL, "gameScript", "");
+		}
+
+		if (!game)
+			game = "Content\\Gothic";
+
+		ogame->LoadParserFile(game + ".src");
+		return 1;
+	}
+
+	if (cmd1 == "SPAWNMASS") {
+		auto cmd2 = cmd.PickWord(2, " ", zSTR_SKIP);
+
+		if (cmd2 == "GIGA") {
+			auto num = cmd.PickWord(3, " ", zSTR_SKIP).ToLong();
+			
+			SpawnNpc(oCNpc::player, "DEMON",  2000.0, rand() % num + 1);
+			SpawnNpc(oCNpc::player, "TROLL",  2000.0, rand() % num + 1);
+			SpawnNpc(oCNpc::player, "ZOMBIE", 2000.0, rand() % num + 1);
+			SpawnNpc(oCNpc::player, "MINECRAWLER", 2000.0, rand() % num + 1);
+			SpawnNpc(oCNpc::player, "GOLEM",       2000.0, rand() % num + 1);
+			SpawnNpc(oCNpc::player, "ORC_WARRIOR", 2000.0, rand() % num + 1);
+			return 1;
+		}
+
+		auto num = cmd.PickWord(2, " ", zSTR_SKIP).ToLong();
+
+		SpawnNpc(oCNpc::player, "SKELETON",    2000.0, rand() % num + 1);
+		SpawnNpc(oCNpc::player, "WOLF",        2000.0, rand() % num + 1);
+		SpawnNpc(oCNpc::player, "GOBBO",       2000.0, rand() % num + 1);
+		SpawnNpc(oCNpc::player, "SNAPPER",     2000.0, rand() % num + 1);
+		SpawnNpc(oCNpc::player, "BLOODFLY",    2000.0, rand() % num + 1);
+		SpawnNpc(oCNpc::player, "MEATBUG",     2000.0, rand() % num + 1);
+		return 1;
+	}
+
+	if (cmd1 == "DEBUG") {
+		auto cmd2 = cmd.PickWord(2, " ", zSTR_SKIP);
+		if (cmd2 == "DAMAGE") {
+			auto val = cmd.PickWord(3, " ", zSTR_SKIP).ToLong();
+			if ( !val )
+				oCNpc::EnableDamageDebugOutput(0);
+			if ( val )
+				oCNpc::EnableDamageDebugOutput(1);
+			return 1;
+		}
+		return 0;
+	}
+
+	return 0;
+}

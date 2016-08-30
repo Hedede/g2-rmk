@@ -351,3 +351,48 @@ void zDieter_StartUp(HWND* initContextHandle)
 	polyTreshold = zoptions->ReadInt("ENGINE", "zRayTurboPolyTreshold", polyTreshold);
 	zCRayTurboAdmin::SetPolyTreshold(polyTreshold);
 }
+
+void zCarsten_StartUp(HWND *wnd)
+{
+	v1 = ZOPT_SND_SFX_VOL.data.ptr;
+	zoptions->InsertChangeHandler(zOPT_SEC_SOUND, ZOPT_SND_SFX_VOL, zOpt_Sound_ChangeFXVol);
+	zoptions->InsertChangeHandler(zOPT_SEC_SOUND, ZOPT_SND_MUSIC_VOL, zOpt_Sound_ChangeMusicVol);
+	zoptions->InsertChangeHandler(zOPT_SEC_VIDEO, "zVidBrightness", zOpt_Video_ChangeVidOptions);
+	zoptions->InsertChangeHandler(zOPT_SEC_VIDEO, "zVidContrast", zOpt_Video_ChangeVidOptions);
+	zoptions->InsertChangeHandler(zOPT_SEC_VIDEO, "zVidGamma", zOpt_Video_ChangeVidOptions);
+	auto vol = zoptions->ReadReal(zOPT_SEC_SOUND, ZOPT_SND_SFX_VOL, 1.0);
+	zoptions->WriteReal(zOPT_SEC_SOUND, ZOPT_SND_SFX_VOL, vol, 0);
+
+	vol = zoptions->ReadReal(zOPT_SEC_SOUND, ZOPT_SND_MUSIC_VOL, 0.8);
+	zoptions->WriteReal(zOPT_SEC_SOUND, ZOPT_SND_MUSIC_VOL, vol, 0);
+
+	if ( zinput )
+		delete zinput;
+	zinput = new zCInput_Win32;
+
+	zcon.Register("ZTOGGLE SHOWSPLINES", "Toggles camera splines ");
+	zcon.Register("ZTOGGLE TIMEDEMO", "Toggles a time demo with avg FPS Rate");
+	zcon.Register("ZTOGGLE RENDERORDER", "Renders Sky last (possible better z buffer performance)");
+	zcon.Register("ZTOGGLE ENVMAP", "Toggled rendering of environmental fx");
+	zcon.Register("ZTOGGLE AMBIENTVOBS", "Toggles rendering of ambient vobs");
+	zcon.Register("ZTOGGLE AMBIENTPFX", "Toggles rendering of ambient pfx");
+	zcon.Register("ZTOGGLE RENDERPORTALS", "Toggles rendering of all portals (spacer only)");
+	zcon.Register("ZSET NEARCLIPZ", "sets the value for the near clipping plane");
+	zcon.Register("ZTOGGLE FLUSHONAMBIENTCOL", "toggles flushing the renderer on a ambientcol change");
+
+	zcon.AddEvalFunc(zCarsten_Console_EvalFunc);
+
+	zCFFT::S_Init();
+	zCPolygon::S_InitMorph();
+
+	auto mfps = zoptions->ReadDWord("ENGINE", "zMaxFPS", zCTimer::S_GetMaxFPS());
+	zCTimer::S_SetMaxFPS(mfps);
+
+	zCParticleFX::s_bAmbientPFXEnabled = zoptions->ReadBool("ENGINE", "zAmbientPFXEnabled", 1);
+	zCWorld::s_bEnvMappingEnabled = zoptions->ReadBool("ENGINE", "zAmbientVobsEnabled", 1);
+	zCWorld::s_bEnvMappingEnabled = zoptions->ReadBool("ENGINE", "zEnvMappingEnabled", 1);
+	zCWorld::s_bAlternateRenderOrder = !zoptions->ReadBool("ENGINE", "zSkyRenderFirst", 1);
+	zCAIPlayer::s_bShowWeaponTrails = zoptions->ReadBool("GAME", "zShowWeaponTrails", 1);
+
+	ztimer.SetMaxFPS(zCTimer::S_GetMaxFPS());
+}

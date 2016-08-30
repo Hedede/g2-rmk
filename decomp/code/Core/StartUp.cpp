@@ -374,3 +374,165 @@ void zCarsten_StartUp(HWND* wnd)
 	ztimer.SetMaxFPS(zCTimer::S_GetMaxFPS());
 }
 
+
+void zDieter_StartUp(HWND* initContextHandle)
+{
+	Trg_Init();
+
+	if ( zoptions->Parm("ZMAXFRAMERATE"))
+		ztimer.LimitFPS(zoptions->ParmValue("ZMAXFRAMERATE").ToLong());
+
+	zCMemPoolBase::DisablePools(zoptions->Parm("ZNOMEMPOOL"));
+
+	int deviceOverride = -1;
+	if ( zoptions->Parm("ZRND") ) {
+		auto val = zoptions->ParmValue("ZRND");
+		if (val.Search(0,"D3D",1) != -1) {
+			zrenderer = new zCRnd_D3D; // 0x82E7C
+			if ( val.Search(0, "1", 1u) != -1 )
+				deviceOverride = 1;
+		}
+	} else if ( !zrenderer ) {
+		zINFO("D: RENDERER: no renderer specified, trying D3D (dev0)");
+		zrenderer = new zCRnd_D3D;
+	}
+	auto resX       = zoptions->ReadInt(zOPT_SEC_VIDEO, "zVidResFullscreenX", 800);
+	auto resY       = zoptions->ReadInt(zOPT_SEC_VIDEO, "zVidResFullscreenY", 600);
+	auto bpp        = zoptions->ReadInt(zOPT_SEC_VIDEO, "zVidResFullscreenBPP",16);
+	auto deviceNo   = zoptions->ReadInt(zOPT_SEC_VIDEO, "zVidDevice", 0);
+	auto gamma      = zoptions->ReadReal(zOPT_SEC_VIDEO, "zVidGamma", 0.5);
+	auto contrast   = zoptions->ReadReal(zOPT_SEC_VIDEO, "zVidContrast", 0.5);
+	auto brightness = zoptions->ReadReal(zOPT_SEC_VIDEO, "zVidBrightness", 0.5);
+
+	if ( zoptions->Parm("ZRES") ) {
+		auto val = zoptions->ParmValue("ZRES");
+		resX = val.PickWord(1, ",", ",").ToLong();
+		resY = val.PickWord(2, ",", ",").ToLong();
+		bpp  = val.PickWord(3, ",", ",").ToLong();
+	}
+	if ( deviceOverride >= 0 )
+		deviceNo = deviceOverride;
+
+	auto windowed = zoptions->ReadBool(zOPT_SEC_VIDEO, "zStartupWindowed", 0);
+	if ( zoptions->Parm("ZWINDOW") )
+		windowed = 1;
+
+	zrenderer->Vid_SetDevice(deviceNo);
+	zrenderer->Vid_SetScreenMode(windowed != 0);
+	zrenderer->Vid_SetMode(resX, resY, bpp, initContextHandle);
+	zCOLOR clearcolor = 0;
+	zrenderer->Vid_Clear(&clearcolor, 3);
+	zrenderer->Vid_SetGammaCorrection(gamma, contrast, brightness);
+
+	zCTexture::AutoDetectRendererTexScale();
+
+	zCTexture::s_globalLoadTextures = zoptions->Parm("ZNOTEX") == 0;
+	zCView::SetMode(resX, resY, bpp, initContextHandle);
+
+	if ( zoptions->Parm("ZNOMUSIC") )
+		zoptions->WriteBool(zOPT_SEC_SOUND, "musicEnabled", 0, 1);
+	auto music = zoptions->ReadBool(zOPT_SEC_SOUND, "musicEnabled", 1);
+	zCMusicSystem::DisableMusicSystem(!music);
+	if ( !zmusic ) {
+		if ( zoptions->Parm("ZNOMUSIC") ) {
+			zmusic = new zCMusicSys_Dummy;
+		} else {
+			zmusic = new zCMusicSys_DirectMusic;
+		}
+	}
+
+	if ( zoptions->Parm("ZNOSOUND") )
+		zoptions->WriteBool(zOPT_SEC_SOUND, "soundEnabled", 0, 1);
+	auto sound = zoptions->ReadBool(zOPT_SEC_SOUND, "soundEnabled", 1);
+	if ( !zsound ) {
+		if ( sound ) {
+			zsound = new zCSndSys_MSS; // 0x14
+		} else {
+			zsound = new zCSoundSystemDummy;
+		}
+	}
+
+	zsndMan = new zCSoundManager;
+
+
+
+	zCModelPrototype::s_autoConvertAnis = convData;
+	zCMesh::s_autoConvertMeshes = convData;
+	zCMorphMeshProto::autoConvertBinaryFile = convData;
+
+	zcon.Register("ZMARK", "marks outdoor occluder polys");
+	zcon.Register("ZWORLD STATUS", "prints some engine-world data");
+	zcon.Register("ZWORLD ACTIVEVOBS", "prints engine-world activeVobList");
+	zcon.Register("ZWORLD VOBTREE", "prints engine-world globalVobTree");
+	zcon.Register("ZWORLD VOBPROPS", "prints props of vob with specified name [VOB_NAME | VOB_ID]");
+	zcon.Register("ZRMODE MAT", "rendermode material/normal");
+	zcon.Register("ZRMODE WMAT", "rendermode material with overlaid wireframe");
+	zcon.Register("ZRMODE FLAT", "rendermode flat");
+	zcon.Register("ZRMODE WIRE", "rendermode wireframe");
+	zcon.Register("ZTOGGLE LIGHTSTAT", "toggles lightmaps/vertLight");
+	zcon.Register("ZTOGGLE VOBBOX", "toggles bbox3D drawing of vobs");
+	zcon.Register("ZTOGGLE RENDERVOB", "toggles drawing of vobs");
+	zcon.Register("ZTOGGLE MODELSKELETON", "toggles drawing of all models node-hierarchies");
+	zcon.Register("ZTOGGLE SMOOTHROOTNODE", "toggles smooothing of model root nodes translation");
+	zcon.Register("ZTOGGLE TEXSTATS", "toggles display of scene texture statistics");
+	zcon.Register("ZRNDSTAT", "renderer statistics");
+	zcon.Register("ZRNDMODELIST", "enumerates the renderers available modes and devices");
+	zcon.Register("ZVIDEORES", "sets video resolution");
+	zcon.Register("ZLIST MAT", "enumerating materials");
+	zcon.Register("ZLIST TEX", "enumerating textures");
+	zcon.Register("ZLIST MESH", "enumerating meshes");
+	zcon.Register("ZLIST CLASSTREE", "enumerating class hierarchy");
+	zcon.Register("ZMODEL PRINTTREE", "prints a model's node hierarchy [MODEL_NAME]");
+	zcon.Register("ZMOVECAMTOVOB", "[VOB_NAME | VOB_ID]");
+	zcon.Register("ZSOUNDMAN DEBUG", "toggles SoundManager debug info");
+	zcon.Register("ZTRIGGER", "sends trigger-message to vob [VOB_NAME | VOB_ID]");
+	zcon.Register("ZUNTRIGGER", "sends untrigger-message to vob [VOB_NAME | VOB_ID]");
+	zcon.Register("ZARCTEST", "tests integrity of each classes' arc/unarc funcs");
+	zcon.Register("ZOVERLAYMDS APPLY", "applies overlay-.MDS to vob's model [VOB_NAME | VOB_ID] [MDS_NAME]");
+	zcon.Register("ZOVERLAYMDS REMOVE", "removes overlay-.MDS from vob's model [VOB_NAME | VOB_ID] [MDS_NAME]");
+	zcon.Register("ZLIST", "list every living object of class [CLASS_NAME], if the class has SHARED_OBJECTS flag",
+	zcon.Register("ZTOGGLE SHOWZONES", "lists all zones the camera is currently located in (sound,reverb,fog,..)");
+	zcon.Register("ZTOGGLE SHOWTRACERAY", "displays all rays traced in the world as lines");
+	zcon.Register("ZTOGGLE SHOWPORTALS", "displays portals processed during occlusion during");
+	zcon.Register("ZTOGGLE SHOWHELPVERVISUALS", "displays helper visuals for vobs that don't have a natural visualization (eg zCTriggers)");
+	zcon.Register("ZTOGGLE PFXINFOS", "");
+	zcon.Register("ZSTARTANI", "starts ani on specified vob if it has a animatable visual [VOB_NAME] [ANI_NAME]");
+	zcon.Register("ZLIST VOBSWITHBIGBBOX", "lists suspicious vobs with very large bboxes");
+	zcon.Register("ZLIST MESHESWITHLOTSOFMATERIALS", "lists suspicious meshes with large material counts [NUM_MIN]");
+	zcon.Register("ZTOGGLE RESMANSTATS", "displays resource manager statistics (textures,sounds,..)");
+	zcon.Register("ZPROGMESHLOD", "apply global strength value to all pm LOD rendering, -1(default), 0..1..x");
+	zcon.Register("ZTOGGLE MARKPMESHMATERIALS", "marks vob/pmesh materials with color-code: red=1st mat, blue=2nd mat, green=3rd, yellow..white..brown..black=7th");
+	zcon.Register("ZTOGGLE PMESHSUBDIV", "debug");
+	zcon.Register("ZTOGGLE SHOWMEM", "displays information on heap allocations realtime onscreen");
+	zcon.Register("ZTOGGLE VOBMORPH", "toggles morphing of vobs");
+	zcon.Register("ZTOGGLE MATMORPH", "toggles morphing of materials");
+	zcon.Register("ZTOGGLE TNL", "toggles using of hardware transform and lightning");
+	zcon.Register("ZMEM DUMPHEAP BYTESPERLINE", "dumps current heap allocations sorted by bytes per line");
+	zcon.Register("ZMEM DUMPHEAP BLOCKSPERLINE", "dumps current heap allocations sorted by block per line");
+	zcon.Register("ZMEM CHECKHEAP", "checks consistency of current heap allocations");
+	zcon.Register("ZSTARTRAIN", "starts outdoor rain effect [STRENGTH]");
+	zcon.Register("ZSTARTSNOW", "starts outdoor snow effect [STRENGTH]");
+	zcon.Register("ZSET VOBFARCLIPZSCALER", "adjusts far clipping plane for objects, 1 being default");
+	zcon.Register("ZSET LEVELFARCLIPZSCALER", "adjusts far clipping plane for static level mesh, 1 being default");
+	zcon.Register("ZHIGHQUALITYRENDER", "batch activation of high-quality render options: vob/level farClip, LevelLOD-Strength, Object-LOD, TexMaxSize");
+	zcon.Register("ZTIMER MULTIPLIER", "sets factor for slow/quick-motion timing");
+	zcon.Register("ZTIMER REALTIME", "resets factor for slow/quick-motion timing to realtime");
+	zcon.Register("ZFOGZONE", "inserts test fog-zones");
+
+	zcon.AddEvalFunc(zDieter_EvalFunc);
+
+	zrenderMan.InitRenderManager();
+
+	zCMapDetailTexture::S_Init();
+	zCVisual::InitVisualSystem();
+	zCVob::InitVobSystem();
+	zCLensFlareFX::LoadLensFlareScript();
+	zCVobLight::LoadLightPresets();
+	zCDecal::CreateDecalMeshes();
+	zCParticleFX::InitParticleFX();
+	zCProgMeshProto::InitProgMeshProto();
+
+	auto polyTreshold = zCRayTurboAdmin::GetPolyTreshold();
+	polyTreshold = zoptions->ReadInt("ENGINE", "zRayTurboPolyTreshold", polyTreshold);
+	zCRayTurboAdmin::SetPolyTreshold(polyTreshold);
+}

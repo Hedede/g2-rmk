@@ -1,3 +1,13 @@
+int GetVob(zSTRING const& str, unsigned int pos)
+{
+	auto word = str.PickWord(pos, " ". " ");
+	auto num = word.ToLong();
+
+	if (num)
+		return zcon.GetWorld()->SearchVobByID(num, 0);
+	return = zcon.GetWorld()->SearchVobByName(word);
+}
+
 int oBert_EvalFunc(const zSTRING& cmdString, zSTRING& out)
 {
 	zSTRING word1 = cmdString.PickWord(1, " ", zSTR_SKIP);

@@ -1,31 +1,80 @@
 //----------- INTERNAL HELPERS -----------
 void ScriptWarning(zSTRING msg, bool print_func = true)
 {
-	if ( dword_8B436C )
-	{
-		if ( dword_8B436C == 1 )
-		{
-			zERROR::Warning("C: SCRIPT: " + msg);
-		}
-		else
-		{
-			if ( !byte_AB0A7D ) {
-				zERROR::Fault("C: SCRIPT: " + msg);
-			}
-			byte_AB0A7D = 1;
-			zERROR::Warning("C: SCRIPT: " + msg);
-		}
+	if ( script_warn_type == 0)
+		return;
 
-		if (print_func) {
-			auto cur_func = zparser->GetCurrentFunc();
-			auto sym = zparser->GetSymbol(cur_func);
-			if (!sym )
-				return;
-
-			zERROR::Warning("C: SCRIPT: last parser func-name: " +
-			                sym->name);
-		}
+	if ( script_warn_type == 1 ) {
+		zERROR::Warning("C: SCRIPT: " + msg); // 252
+	} else {
+		static bool reported_error = false;
+		if ( !reported_error )
+			zERROR::Fault("C: SCRIPT: " + msg); // 256
+		reported_error = true;
+		zERROR::Warning("C: SCRIPT: " + msg); // 257
 	}
+
+	if (print_func) {
+		auto cur_func = zparser->GetCurrentFunc();
+		auto sym = zparser->GetSymbol(cur_func);
+		if (!sym)
+			return;
+
+		zERROR::Warning("C: SCRIPT: last parser func-name: " + sym->name); // 262
+	}
+}
+
+oCNpc* GetNpc(zSTRING& funcname, int showfunc)
+{
+	auto parser = zCParser::GetParser();
+	if ( script_warn_type == 0)
+		return dynamic_cast<oCNpc*>(parser->GetInstance());
+
+	int idx;
+	zCVob* inst = parser->GetInstanceAndIndex(&index);
+	auto npc = dynamic_cast<oCNpc*>(inst);
+
+	zCVob* offs = parser->GetSymbol(index)->GetOffset(sym);
+	if ( auto npc = dynamic_cast<oCNpc*>(offs) )
+		return npc;
+	else if ( dynamic_cast<oCItem*>(offs) )
+		ScriptWarning(funcname + "(): illegal param: \"" + sym->name + "\" is an item and not a npc. ", showfunc);
+	else if ( dynamic_cast<oCMob*>(offs) ) 
+		ScriptWarning(funcname + "(): illegal param: \"" + sym->name + "\" is a mob and not a npc. ", showfunc);
+	else if ( dynamic_cast<zCVob*>(offs) ) 
+		ScriptWarning(funcname + "(): illegal param: \"" + sym->name + "\" is invalid (bug? -> contact me!). ", showfunc);
+	else
+		ScriptWarning( funcname + "(): illegal param: \"" + sym->name + "\" is NULL.", showfunc);
+
+	return npc;
+}
+
+oCItem* GetItem(zSTRING& funcname, int showfunc)
+{
+
+	auto parser = zCParser::GetParser();
+	if ( script_warn_type == 0)
+		return dynamic_cast<oCItem*>(parser->GetInstance());
+
+
+	int idx;
+	zCVob* inst = parser->GetInstanceAndIndex(&index);
+	auto item = dynamic_cast<oCItem*>(inst);
+
+	zCVob* offs = parser->GetSymbol(index)->GetOffset(sym);
+	if ( auto item = dynamic_cast<oCItem*>(offs) )
+		return item;
+	else if ( dynamic_cast<oCNpc*>(offs) )
+		ScriptWarning(funcname + "(): illegal param: \"" + sym->name + "\" is an npc and not an item. ", showfunc); // WASN'T in original code
+	else if ( dynamic_cast<oCMob*>(offs) ) 
+		ScriptWarning(funcname + "(): illegal param: \"" + sym->name + "\" is a mob and not an item. ", showfunc);
+	else if ( dynamic_cast<zCVob*>(offs) ) 
+		ScriptWarning(funcname + "(): illegal param: \"" + sym->name + "\" is invalid (bug? -> contact me!). ", showfunc);
+	else
+		ScriptWarning(funcname + "(): illegal param: \"" + sym->name + "\" is NULL.", showfunc);
+
+
+	return item;
 }
 
 oCNpc* oldSelfNpc;
@@ -125,9 +174,9 @@ int PrintDebug()
 	zSTRING text;
 	parser->GetParameter(&text);
 
-	if (zCView::GetShowDebug()) {
+	if (zCView::GetShowDebug())
 		zERROR::Message("U:Skript: " + text);
-	}
+
 	return 0;
 }
 

@@ -62,6 +62,7 @@ void GameLoop()
 	Log("GameLoop", "Gameloop starting.");
 
 	game.Init(hWndApp);
+	game.PreRun();
 	game.Run();
 	game.Done();
 }

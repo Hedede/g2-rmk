@@ -3,7 +3,7 @@
 #include <Hook/Externals.h>
 #include <Gothic/Types/Base.h>
 
-zBOOL& zExHandler = *reinterpret_cast<zBOOL*>(0x89D9F4);
+zBOOL& zExHandler = Value<zBOOL>(0x89D9F4);
 
 struct zCExceptionHandler {
 	static void SetIsActive(bool active)

@@ -152,5 +152,3 @@ int  __thiscall zCThread_vt::ThreadProc_thunk(zCThread* self)
 {
 	return self->ThreadProc();
 }
-
-

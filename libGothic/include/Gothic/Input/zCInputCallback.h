@@ -2,6 +2,12 @@
 #define ZCINPUTCALLBACK_H
 #include <Hook/Externals.h>
 #include <Gothic/Types/zCList.h>
+
+struct zCInputCallback;
+struct zCInputCallback_vt {
+	int (__thiscall *HandleEvent)(zCInputCallback*, int);
+};
+
 struct zCInputCallback {
 	zCInputCallback()
 	{
@@ -14,7 +20,11 @@ struct zCInputCallback {
 		call(this, enable);
 	}
 
-	static void GetInput();
+	static void GetInput()
+	{
+		Cdecl<void()> _g_GetInput{0x7A55C0};
+		_g_GetInput();
+	}
 
 protected:
 	void* _vtab;

@@ -101,6 +101,12 @@ struct zCOptions {
 		Thiscall<int(zCOptions*, zSTRING const&, const char*, int, int)> call{0x461DE0};
 		return call(this, zSTRING{sec}, opt.data(), value, temp);
 	}
+
+	bool Save(std::string const& filename)
+	{
+		Thiscall<int(zCOptions*, zSTRING)> func{0x4616C0};
+		return func(this, filename);
+	}
 };
 
 static auto& zoptions     = Value<zCOptions*>(0x8CD988);

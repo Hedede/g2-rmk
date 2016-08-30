@@ -193,3 +193,104 @@ void CGameManager::PreGraphicsInit()
 		Tool_ConvertData();
 }
 
+#include <Gothic/Menu/oMenuSavegame.h>
+#include <Gothic/Menu/oMenuChgKeys.h>
+#include <Gothic/Game/zSession.h>
+void CGameManager::PreRun()
+{
+	if ( dontStartGame )
+		return;
+
+	menu_chgkeys       = new oCMenuChgKeys("MENU_OPT_CONTROLS");
+	menu_chgkeys_ext   = new oCMenuChgKeys("MENU_OPT_CONTROLS_EXTKEY");
+
+	menu_save = new oCMenuSavegame("MENU_SAVEGAME_SAVE", oCMenuSavegame::Mode::Save);
+	menu_load = new oCMenuSavegame("MENU_SAVEGAME_LOAD", oCMenuSavegame::Mode::Load);
+
+	menu_save->saveMan = savegameManager;
+	menu_load->saveMan = savegameManager;
+
+	InitScreen_Menu();
+
+	zoptions->WriteBool("INTERNAL", "gameStartFailed", 0, 0);
+
+	std::string ini = zoptions->ParmValue("ini");
+	if (ini.empty())
+		ini = "Gothic.ini";
+
+	zoptions->Save(ini);
+
+	while (!exitGame) {
+		if (gameSession && gameSession->GetCamera())
+			break;
+		zCMenu::inGameMenu = 0;
+		Menu(0);
+		zCMenu::inGameMenu = 1;
+	}
+
+	InitScreen_Close();
+}
+
+void CGameManager::RenderFrame()
+{
+	if (backLoop) {
+		backLoop->Render();
+		backLoop->RenderBlit();
+	} else if (gameSession && gameSession->GetCamera()) {
+		gameSession->Render();
+		gameSession->RenderBlit();
+	}
+}
+
+bool& chapBool = Value<bool>(0x8C2954);
+void CGameManager::Run()
+{
+	while (!exitGame) {
+		if (exitSession) {
+			InitScreen_Open();
+			vidScreen->SetEnableHandleEvent(1);
+			InitScreen_Menu();
+
+			while (!exitGame) {
+				if (!exitSession)
+					break;
+				zCMenu::inGameMenu = 0;
+				Menu(0);
+				zCMenu::inGameMenu = 1;
+			}
+
+			InitScreen_Close();
+			exitSession = 0;
+		} else {
+			sysEvent();
+			zCInputCallback::GetInput();
+			RenderFrame();
+
+			Cdecl<void()> IntroduceChapter{0x6FB4E0};
+			// chapBool -- real name unknown
+			if (chapBool && MenuEnabled())
+				IntroduceChapter();
+		}
+	}
+}
+
+void CGameManager::Done()
+{
+	if (menu_chgkeys)
+		delete menu_chgkeys;
+	if (menu_chgkeys_ext)
+		delete menu_chgkeys_ext;
+	if (menu_save)
+		delete menu_save;
+	if (menu_load)
+		delete menu_load;
+
+	menu_chgkeys       = 0;
+	menu_chgkeys_ext   = 0;
+	menu_save          = 0;
+	menu_load          = 0;
+
+
+	Thiscall<void(CGameManager*)> _g_Done{0x4254E0};
+	_g_Done(this);
+}

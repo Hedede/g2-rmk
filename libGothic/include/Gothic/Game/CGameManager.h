@@ -42,11 +42,10 @@ struct CGameManager : zCInputCallback {
 		call(this);
 	}
 
-	void Run()
-	{
-		Thiscall<void(CGameManager*)> func{0x425830};
-		func(this);
-	}
+	void PreRun();
+	void Run();
+
+	void RenderFrame();
 
 	void Tool_ConvertData()
 	{
@@ -61,16 +60,37 @@ struct CGameManager : zCInputCallback {
 		func(this);
 	}
 
-	void Done()
-	{
-		Thiscall<void(CGameManager*)> func{0x4254E0};
-		func(this);
-	}
+	void Done();
 
 	void InitScreen_Open()
 	{
 		Thiscall<void(CGameManager*)> func{0x425F60};
 		func(this);
+	}
+
+	void InitScreen_Menu()
+	{
+		Thiscall<void(CGameManager*)> func{0x426210};
+		func(this);
+	}
+
+	void InitScreen_Close()
+	{
+		Thiscall<void(CGameManager*)> func{0x426330};
+		func(this);
+	}
+
+	void Menu(int a)
+	{
+		Thiscall<void(CGameManager*, int)> func{0x4292D0};
+		func(this, a);
+	}
+
+	bool MenuEnabled()
+	{
+		Thiscall<int(CGameManager*, int&)> func{0x42AAF0};
+		int a = 0;
+		return func(this, a);
 	}
 
 	void PlayVideo(std::string const& fileName)
@@ -107,8 +127,8 @@ struct CGameManager : zCInputCallback {
 
 	zCMenu*         menu_chgkeys       = nullptr;
 	zCMenu*         menu_chgkeys_ext   = nullptr;
-	oCMenuSavegame* menu_save_savegame = nullptr;
-	oCMenuSavegame* menu_load_savegame = nullptr;
+	oCMenuSavegame* menu_save          = nullptr;
+	oCMenuSavegame* menu_load          = nullptr;
 
 	//wird selten (?) aktualisiert. Mindestens aber beim Speichern und Laden.
 	int playTime = 0;

@@ -1,10 +1,9 @@
-int oBert_Console_EvalFunc(const zSTRING& cmdString, zSTRING& out)
+int oBert_EvalFunc(const zSTRING& cmdString, zSTRING& out)
 {
 	zSTRING word1 = cmdString.PickWord(1, " ", zSTR_SKIP);
 	zSTRING word2 = cmdString.PickWord(2, " ", zSTR_SKIP);
 	zSTRING word3 = cmdString.PickWord(3, " ", zSTR_SKIP);
 	zSTRING word4 = cmdString.PickWord(4, " ", zSTR_SKIP);
-
 
 	out = "ok";
 
@@ -1055,6 +1054,58 @@ int oCarsten_Console_EvalFunc(zSTRING const& _cmd, zSTRING& msg)
 			return 1;
 		}
 		return 0;
+	}
+
+	return 0;
+}
+
+// _bert/zzBert.cpp
+int zBert_EvalFunc(zSTRING const& str, zSTRING& msg)
+{
+	auto word1 = str.PickWord(1, " ",, &zSTR_SKIP);
+	auto word2 = str.PickWord(1, " ",, &zSTR_SKIP);
+	auto word3 = str.PickWord(1, " ",, &zSTR_SKIP);
+	auto word4 = str.PickWord(1, " ",, &zSTR_SKIP);
+
+	if (word1 == "ZERR") {
+		if (word2 == "AUTHORS") {
+			zerr.SearchForSpy();
+			zerr.SetFilterAuthors(word2);
+			msg = "logged authors are now: " + zerr.GetFilterAuthors();
+			return 1;
+		}
+
+		if (word2 == "SEARCHSPY") {
+			if (zerr.SearchForSpy()) {
+				msg = "spy found";
+			} else {
+				msg = "spy not found";
+			}
+			return 1;
+		}
+
+		if (word2 == "STATUS") {
+			msg = "max.level: " + zerr.filter_level;
+			msg += "  (authors: " + zerr.GetFilterAuthors() + ")\n";
+			msg += "flags: " + zerr.GetFilterFlagDescription() + "\n";
+			msg += "targets: " + zerr.GetTargetDescription() + "\n";
+			return 1;
+		}
+
+		if (word2 == "REM") {
+			zERROR::Separator("");
+			zINFO(5, " Remark: " + word3); // 339
+			msg = "added remark \"" + word3 + "\"";
+			return 1;
+		}
+
+		if ( word2 == "LEVEL" ) {
+			zerr.SearchForSpy();
+			zerr.SetFilterLevel(word3.ToLong());
+			msg = "max.level is now: "_s + zerr.GetFilterLevel();
+			return 1;
+
+		}
 	}
 
 	return 0;

@@ -11,13 +11,14 @@ class zCAccountInfo {
 
 };
 
+bool accountInitialized = 0;
 bool zAccount     = true;
 bool zAccountFull = true;
 
 void zAccountInit()
 {
 	if ( zoptions ) {
-		dword_AAC318 = 1;
+		accountInitialized = 1;
 		zAccount = zoptions->Parm("ZACCOUNT");
 		zAccountFull = zoptions->Parm("ZACCOUNTFULL");
 		zAccount |= zAccountFull;

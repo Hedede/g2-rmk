@@ -1,7 +1,8 @@
 struct oCMenu_Main : public zCMenu {
-	void HandleEvent(int key) override;
 	oCMenu_Main(zSTRING const& name) : zCMenu(name) {}
 	~oCMenu_Main() override = default;
+
+	void HandleEvent(int key) override;
 	void ScreenInit() override { zCMenu::ScreenInit(); }
 	void ScreenDone() override { zCMenu::ScreenDone(); }
 };

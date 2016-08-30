@@ -1,6 +1,9 @@
-// _bert\\oMenuSavegame.cpp
+// _bert/oMenuSavegame.cpp
 struct oCMenuSavegame : oCMenu_Main {
-	enum oTMenuSavegameMode {};
+	enum oTMenuSavegameMode {
+		MENU_SAVEGAME_MODE_SAVE,
+		MENU_SAVEGAME_MODE_LOAD
+	};
 
 	oCMenuSavegame(zSTRING const& name, oTMenuSavegameMode mode)
 		: oCMenu_Main(name), mode(mode)

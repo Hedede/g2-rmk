@@ -85,7 +85,7 @@ void oBert_StartUp()
 
 void zBert_StartUp()
 {
-	zCOption::ChangeDir(zoptions, 0);
+	zoptions->ChangeDir(DIR_SYSTEM);
 	_control87(0x9001Fu, 0xFFFFu);
 
 	zcon.Register("ZERR AUTHORS", "Set the author-filter for messages (as characters A-Z)");

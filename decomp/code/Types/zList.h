@@ -1,13 +1,28 @@
+// Intrusive list
 template <class T>
-class zList {
-public:
-	int zList::IsIn(T *val)
+struct zList {
+	int IsIn(T* val)
 	{
 		for (auto ele = root; ele; ele = ele->next) {
 			if (ele == val)
 				return 1;
 		}
 		return 0;
+	}
+
+	void Insert(T* val)
+	{
+		if (!root) {
+			root = val;
+			return;
+		}
+
+		if (!IsIn(val)) {
+			++count;
+			last->next = val;
+			val->next  = 0;
+			last = val;
+		}
 	}
 
 private:

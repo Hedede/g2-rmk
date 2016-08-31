@@ -7,7 +7,7 @@ struct zCConDat {
 	}
 
 	zCConDat(zSTRING const& h, zSTRING const& s, int t, void* a, int e)
-		: command(h), description(s), type(t), adr(a), ele(e), extended(true)
+		: command(h), description(s), type(t), adr(a), ele(e), var(true)
 	{
 		command.Upper();
 	}
@@ -20,7 +20,7 @@ private:
 	int type;
 	void *adr = nullptr;
 	int ele   = 0;
-	int extended = false;
+	int var   = false;
 	zCConDat *next;
 };
 
@@ -102,6 +102,8 @@ public:
 	{
 		return this->cparser;
 	}
+
+	int AutoCompletion(zSTRING& cmd);
 
 	int EditInstance(int index, void* adr);
 	int EditInstance(zSTRING const& name, void *adr)
@@ -326,7 +328,7 @@ void zCConsole::ShowInput(zCConsole *this)
 
 	auto line = ": " + instr;
 	if ( zCConsole::cur_console == this )
-		line.Insert("|"); // at end?
+		line += "|";
 
 	conview->Print(0, 0x1FFF - fontY, line);
 }
@@ -411,8 +413,7 @@ void zCConsole::Register(zSTRING const& command, zSTRING const& desc, int param)
 void zCConsole::InsertVar(zSTRING const& h, zSTRING const& s, int type, void* adr, int ele)
 {
 	_var = 1;
-	auto condat = new zCConDat(h, s, type, adr, ele);
-	list.Insert(condat);
+	list.InsertLast(new zCConDat{h, s, type, adr, ele}); // 275
 }
 
 zCConDat* zCConsole::Get(zSTRING const& what)
@@ -594,13 +595,251 @@ int zCConsole::EditInstance(int index, void *adr)
 
 		auto mem = adr + sym->GetOffset();
 		auto ele = sym->GetNumElements();
-		list.InsertLast(new zCConDat{"", name, type, mem, ele});
+
+		InsertVar("", name, type, mem, ele);
 	}
 
 	Register(zCConsole::EditFunc);
 	Show();
 
 	return 1;
+}
+
+void zCConsole::Update()
+{
+	if ( list.Empty() )
+		return;
+
+	conview = this->conview;
+
+	auto y = 0;
+	auto fontY = conview->FontY();
+
+	if (!conview)
+		return;
+
+	if ( id.data != "" ) {
+		conview->PrintCX(0, id);
+		y = fontY;
+	}
+
+	auto node = list.root;
+	for (auto i = skip; i > 0; --i)
+		node = node->next;
+
+	for ( i = 0; (i < showmax) && node; ++i, node = node->next ) {
+		if ( !node->adr )
+			continue;
+
+		zSTRING title = node->description;
+		zSTRING ynk   = node->command;
+		zSTRING value = "";
+
+		switch ( node->param ) {
+		case 0:
+			value = *(int*)node->adr;
+			break;
+		case 1:
+			value = *(float*)node->adr;
+			break;
+		case 2:
+			value = *(zSTRING*)node->adr;
+			break;
+		case 3:
+			if (auto str = *(zSTRING**)node->adr)
+				value = *str;
+			break;
+		default:
+			break;
+		}
+
+		int x = 0;
+		if ( title != "" ) {
+			conview->Print(x, y, title);
+			x = 4000;
+		}
+
+		conview->Print(x, y, ynk);
+		if ( node->ele <= 1 ) {
+			conview->Print(6000, y, ":  " + value);
+		} else {
+			conview->Print(6000, y, ":  " + value + ":  ("+ node->ele +")");
+		}
+	}
+
+	if ( dynsize )
+		conview->Print(0, 0x1FFF - 2 * conview->FontY(), savemsg);
+
+	ShowInput();
+}
+
+int zCConsole::Evaluate(zSTRING const& cmd)
+{
+	// this function was horrible spaghetti,
+	// some stuff might be wrong
+	savemsg.Clear();
+	if ( cmd.IsEmpty() )
+		return 0;
+
+	if (_var) {
+		zCConDat* node = list.root;
+		if ( cmd->Search(0, "=", 1u) > 0 ) {
+			auto word = cmd.PickWord(1, " ", zSTR_SKIP);
+			word.Upper();
+
+			for (; node; node = node->next) {
+				if (node->command == word)
+					break;
+			}
+		}
+
+		if ( !node || node->ele != 1 ) {
+			if ( _var ) {
+				node = list.root;
+
+				auto word = cmd.PickWord(1, " ", zSTR_SKIP);
+				word.Upper();
+
+				for (; node; node = node->next) {
+					if (node->command == word)
+						break;
+				}
+
+				if ( node && node->ele > 1 ) {
+					type = node->type;
+					adr  = node->adr;
+
+					for (int i = 0; i < list.count; ++i) {
+						if (!list.Get(i)->var)
+							continue;
+						auto node = list.Get(i);
+						list.Remove(node); // lines different from Remove()!
+						// (246, 255)
+						delete node;
+					}
+
+					zSTRING h;
+
+					dynsize = 1;
+					lx = 4000;
+					ly = 0;
+
+					size_t size;
+					if (in(type, 0,1))
+						size = sizeof(int);
+					else if (type == 2)
+						size = sizeof(zSTRING);
+
+
+					for (int i = 0; i < node->ele; ++i) {
+						InsertVar(h, i, type, adr, 1);
+						adr += size;
+					}
+
+					Hide();
+					Show();
+					return 1;
+				}
+			}
+		}
+	}
+
+	auto* func = this->evalfunc;
+	if ( func ) {
+		zSTRING msg;
+		if (cmd.Search("SAVE INFOFILE", 1u) > 0 ) {
+			SaveInfoFile("Readme_Console.txt");
+			msg = "File saved (DIR_CONFIG : Readme_Console.txt)";
+		} else if ( cmd == "HELP" || cmd =="HELP ") {
+			ShowHelp();
+		} else for(auto i = 0; i < zCON_MAX_EVAL; ++i) {
+			if (!func) break;
+			if (func(cmd, msg)) break;
+			++func;
+		}
+
+		if ( msg != "" ) {
+			if ( !dynsize ) {
+				if ( conview ) {
+					conview->Printwin(msg + "\n");
+				}
+			}
+			msg.Clear();
+		}
+	}
+
+	// possibly? it's too spaghetti to understand
+	if (var)
+		Eval(cmd);
+	return 1;
+}
+
+int zCConsole::AutoCompletion(zSTRING& cmd)
+{
+	// заколебало разбирать этот код
+	zSTRING result;
+	zSTRING word2;
+	zSTRING word3;
+	zSTRING tmp = cmd;
+	tmp.Upper();
+
+	zCConDat* match;
+	int matches = 0;
+	bool found = false;
+	for ( int i = 1; ; ++i ) {
+		auto word = tmp.PickWord(i, " ", zSTR_SKIP);
+		std::string::assign(&str.data, v6, 0, 0xFFFFFFFF);
+
+		if ( word == "" )
+			break;
+
+		for (auto node = list.root; node; node = node->next) {
+			for (auto j = 1; j < i; ++j) {
+				auto c1 = node->command.PickWord(j, " ", zSTR_SKIP);
+				auto c2 = tmp.PickWord(j, " ", zSTR_SKIP);
+
+				if (c1 == c2)
+					break;
+			}
+
+			if ( !_var && !node->adr && node->param == i && cparser ) {
+				auto ac = cparser->AutoCompletion(word);
+				if ( ac ) {
+					word.Lower();
+					cmd = str_1 + word;
+				}
+
+				return ac;
+			}
+
+			word2 = node->command.PickWord(" ", zSTR_SKIP);
+			if (word2.Search(0, word, 1) && (word2 != word3)) {
+				if (++mathches > 0)
+					return false;
+				word3 = word2;
+				match = node;
+			}
+		}
+
+		found = true;
+		if ( matches != 1 )
+			return false;
+		matches = 0;
+
+		word2 = ""; 
+		word3.Lower();
+		result += word3 + " ";
+	}
+
+	if ( found ) {
+		cmd = result;
+		if ( var ) {
+			if ( match->ele == 1 )
+				cmd += "= ";
+		}
+	}
+
+	return found;
 }
 
 //-----------------------------------------------------------------------------

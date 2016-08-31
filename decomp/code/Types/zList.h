@@ -2,6 +2,13 @@
 // Intrusive list
 template <class T>
 struct zList {
+	zList() = default;
+
+	bool Empty() const()
+	{
+		return count == 0;
+	}
+
 	void DeleteList()
 	{
 		while (auto cur = root) {
@@ -78,9 +85,21 @@ struct zList {
 		}
 	}
 
+	T* Get(int idx)
+	{
+		auto node = root;
+		for (int i = 0; i != idx; ++i) {
+			node = node->next;
+			if (!node) break;
+		}
+
+		return node;
+	}
+
 private:
-	int (*Compare)(const T* ele1,const T* ele2);
-	int count;    //Anzahl Elemente
-	T* last;
-	T* wurzel;
+	using CompareFunc = int (*)(const T* ele1,const T* ele2);
+	CompareFunc Compare;
+	int count = 0;    //Anzahl Elemente
+	T* last   = nullptr;
+	T* wurzel = nullptr;
 };

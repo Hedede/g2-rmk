@@ -22,6 +22,11 @@ struct zTRnd_VidModeInfo {
 	int bpp;
 };
 
+struct zTRnd_DeviceInfo {
+	zSTRING name;
+};
+
+
 struct zCRenderer {
 	static zTRnd_TexFormatInfo* GettexFormatInfo(zTRnd_TexFormat idx)
 	{

@@ -42,6 +42,8 @@ struct zCView : zCInputCallback {
 			StdPrintwin(text);
 	}
 
+	virtual ~zCView();
+
 	void HandleEvent(int key) override;
 
 	virtual int anx(int x);
@@ -72,7 +74,7 @@ struct zCView : zCInputCallback {
 	virtual void Line(int,int,int,int,zCOLOR const &);
 	virtual void GetViewport(int &,int &,int &,int &);
 	virtual void GetCode(int,int);
-	virtual ~zCView();
+
 	virtual void Blit();
 	virtual void DrawItems()
 	{
@@ -164,6 +166,16 @@ struct zCView : zCInputCallback {
 
 	void ChangeMode() {}
 	void SetNextMode() {}
+
+	void GetScreenExtends(int& x0, int& y0, int& x1, int& y1)
+	{
+		if ( screen ) {
+			x0 = screen->anx(pposx);
+			y0 = screen->any(pposy);
+			x1 = x0 + screen->anx(psizex - 1);
+			y1 = y0 + screen->any(psizey - 1);
+		}
+	}
 
 private:
 	//Noch eine _vtbl, weil zCView von zwei Klassen erbt.

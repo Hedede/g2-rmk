@@ -140,95 +140,6 @@ class zCViewText {
  * -Der Text wird vom InnerWindow dann in jedem Frame gezeichnet. Sobald das Menüitem entscheidet, dass es nichts mehr anzeigen muss wird das InnerWindow zerstört.
  */
 
-const int MAX_USERSTRINGS = 10;
-const int MAX_SEL_ACTIONS =  5;
-const int MAX_USERVARS    =  4;
-const int MAX_EVENTS      = 10;
-
-class zCMenuItem : public zCView {
-public:
-	virtual ~zCMenuItem();
-	virtual void DrawItems();
-	virtual void InitMenuItem();
-	virtual void ToggleValue(int,int);
-	virtual void Run();
-	virtual void GetText(int);
-	virtual void SetText(zCArray<zSTRING>,int);
-	virtual void SetText(zSTRING const &,int,int);
-	virtual void SetMinValue(float);
-	virtual void SetMaxValue(float);
-	virtual void Enter();
-	virtual void Leave();
-	virtual void Draw();
-	virtual void DrawFront();
-	virtual void Show();
-	virtual void Hide();
-	virtual void HasBeenCanceled();
-	virtual void Open();
-	virtual void Input(int,zSTRING &);
-	virtual void InsertInWin(zCView *);
-	virtual void RemoveFromWin();
-	virtual void UpdateContent();
-	virtual void UpdateFX();
-    //Parser Start
-
-    zSTRING parFontName;
-    zSTRING parText      [MAX_USERSTRINGS];
-    zSTRING parBackPic;
-    zSTRING parAlphaMode;
-    int parAlpha;
-    int parType;
-    int parOnSelAction         [MAX_SEL_ACTIONS];
-    zSTRING parOnSelAction_S   [MAX_SEL_ACTIONS];
-    zSTRING parOnChgSetOption;
-    zSTRING parOnChgSetOptionSection;
-    int parOnEventAction  [MAX_EVENTS];
-    int parPosX;
-    int parPosY;
-    int parDimX;
-    int parDimY;
-    int parSizeStartScale;
-    int parItemFlags;
-    int parOpenDelayTime;
-    int parOpenDuration;
-    int parUserFloat          [MAX_USERVARS];
-    zSTRING parUserString     [MAX_USERVARS];
-    int parFrameSizeX;
-    int parFrameSizeY;
-    zSTRING parHideIfOptionSectionSet;
-    zSTRING parHideIfOptionSet;
-    int parHideOnValue;
-private:
-    //Parser End
-    int iRefCtr;
-    zCView*                   pInnerWindow;           //
-    zCFont*                   pFont;                  //
-    zCFont*                   pFontHi;                //
-    zCFont*                   pFontSel;               //
-    zCFont*                   pFontDis;               //
-    zBOOL                     bViewInitialized;       //
-    zBOOL                     bLeaveItem;             //
-    zBOOL                     bVisible;               //
-    zBOOL                     bDontRender;            //
-    zCArray<zSTRING> listLines;
-
-    zSTRING id;                     //zSTRING            
-    int inserted;                  //zBOOL            
-    int changed;                   //zBOOL            
-    int active;                    //zBOOL            
-    int open;                      //zBOOL            
-    int close;                     //zBOOL            
-    int opened;                    //zBOOL            
-    int closed;                    //zBOOL            
-    int disabled;                  //zBOOL            
-    zCView*             orgWin;                    //
-    float fxTimer;                   //float            
-    float openDelayTimer;            //float            
-    
-    float activeTimer;               //float
-	zBOOL registeredCPP;             //zBOOL
-	zBOOL firstTimeInserted;         //zBOOL
-};
 
 //#################################################################
 //
@@ -251,43 +162,6 @@ class oCViewStatusBar : zCView
     zSTRING texValue;             //zSTRING 
 };
 
-//#################################################################
-//
-//  Vermutlich ziemlich nutzlos, ich dachte zunächst die Klasse
-//  wäre wichtiger. Alles entscheidende spielt sich
-//  zumindest was das Charaktermenü angeht in den gewöhnlichen
-//  zCMenuItems ab. zCMenuItemText wird (nicht ausschließlich)
-//  für Auswahlboxen benutzt (In den Einstellungen: [ja|nein]-Box)
-//
-//#################################################################
-
-class zCMenuItemText : zCMenuItem {
-public:
-	zSTRING GetText(int index) const
-	{
-		if ( index < listLines.NumInList() )
-			return listLines[index];
-		return zSTRING();
-	}
-
-	enum zTMenuItemTextMode {
-		MODE_SIMPLE,
-		MODE_ENUM,
-		MODE_MULTILINE
-	};
-private:
-	int mode; //siehe enum
-
-	zSTRING fullText;		//zSTRING
-	//Relevant für Options-Menüitems wo man zum Beispiel
-	//zwischen "aus" und "an" wählen kann.
-	int	numOptions;
-
-	int topLine;          //int		 
-	int viewLines;        //int		 
-	int numLines;         //int		 
-	zBOOL unformated;	    //zBOOL	
-};
 
 int zCMenu::ExecCommand(zSTRING& const cmdstr)
 {

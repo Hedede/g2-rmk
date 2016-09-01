@@ -1,19 +1,20 @@
+// _carsten/zMenu_Item.cpp
 enum zMenuItemFlags {
 	IT_CHROMAKEYED    = 1,
 	IT_TRANSPARENT    = 2,
 	IT_SELECTABLE     = 4,
 	IT_MOVEABLE       = 8,
-	IT_TXT_CENTER     = 16,
-	IT_DISABLED       = 32,
-	IT_FADE           = 64,
-	IT_EFFECTS_NEXT   = 128,
-	IT_ONLY_OUT_GAME  = 256,
-	IT_ONLY_IN_GAME   = 512,
-	IT_PERF_OPTION    = 1024,
-	IT_MULTILINE      = 2048,
-	IT_NEEDS_APPLY    = 4096, // die mit dem Menuepunkt verknuepfte Option wird NUR ueber ein APPLY aktiv
-	IT_NEEDS_RESTART  = 8192, // die mit dem Menuepunkt verknuepfte Option wird NUR ueber ein RESTART aktiv
-	IT_EXTENDED_MENU  = 16384,
+	IT_TXT_CENTER     = 0x10,
+	IT_DISABLED       = 0x20,
+	IT_FADE           = 0x40,
+	IT_EFFECTS_NEXT   = 0x80,
+	IT_ONLY_OUT_GAME  = 0x100,
+	IT_ONLY_IN_GAME   = 0x200,
+	IT_PERF_OPTION    = 0x400,
+	IT_MULTILINE      = 0x800,
+	IT_NEEDS_APPLY    = 0x1000, // die mit dem Menuepunkt verknuepfte Option wird NUR ueber ein APPLY aktiv
+	IT_NEEDS_RESTART  = 0x2000, // die mit dem Menuepunkt verknuepfte Option wird NUR ueber ein RESTART aktiv
+	IT_EXTENDED_MENU  = 0x4000,
 }
 
 const int MAX_USERSTRINGS = 10;
@@ -35,7 +36,39 @@ struct zCMenuItem : zCView {
 		zCMenuItem* tmp = new zCMenuItem;
 	}
 
-	~zCMenuItem() override;
+	static void Shutdown()
+	{
+		while (!itemList.Empty())
+			itemList[0]->Unregister();
+
+		Release(zCMenuItem::tmp);
+	}
+
+	static zCMenuItem* GetByName(zSTRING const& name)
+	{
+		zCMenuItem::tmp->SetName(name);
+		auto idx = itemList.Search(tmp);
+		if (idx == -1)
+			return nullptr;
+		return itemList[idx];
+	}
+
+	zCMenuItem() : zCView() { Init(); }
+	zCMenuItem(zSTRING const& name) : zCMenuItem();
+	{
+		id = name;
+		id.Upper();
+		SetByScript(id);
+		registeredCPP = 1;
+	}
+	~zCMenuItem() override
+	{
+		font = 0;
+		fontHi = 0;
+		fontSel = 0;
+		fontDis = 0;
+		Delete(innerWindow);
+	}
 	int HandleEvent(int key)
 	{
 		if ( key == KEY_ESCAPE || key == MOUSE_BUTTONRIGHT )
@@ -95,7 +128,47 @@ struct zCMenuItem : zCView {
 			return listLines[index];
 		return "";
 	}
-	virtual void SetText(zCArray<zSTRING>,int);
+	virtual void SetText(zCArray<zSTRING> textLines, int draw_now)
+	{
+		zCMenuItem *v4; // ebx@1
+		int v5; // edi@1
+		zSTRING *v6; // eax@2
+		const zSTRING *v7; // eax@2
+		void **v8; // ecx@7
+		char *v9; // esi@7
+		zSTRING *v10; // ebp@10
+		int v11; // ebx@10
+		signed int v12; // eax@11
+		int v13; // eax@15
+		zSTRING *v14; // ecx@15
+		std::string *v15; // eax@16
+		int result; // eax@20
+		zCMenuItem *v17; // [sp+10h] [bp-3Ch]@1
+		zSTRING a1; // [sp+18h] [bp-34h]@2
+		zSTRING v19; // [sp+2Ch] [bp-20h]@2
+		int v20; // [sp+44h] [bp-8h]@22
+		int v21; // [sp+48h] [bp-4h]@1
+		zSTRING *retaddr; // [sp+4Ch] [bp+0h]@10
+
+		v4 = 0;
+		v5 = 0;
+		v17 = 0;
+		v21 = 0;
+
+		zINFO(7,"B: MenuItem " + id + " text: textarray"); //543
+
+		listLines.Clear();
+		// appears to be bug in original code
+		for (auto line : listLines) {
+			listLines.InsertEnd(line);
+			FormatText(listLines.Back()); // .Back() is pseudocode
+		}
+
+		DrawFront();
+		if ( textLines.GetNum() > 0 )
+			DrawItems();
+	}
+
 	virtual void SetText(zSTRING const &,int,int);
 	virtual void SetMinValue(float) {}
 	virtual void SetMaxValue(float) {}
@@ -108,7 +181,28 @@ struct zCMenuItem : zCView {
 			DrawItems();
 		}
 	}
+
 	virtual void DrawFront();
+	{
+		if ( owner && innerWindow && !dontRender ) {
+			this->vt1->GetText(this, &text, 0);
+			v4 = this->vt1;
+			v16 = 0;
+			UpdateFX();
+
+			ClrPrintwin(innerWindow);
+			auto flags = par.itemFlags;
+			if ( flags & IT_MULTILINE8 ) {
+				innerWindow->Printwin(text + "\n");
+			} else {
+				if (flags & IT_TXT_CENTER)
+					innerWindow->PrintCXY(text);
+				else
+					innerWindow->Print(0, 0, text);
+			}
+		}
+	}
+
 	virtual bool Show()
 	{
 		if (orgWin) {
@@ -154,7 +248,32 @@ struct zCMenuItem : zCView {
 		openDelayTimer = 0.0;
 	}
 	virtual void UpdateContent() {}
-	virtual void UpdateFX();
+	virtual void UpdateFX()
+	{
+		if ( isVisible )
+		{
+			auto flags = this->par.itemFlags;
+			bool disabled = GetIsDisabled();
+
+			zCOLOR col;
+			zCFont* fnt;
+			if ( active ) {
+				col = GFX_WHITE;
+				fnt = fontSel;
+			} else if ( disabled ) {
+				col = zCOLOR{-81, -81, -81, 220};
+				fnt = fontDis;
+			} else {
+				col = GFX_WHITE;
+				fnt = fontM;
+			}
+
+			innerWindow->SetFont(fnt);
+			innerWindow->SetFontColor(col);
+			innerWindow->SetTransparency(par.alpha);
+			UpdateSize();
+		}
+	}
 
 	void Release()
 	{
@@ -177,6 +296,22 @@ struct zCMenuItem : zCView {
 	bool IsRegistered()
 	{
 		return itemList.Search(this) != -1;
+	}
+
+	void Unregister()
+	{
+		if (!itemList.Empty()) {
+			itemList.Remove(this);
+			this->Release();
+		}
+	}
+
+	void Register()
+	{
+		if (!IsRegistered()) {
+			itemList.InsertSort(this);
+			++refCtr;
+		}
 	}
 
 	zCMenuItem* GetSelItem()
@@ -216,12 +351,10 @@ struct zCMenuItem : zCView {
 			return 1;
 
 		auto flags = par.itemFlags;
-		if ((flags & IT_TRANSPARENT) && zCMenu::inGameMenu)
+		if ((flags & IT_ONLY_IN_GAME) && !zCMenu::inGameMenu)
 			return 1;
-
-		if ((flags & IT_CHROMAKEYED) && zCMenu::inGameMenu)
+		if ((flags & IT_ONLY_OUT_GAME) && zCMenu::inGameMenu)
 			return 1;
-
 		return par.itemFlags & IT_DISABLED;
 	}
 
@@ -239,25 +372,28 @@ struct zCMenuItem : zCView {
 
 	int GetIsSelectable()
 	{
-		if (!isVisible)
-			return 0;
-
-		auto flags = par.itemFlags;
-		if (flags & IT_ONLY_IN_GAME && !zCMenu::inGameMenu)
-			return 0;
-		if (flags & IT_ONLY_OUT_GAME && zCMenu::inGameMenu)
-			return 0;
-		if (flags & IT_DISABLED)
+		if (GetIsDisabled())
 			return false;
 		if (dontRender)
 			return false;
-		// compiler bullshit?
-		if ( !(flags & IT_ONLY_IN_GAME) || zCMenu::inGameMenu ) {
-			if ( flags & IT_ONLY_OUT_GAME && zCMenu::inGameMenu )
-				return false;
-			return par.itemFlags & IT_SELECTABLE;
-		}
-		return false;
+
+		auto flags = par.itemFlags;
+		if ( (flags & IT_ONLY_IN_GAME) && !zCMenu::inGameMenu )
+			return false;
+		if ( flags & IT_ONLY_OUT_GAME && zCMenu::inGameMenu )
+			return false;
+		return par.itemFlags & IT_SELECTABLE;
+	}
+
+	void SetName(zSTRING& name)
+	{
+		id = name;
+		id.Upper();
+	}
+
+	void SetName(zSTRING const& name)
+	{
+		id = name;
 	}
 
 	zSTRING const& GetName() const
@@ -355,6 +491,8 @@ struct zCMenuItem : zCView {
 		DrawFront();
 	}
 
+	void SetByScript(zSTRING& name);
+
 public:
 	// m_parYYYY in original code
 	struct {
@@ -428,39 +566,39 @@ private:
 	zBOOL firstTimeInserted;
 };
 
-//#################################################################
-//
-//  Vermutlich ziemlich nutzlos, ich dachte zunächst die Klasse
-//  wäre wichtiger. Alles entscheidende spielt sich
-//  zumindest was das Charaktermenü angeht in den gewöhnlichen
-//  zCMenuItems ab. zCMenuItemText wird (nicht ausschließlich)
-//  für Auswahlboxen benutzt (In den Einstellungen: [ja|nein]-Box)
-//
-//#################################################################
+void zCMenuItem::SetByScript(zSTRING& name)
+{
+	SetName(name);
 
-struct zCMenuItemText : zCMenuItem {
-	zSTRING GetText(int index) const
-	{
-		if ( index < listLines.NumInList() )
-			return listLines[index];
-		return zSTRING();
+	if ( zCMenu::GetParser()->GetSymbol(name) )
+		zCMenu::GetParser()->CreateInstance(name, (void*)&par);
+	par.backPic.Upper();
+	SetAlphaBlendFunc(zCRenderer::AlphaBlendFuncStringToType(par.alphaMode));
+
+	auto fontName = par.fontName;
+	auto fnt = zfontman->Load(fontName);
+	font = zfontman->GetFont(fnt);
+
+	if ( fontName.Search(0, "_hi", 1u) < 0 ) {
+		auto pos = fontName.Search(0, ".", 1);
+		fontName.Insert(pos, "_hi");
 	}
 
-	enum zTMenuItemTextMode {
-		MODE_SIMPLE,
-		MODE_ENUM,
-		MODE_MULTILINE
-	};
-private:
-	int mode; //siehe enum
+	fnt = zfontman->Load(fontName);
+	font = zfontman->GetFont(fnt);
+	fontDis = font;
+	fontHi = v11;
+	fontSel = v11;
 
-	zSTRING fullText;		//zSTRING
-	//Relevant für Options-Menüitems wo man zum Beispiel
-	//zwischen "aus" und "an" wählen kann.
-	int	numOptions;
+	Register();
 
-	int topLine;          //int		 
-	int viewLines;        //int		 
-	int numLines;         //int		 
-	zBOOL unformated;	    //zBOOL	
-};
+	int num = -1;
+	for (int i = 0; i < MAX_USERSTRINGS; ++i) {
+		if (text[i].NotEmpty())
+			num = i;
+	}
+
+	for (int i = 0; i < num; ++i)
+		listLines.Insert(text[i]);
+}
+

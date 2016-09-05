@@ -1,7 +1,18 @@
 struct zCSoundManager {
+	zCSoundManager() = default;
+
 	struct zCTableEntry {
 		char data[44];
 	};
+
+	struct zCSoundEventData {
+		char dta[28];
+	};
+
+	struct zCMediumType {
+		char data[24];
+	};
+
 
 private:
 	zCArraySort<zCMediumType> mediumTypes;

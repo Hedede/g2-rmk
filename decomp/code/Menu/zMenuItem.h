@@ -15,7 +15,19 @@ enum zMenuItemFlags {
 	IT_NEEDS_APPLY    = 0x1000, // die mit dem Menuepunkt verknuepfte Option wird NUR ueber ein APPLY aktiv
 	IT_NEEDS_RESTART  = 0x2000, // die mit dem Menuepunkt verknuepfte Option wird NUR ueber ein RESTART aktiv
 	IT_EXTENDED_MENU  = 0x4000,
-}
+};
+
+
+enum zMenuItemType {
+	MENU_ITEM_UNDEF     = 0,
+	MENU_ITEM_TEXT      = 1,
+	MENU_ITEM_SLIDER    = 2,
+	MENU_ITEM_INPUT     = 3,
+	MENU_ITEM_CURSOR    = 4,
+	MENU_ITEM_CHOICEBOX = 5,
+	MENU_ITEM_BUTTON    = 6,
+	MENU_ITEM_LISTBOX   = 7,
+};
 
 const int MAX_USERSTRINGS = 10;
 const int MAX_SEL_ACTIONS =  5;
@@ -185,9 +197,7 @@ struct zCMenuItem : zCView {
 	virtual void DrawFront();
 	{
 		if ( owner && innerWindow && !dontRender ) {
-			this->vt1->GetText(this, &text, 0);
-			v4 = this->vt1;
-			v16 = 0;
+			auto text = GetText(text, 0);
 			UpdateFX();
 
 			ClrPrintwin(innerWindow);
@@ -602,3 +612,264 @@ void zCMenuItem::SetByScript(zSTRING& name)
 		listLines.Insert(text[i]);
 }
 
+
+int zCMenuItem::Input(int len, zSTRING& ls)
+{
+	zSTRING s = ls;
+	SetText(s + "_", 0, 0);
+
+	int key = -1;
+	int num = 0;
+	while ( 1 ) {
+		zCMenu::GetActive()->HandleFrame(1);
+		key = zinput->GetKey(1, 1);
+		switch (key) {
+		case KEY_ESCAPE:
+		case KEY_RETURN:
+		case MOUSE_BUTTONLEFT:
+		case MOUSE_BUTTONRIGHT:
+			break;
+
+		case KEY_DELETE:
+			s.Clear();
+			SetText(s + "_");
+			continue;
+
+		case KEY_BACK:
+			if (num > 0) {
+				s.Delete(s.Length() - 1, 1);
+				SetText(s + "_");
+				--num;
+			}
+			continue;
+		}
+
+		if ( key > KEY_DELETE ) {
+			int shift = (zinput->KeyPressed(KEY_RSHIFT) || zinput->KeyPressed(KEY_LSHIFT)) ? KEY_LSHIFT : 0;
+			int alt   = zinput->KeyPressed(KEY_RMENU) ? KEY_RMENU : 0;
+
+			char c = GetCharFromDIK(key, shift, alt);
+			if ( num < len && c >= ' ' && c <= '\xFF' ) {
+				s += c;
+				SetText(s + "_", 0, 0);
+				++num;
+			}
+		}
+	}
+
+	ls = s;
+	SetText(s);
+	return key == KEY_RETURN || key == MOUSE_BUTTONLEFT;
+}
+
+void zCMenuItem::Init()
+{
+	memset(par.onEventAction, 0, 0x24u);
+	for (auto& s : par.onSelAction_S)
+		s.Clear();
+	inserted = 0;
+	changed = 1;
+	active = 0;
+	activeTimer = 0;
+	orgWin = 0;
+	open = 0;
+	close = 0;
+	opened = 0;
+	closed = 0;
+	fxTimer = 0;
+	openDelayTimer = 0;
+	par.alpha = 254;
+	par.type = 0;
+	par.openDuration = -1.0;
+	par.sizeStartScale = 1.0;
+	par.itemFlags = 0;
+	par.openDelayTime = 0;
+	par.posX = 0;
+	par.posY = 0;
+	par.dimX = -1;
+	par.dimY = -1;
+	par.frameSizeX = 0;
+	par.frameSizeY = 0;
+	disabled = 0;
+	registeredCPP = 0;
+	isVisible = 1;
+	dontRender = 0;
+	viewInitialized = 0;
+	refCtr = 1;
+	innerWindow = 0;
+	fontM = 0;
+	fontHi = 0;
+	fontSel = 0;
+	fontDis = 0;
+	firstTimeInserted = 1;
+	par.fontName.data.Clear();
+	par.backPic.data.Clear();
+	par.alphaMode.data.Clear();
+	par.onChgSetOption.data.Clear();
+	id.Clear();
+	for (auto& s : par.text)
+		s.Clear();
+	for (auto& f : par.userFloat)
+		f = 0;
+	for (auto& s : par.userString)
+		s.Clear();
+
+	par.hideIfOptionSet.Clear();
+	par.hideIfOptionSectionSet.Clear();
+	par.hideOnValue = 0;
+}
+
+void zCMenuItem::SetText(zSTRING const& txt, int line, int draw_now)
+{
+	if ( line < 0 )
+		return;
+	zINFO(7,"B: MenuItem " + id + " text: " + txt + " (line " + line + ")"); //514
+
+	while (listLines.GetNum() <= line)
+		listLines.InsertEnd("");
+
+	listLines[line] = txt;
+
+	FormatText(listLines[line]);
+	UpdateSize();
+	DrawFront();
+	if ( draw_now )
+		DrawItems();
+}
+
+	int GetDimX(int parDimX)
+	{
+		if ( parDimX < 0 ) {
+			zCView* inWin = innerWindow;
+			if ( !inWin )
+				inWin = this;
+			auto font = inWin->GetFont();
+			if ( font && owner ) {
+				auto x = nax(par.frameSizeX);
+				auto fontX = font->GetFontX(GetText(0));
+				return owner->anx(x + fontX);
+			}
+			return 0
+		}
+		return parDimX;
+	}
+
+void zCMenuItem::InsertInWin(zCView* orgWindow)
+{
+	if ( owner )
+		RemoveFromWin();
+	if ( isVisible ) {
+		orgWin = orgWindow;
+		orgWin->InsertItem(this, 0);
+		SetPos(par.posX, par.posY);
+		SetTransparency(par.alpha);
+		SetFont(par.fontName);
+
+		auto x = GetDimY(par.dimY);
+		auto y = GetDimX(par.dimX);
+		SetSize(x, y);
+
+		if ( par.backPic.Search(0, ".TGA", 1u) > 0 ) {
+			zSTRING backPic = par.BackPic;
+			if ( par.backPic.Search(0, "|", 1u) > 0 ) {
+				backPic = backPic.PickWord(inGameMenu ? 2 : 1, "|", "|");
+			}
+			if (!backPic.IsEmpty())
+				InsertBack(&backPic);
+			else
+				InsertBack(nullptr);
+		}
+
+		innerWindow = new zCView(
+				par.frameSizeX,
+				par.frameSizeY,
+				0x2000 - par.frameSizeX,
+				0x2000 - par.frameSizeY,
+				2);
+
+		v23 = this->par.alpha;
+		v47 = this->fontColor;
+		v47.color[3] = v23;
+		v24 = operator new(0x100u);
+		orgWindow = v24;
+		v56 = 5;
+		if ( v24 )
+			v25 = zCView::zCView(
+		else
+			v25 = 0;
+		v56 = -1;
+
+		InsertItem(innerWindow, 0);
+		SetPos(innerWindow, par.frameSizeX, par.frameSizeY);
+		innerWindow->SetSize(2 * (4096 - par.frameSizeX), 2 * (4096 - par.frameSizeY));
+		innerWindow->SetFont(par.fontName);
+		innerWindow->SetFontColor(fontColor);
+		innerWindow->SetAlphaBlendFunc(zCRenderer::AlphaBlendFuncStringToType(par.alphaMode);
+
+		if ( par.itemFlags & IT_TXT_CENTER )
+			innerWindow->Setflags(512);
+		else
+			innerWindow->ClrFlags(512);
+
+		inserted = 1;
+		UpdateFX();
+
+		// SetSize(GetDimX(par.dimX), GetDimY(par.dimY));
+		UpdateSize();
+
+		ClrPrintwin();
+		DrawFront();
+		return;
+	}
+	v10 = 0;
+}
+
+zCMenuItem* zCMenuItem::Create(zSTRING const& name)
+{
+	if (name.IsEmpty())
+		return nullptr;
+
+	zSTRING _name = name;
+	_name.Upper();
+
+	auto item = GetByName(_name);
+	if (item) {
+		++item->refCtr;
+		return item;
+	}
+
+	zCMenuItem* result;
+	if ( zCMenu::GetParser()->GetSymbol(_name) ) {
+		zCMenu::GetParser()->CreateInstance(_name, &zCMenuItem::tmp->par);
+		switch (  zCMenuItem::tmp->par.type ) {
+		case MENU_ITEM_TEXT:
+			result = new zCMenuItemText(_name);
+			break;
+		case MENU_ITEM_INPUT:
+			result = new zCMenuItemInput(_name);
+			break;
+		case MENU_ITEM_SLIDER:
+			result = new zCMenuItemSlider(_name);
+			break;
+		case MENU_ITEM_CHOICEBOX:
+			result = new zCMenuItemChoice(_name);
+			break;
+		case MENU_ITEM_LISTBOX:
+			result = new zCMenuItemList(_name);
+			break;
+		case MENU_ITEM_BUTTON:
+			result = new zCMenuItemButton(_name);
+			break;
+		default:
+			zFATAL("C: zmenu_item.cpp(zCMenuItem::Create): Illegal item type: "_s + tmp->par.type); // 97
+			return nullptr;
+		}
+	} else {
+		zFATAL("C: zmenu_item.cpp(zCMenuItem::Create): MenuItem not known: " + _name); // 100
+	}
+
+	result->InitView();
+	result->InitMenuItem();
+
+	return result;
+}

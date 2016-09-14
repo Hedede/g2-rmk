@@ -254,3 +254,4 @@ void oCVisualFX::InitParser()
 	oCVisualFX::fxParser->CheckClassSize("CFX_BASE", 616);
 	zCParser::enableParsing = oldEnable;
 }
+

@@ -21,3 +21,16 @@ private:
 	zCArraySort<zCSoundEventData> eventData2;
 	int unk;
 };
+
+/*
+     zCArraySort<zCSoundManager::zCMediumType>::zCArraySort<zCSoundManager::zCMediumType>(this);
+    `eh vector constructor iterator'(
+      this->table,
+      0x2Cu,
+      17,
+      zCSoundManager::zCTableEntry::zCTableEntry,
+      zCSoundManager::zCTableEntry::~zCTableEntry);
+    zCArraySort<zCSoundManager::zCSoundEventData>::zCArraySort<zCSoundManager::zCSoundEventData>(this->eventData1);
+    zCArraySort<zCSoundManager::zCSoundEventData>::zCArraySort<zCSoundManager::zCSoundEventData>(this->eventData2);
+    zCSoundManager::Init(this);
+*/

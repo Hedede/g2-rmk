@@ -1,2 +1,6 @@
 *.o
+*.idb
+*.id2
+*.id1
+*.id0
 config.mk

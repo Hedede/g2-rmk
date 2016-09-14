@@ -1,4 +1,5 @@
 #pragma once
+#include <Gothic/Types/Base.h>
 #include <Gothic/Types/zSTRING.h>
 #include <Gothic/Types/zArray.h>
 #include <Gothic/Types/zCList.h>
@@ -9,6 +10,8 @@ struct zCParser;
 struct zCView;
 
 struct zCConDat;
+
+constexpr int zCON_MAX_EVAL = 15;
 
 struct zCConsole {
 	zCConsole()
@@ -21,6 +24,20 @@ struct zCConsole {
 	{
 		Thiscall<void(zCConsole*, int,int,zSTRING const&)> ctor{0x7820B0};
 		ctor(this, x, y, zSTRING{name});
+	}
+
+	void Register(std::string const& cmd, std::string const& desc)
+	{
+		Thiscall<void(zCConsole*, zSTRING const&, zSTRING const&)> func{0x782AE0};
+
+		func(this, cmd, desc);
+	}
+
+	using EvalFunc = zBOOL( const zSTRING& s, zSTRING& msg );
+	void AddEvalFunc(EvalFunc* func)
+	{
+		if ( evalcount + 1 < zCON_MAX_EVAL )
+			evalfunc[evalcount++] = func;
 	}
 
 	void SetPos(int x, int y)
@@ -58,8 +75,10 @@ struct zCConsole {
 	int autocomplete;
 	zList<zCConDat> list;
 	zCView *conview;
+
 	int evalcount;
-	int (*evalfunc[15])(const zSTRING& s, zSTRING& msg);
+	EvalFunc* evalfunc[zCON_MAX_EVAL];
+
 	void (*changedfunc)(const zSTRING& s);
 	zCWorld *world;
 	zCParser *cparser;

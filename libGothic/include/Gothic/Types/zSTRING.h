@@ -1,5 +1,4 @@
-#ifndef G2_zSTRING_h
-#define G2_zSTRING_h
+#pragma once
 #include <string>
 #include <Hook/Externals.h>
 #include <Gothic/Types/Base.h>
@@ -36,11 +35,16 @@ struct zSTRING {
 		return std::string(ptr, len);
 	}
 
+	zSTRING& Upper()
+	{
+		Thiscall<void(zSTRING*)> func{0x46AB00};
+		func(this);
+	}
+
 private:
-	void* _vtab; 
+	void* _vtab;
 	char alloc;
 	char *ptr;
 	size_t len;
 	int res;
 };
-#endif//G2_zSTRING_h

@@ -63,9 +63,6 @@ void oBert_Options()
 
 void oBert_StartUp()
 {
-	zSTRING command;
-	zSTRING description;
-
 	zcon.Register("SET CLIPPINGFACTOR", "Setting the clipping-factor. Default is 1. Usually check 0.1 ... 2.0");
 	zcon.Register("LIST CS", "List running cutscenes.");
 	zcon.Register("LIST CS STATES", "List running cutscenes including their current status.");
@@ -78,7 +75,7 @@ void oBert_StartUp()
 	zcon.Register("TOGGLE CUTSCENES ENABLED", "Enable or disable cutscene-system");
 	zcon.Register("HERO EXPORT", "Exports your hero to the given file.");
 	zcon.Register("Imports your hero from the given file.", "HERO IMPORT");
-	zcon->AddEvalFunc(oBert_Console_EvalFunc);
+	zcon.AddEvalFunc(oBert_EvalFunc);
 	oBert_Options();
 }
 

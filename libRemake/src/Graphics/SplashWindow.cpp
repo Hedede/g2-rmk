@@ -5,7 +5,7 @@ void SplashWindow::EventLoop(SplashWindow& wnd)
 {
 	auto image = IMG_Load("splash.png");
 	if (!image) {
-		wnd.Notify();
+		wnd.Stop();
 		return;
 	}
 
@@ -25,7 +25,7 @@ void SplashWindow::EventLoop(SplashWindow& wnd)
 			SDL_WINDOW_BORDERLESS);
 
 	if (!window) {
-		wnd.Notify();
+		wnd.Stop();
 		return;
 	}
 

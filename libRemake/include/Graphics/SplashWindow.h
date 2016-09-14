@@ -11,7 +11,7 @@ struct SplashWindow {
 	SplashWindow() = default;
 	~SplashWindow()
 	{
-		Stop();
+		Close();
 	}
 
 	SplashWindow(SplashWindow const&) = delete;
@@ -22,10 +22,10 @@ struct SplashWindow {
 		return running;
 	}
 
-	void Stop()
+	void Close()
 	{
 		if (IsRunning()) {
-			Notify();
+			Stop();
 
 			std::unique_lock<std::mutex> lk(mutex);
 			cv.wait(lk, [&] { return done; });
@@ -36,7 +36,7 @@ struct SplashWindow {
 	}
 
 private:
-	void Notify()
+	void Stop()
 	{
 		std::lock_guard<std::mutex> lock{mutex};
 		running = false;

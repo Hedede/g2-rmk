@@ -2,7 +2,7 @@
 #include <Logging/LogFile.h>
 #include <cstdio>
 
-namespace g2r {
+namespace g2 {
 aw::LogProvider logger;
 
 LogFile::LogFile()
@@ -48,4 +48,4 @@ void LogFile::log(Level level, std::string const& src, std::string const& msg)
 		std::fwrite(str.data(), str.size(), 1, (FILE*)logfile);
 	}
 }
-} // namespace g2r
+} // namespace g2

@@ -60,7 +60,7 @@ struct zCThread {
 	bool SuspendThread()
 	{
 		if (!threadSuspended) {
-			g2r::Log("zThread", "Suspending thread:", uintptr_t(this));
+			g2::Log("zThread", "Suspending thread:", uintptr_t(this));
 			threadSuspended = 1;
 			return ::SuspendThread(threadHandle) != -1;
 		}
@@ -70,7 +70,7 @@ struct zCThread {
 	bool ResumeThread()
 	{
 		if (threadSuspended) {
-			g2r::Log("zThread", "Resuming thread:", uintptr_t(this));
+			g2::Log("zThread", "Resuming thread:", uintptr_t(this));
 			threadSuspended = 0;
 			return ::ResumeThread(threadHandle) != -1;
 		}

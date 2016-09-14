@@ -3,7 +3,7 @@
 #include <string>
 #include <aw/logger/Log.h>
 
-namespace g2r {
+namespace g2 {
 
 struct LogFile : aw::Log {
 	using aw::Log::Level;
@@ -16,5 +16,5 @@ private:
 	void* logfile;
 };
 
-} // namespace g2r
+} // namespace g2
 #endif//g2remake_LogFile_h

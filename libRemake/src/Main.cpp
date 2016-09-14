@@ -19,7 +19,7 @@ char(&sysLogName)[260] = Value<char[260]>(0x8D3A90);
 
 extern "C" void __attribute__((dllexport)) aw_main(void* hinst, char const* args)
 {
-	using namespace g2r;
+	using namespace g2;
 	LogFile file_log;
 	logger.setLogger(&file_log);
 
@@ -54,7 +54,7 @@ extern "C" void __attribute__((dllexport)) aw_main(void* hinst, char const* args
 
 void GameLoop()
 {
-	using namespace g2r;
+	using namespace g2;
 	CGameManager game;
 
 	sysEvent();

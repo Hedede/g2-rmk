@@ -39,7 +39,7 @@ std::string narrow(WINAPI_STRING const& str)
 
 void InitWin32Stuff(char const* cmdLine)
 {
-	using namespace g2r;
+	using namespace g2;
 	Log("Win32", "Initializing");
 	winMainThreadID = GetCurrentThreadId();
 	auto a = GetCurrentProcess();

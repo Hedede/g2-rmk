@@ -6,7 +6,7 @@
 #include <Gothic/Menu/zMenu.h>
 #include <Gothic/System/System.h>
 
-namespace g2r {
+namespace g2 {
 void InitSound()
 {
 	Log("Startup", "Initializing Sound");
@@ -45,14 +45,14 @@ void InitOptions()
 	zoptions->ReadReal("VIDEO", "zVidContrast"   , 0.5);
 	zoptions->ReadReal("VIDEO", "zVidGamma"      , 0.5);
 }
-} // namespace g2r
+} // namespace g2
 
 
 
 #include <SDL2/SDL.h>
 void CGameManager::Init(void* hwnd)
 {
-	using namespace g2r;
+	using namespace g2;
 
 	sysContextHandle = hwnd;
 
@@ -72,10 +72,10 @@ void CGameManager::Init(void* hwnd)
 
 	sysEvent();
 
-	g2r::InitSound();
-	g2r::InitMusic();
-	g2r::InitMenu();
-	g2r::InitOptions();
+	g2::InitSound();
+	g2::InitMusic();
+	g2::InitMenu();
+	g2::InitOptions();
 
 
 	if ( zoptions->Parm("PLAYER") ) {
@@ -108,7 +108,7 @@ void CGameManager::Init(void* hwnd)
 #include <Gothic/Menu/zView.h>
 void CGameManager::PreGraphicsInit()
 {
-	using namespace g2r;
+	using namespace g2;
 
 	SplashWindow splash;
 

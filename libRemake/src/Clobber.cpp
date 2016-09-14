@@ -42,7 +42,7 @@ int sysGetTime()
 #include <windows.h>
 #include <Gothic/Debug/zERROR.h>
 
-#include <aw/utility/string/as_string.h>
+#include <aw/utility/to_string.h>
 #include <Logging/Log.h>
 int __thiscall zERROR_Report(void*, int type, int id, zSTRING& message, char levelPrio, char flag, int line, char *file, const char *function)
 {
@@ -62,22 +62,22 @@ int __thiscall zERROR_Report(void*, int type, int id, zSTRING& message, char lev
 	src.erase(0, last);
 	if (src.empty())
 		src = "Gothic";
-	src += " [" + aw::as_string(levelPrio) + "]";
+	src += " [" + aw::to_string(levelPrio) + "]";
 
 	switch(type) {
 	default:
 	case zERR_TYPE_OK:
 	case zERR_TYPE_MESSAGE:
-		g2r::Log(src, std::string(msg));
+		g2::Log(src, std::string(msg));
 		break;
 	case zERR_TYPE_WARNING:
-		g2r::Warning(src, std::string(msg));
+		g2::Warning(src, std::string(msg));
 		break;
 	case zERR_TYPE_FAULT:
-		g2r::Error(src, std::string(msg));
+		g2::Error(src, std::string(msg));
 		break;
 	case zERR_TYPE_FATAL:
-		g2r::Fatal(src, std::string(msg));
+		g2::Fatal(src, std::string(msg));
 		break;
 	};
 }
@@ -86,7 +86,7 @@ int __thiscall zERROR_Report(void*, int type, int id, zSTRING& message, char lev
 
 void InitFunctions()
 {
-	using namespace g2r;
+	using namespace g2;
 	constexpr uintptr_t text_start = 0x401000;
 	constexpr uintptr_t text_end   = 0x82E000;
 	constexpr auto text_length = text_end - text_start;

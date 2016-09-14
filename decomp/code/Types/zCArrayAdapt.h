@@ -1,14 +1,24 @@
 template <typename T>
-class zCArrayAdapt {
-public:
+struct zCArrayAdapt {
 	int SetArray(void* array, int count)
 	{
 		this->array = array;
 		this->count = count;
-		return sizeof(T) * count;
+		return GetSizeInBytes();
 	}
+
+	T Get(unsigned idx)
+	{
+		return array[idx];
+	}
+
+	int GetSizeInBytes() const
+	{
+		return count * sizeof(T);
+	}
+
 private:
-	char* array;
+	T* array;
 	int count;
 };
 

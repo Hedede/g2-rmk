@@ -62,3 +62,33 @@ void zCClassDef::ObjectCreated(zCObject *obj, zCClassDef *def)
 	}
 }
 
+
+void zCClassDef::EndStartup()
+{
+	if ( !classDefList )
+		return;
+	classDefList->QSort();
+
+	for (auto cd : *classDefList) {
+		classDefSearchDummy->className = cd->baseName;
+		auto idx = classDefList->Search(classDefSearchDummy);
+		if (idx > 0) {
+			cd->baseClassDef = (*classDefList)[idx];
+		} else {
+			cd->baseClassDef = nullptr;
+		}
+
+		zCChecksum16 crc16;
+		crc16.BeginChecksum();
+
+		auto base = cd;
+		do {
+			crc16.CalcBufferChecksum(&base->version, 2);
+			base = base->baseClassDef;
+		} while (base);
+		crc16.EndChecksum();
+		cd->versionSum = crc16.GetChecksum();
+	}
+
+	zCClassDef::startupFinished = 1;
+}

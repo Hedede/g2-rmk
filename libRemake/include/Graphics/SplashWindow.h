@@ -5,6 +5,7 @@ typedef struct SDL_Window SDL_Window;
 }
 
 #include <thread>
+#include <condition_variable>
 #include <mutex>
 struct SplashWindow {
 	SplashWindow() = default;
@@ -23,16 +24,15 @@ struct SplashWindow {
 
 	void Stop()
 	{
-		if (!IsRunning())
-			return;
-		Notify();
+		if (IsRunning()) {
+			Notify();
 
-		/*PEG:*/std::this_thread::yield();
+			std::unique_lock<std::mutex> lk(mutex);
+			cv.wait(lk, [&] { return done; });
+		}
 
 		if (thread.joinable())
 			thread.join();
-
-		/*PEG:*/std::this_thread::yield();
 	}
 
 private:
@@ -42,11 +42,24 @@ private:
 		running = false;
 	}
 
+	void Done()
+	{
+		{
+			std::lock_guard<std::mutex> lk{mutex};
+			done = true;
+		}
+		cv.notify_one();
+	}
+
 	static void EventLoop(SplashWindow& wnd);
 
 	bool running = true;
+
 	std::mutex mutable mutex;
 	std::thread thread{ EventLoop, std::ref(*this) };
 	SDL_Window* window;
+
+	bool done = false;
+	std::condition_variable cv;
 };
 #endif//Gothic_SplashWindow_H

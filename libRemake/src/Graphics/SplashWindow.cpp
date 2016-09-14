@@ -40,4 +40,6 @@ void SplashWindow::EventLoop(SplashWindow& wnd)
 	}
 
 	SDL_DestroyWindow(wnd.window);
+
+	wnd.Done();
 }

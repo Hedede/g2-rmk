@@ -80,7 +80,7 @@ void CGameManager::Init(void* hwnd)
 	g2::InitMusic();
 	g2::InitMenu();
 	g2::InitOptions();
-	g2::InitConsole();
+
 
 	if ( zoptions->Parm("PLAYER") ) {
 		std::string playerInst = zoptions->ParmValue("PLAYER");
@@ -150,6 +150,7 @@ void CGameManager::PreGraphicsInit()
 
 	zfontman = new g2::FontMan{};
 
+	g2::InitConsole();
 
 	zCParser::enableParsing = zoptions->Parm("ZREPARSE");
 

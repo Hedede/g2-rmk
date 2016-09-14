@@ -276,7 +276,7 @@ void CGameManager::Run()
 			zCInputCallback::GetInput();
 			RenderFrame();
 
-			Cdecl<void()> IntroduceChapter{0x6FB4E0};
+			Cdecl<void()> IntroduceChapter{0x42B220};
 			if (chapBool && MenuEnabled())
 				IntroduceChapter();
 		}

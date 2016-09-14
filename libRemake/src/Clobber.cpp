@@ -84,6 +84,25 @@ int __thiscall zERROR_Report(void*, int type, int id, zSTRING& message, char lev
 
 #include "Clobber/zThread.h"
 
+//-----------------------------------------------------------------------------
+#include <Graphics/FontMan.h>
+size_t __thiscall FontMan_Load(g2::FontMan* fm, zSTRING const& str)
+{
+	return fm->Load( std::string(str) );
+}
+
+zCFont* __thiscall FontMan_GetFont(g2::FontMan* fm, size_t idx)
+{
+	return fm->GetFont(idx);
+}
+
+void InitFontMan()
+{
+	using namespace g2;
+	make_jump((char*)0x7882D0, (uintptr_t)FontMan_Load,    x86::eax);
+	make_jump((char*)0x7884B0, (uintptr_t)FontMan_GetFont, x86::eax);
+}
+
 void InitFunctions()
 {
 	using namespace g2;
@@ -106,6 +125,8 @@ void InitFunctions()
 	make_jump((char*)0x5F9370, (uintptr_t)zCThread_vt::SuspendThread_thunk, x86::eax);
 	make_jump((char*)0x5F93A0, (uintptr_t)zCThread_vt::ResumeThread_thunk, x86::eax);
 	make_jump((char*)0x44C8D0, (uintptr_t)zERROR_Report, x86::eax);
+
+	InitFontMan();
 
 	Log("Clobber", "Restoring memory protection");
 	ret = VirtualProtect((void*)text_start, text_length, prot, &prot);

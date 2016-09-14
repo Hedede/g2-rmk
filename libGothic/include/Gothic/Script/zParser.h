@@ -42,6 +42,8 @@ struct zCViewProgressBar;
 struct zCView;
 
 struct zCParser {
+	static zBOOL& enableParsing;
+
 	using MessageFunc = void (*)(zSTRING);
 
 	zCParser(size_t symtab_size)

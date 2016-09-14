@@ -7,6 +7,7 @@ Win32.cpp \
 Clobber.cpp \
 Game/CGameManager.cpp \
 Graphics/SplashWindow.cpp \
+Graphics/FontMan.cpp \
 Menu/zMenu.cpp
 
 objects=$(patsubst %.cpp, %.o, $(sources))

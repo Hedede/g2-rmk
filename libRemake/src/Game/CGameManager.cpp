@@ -106,6 +106,9 @@ void CGameManager::Init(void* hwnd)
 #include <Gothic/Game/oObjectFactory.h>
 #include <Gothic/Game/zResourceManager.h>
 #include <Gothic/Menu/zView.h>
+#include <Graphics/FontMan.h>
+#include <Gothic/Script/zParser.h>
+#include <Gothic/Game/zConsole.h>
 void CGameManager::PreGraphicsInit()
 {
 	using namespace g2;
@@ -138,8 +141,14 @@ void CGameManager::PreGraphicsInit()
 
 	Cdecl<void()> zBert_StartUp{0x471230};
 	zBert_StartUp();
-	Cdecl<void()> zUlfi_StartUp{0x7B4260};
-	zUlfi_StartUp();
+
+	zfontman = new g2::FontMan{};
+
+	zcon.SetPos(0, 0);
+	zcon.SetDim(8191, 1500);
+	zcon.SetAutoCompletion(1);
+
+	zCParser::enableParsing = zoptions->Parm("ZREPARSE");
 
 	sysEvent();
 

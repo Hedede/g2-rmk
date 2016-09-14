@@ -2,6 +2,7 @@
 #include <Gothic/Script/zParser.h>
 #include <Gothic/Game/zOptions.h>
 
+zBOOL& zCParser::enableParsing = Value<zBOOL>(0xAB6284);
 zCParser*& zCMenu::menuParser = Value<zCParser*>(0x8D1E68);
 zCMenu::Callback& zCMenu::EnterCallback = Value<zCMenu::Callback>(0x8D1E7C);
 zCMenu::Callback& zCMenu::LeaveCallback = Value<zCMenu::Callback>(0x8D1E80);

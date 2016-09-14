@@ -1,4 +1,6 @@
 *.o
+a.out
+a.exe
 *.idb
 *.id2
 *.id1

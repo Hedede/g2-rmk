@@ -35,3 +35,6 @@ hook: $(objects)
 
 rebuild:
 	touch $(sources)
+
+linecount:
+	wc -l $(sources)

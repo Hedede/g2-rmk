@@ -390,6 +390,7 @@ void g2::InitConsole()
 #include <Gothic/Types/zCOLOR.h>
 #include <Gothic/Game/zTimer.h>
 #include <Gothic/Graphics/zRnd_D3D.h>
+#include <Gothic/Graphics/zRenderManager.h>
 #include <aw/utility/string/split.h>
 void g2::InitRenderer(void* hwnd)
 {
@@ -451,6 +452,8 @@ void g2::InitRenderer(void* hwnd)
 
 	zCTexture::s_globalLoadTextures = !zoptions->Parm("ZNOTEX");
 	zCView::SetMode(resX, resY, bpp, hwnd);
+
+	zrenderMan.InitRenderManager();
 
 	Log("Startup", "Renderer is initialized");
 }

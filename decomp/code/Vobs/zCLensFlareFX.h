@@ -107,3 +107,40 @@ void zCLensFlareFX::Unarchive(zCArchiver& arc)
 		type = 2;
 	}
 }
+
+void zCLensFlareFX::LoadLensFlareScript()
+{
+	Release( zCLensFlareFX::s_lensFlareMesh );
+	Release( zCLensFlareFX::s_coronaMesh );
+	Release( zCLensFlareFX::s_glowMesh );
+
+	for (auto obj : zCLensFlareFX::classDef.objectList)
+		Release(obj);
+
+	zCLensFlareFX::s_lensFlareMesh = zCMesh::CreateQuadMesh(0);
+	zCLensFlareFX::s_coronaMesh = zCMesh::CreateQuadMesh(0);
+	zCLensFlareFX::s_glowMesh = zCMesh::CreateQuadMesh(0);
+
+	zCLensFlareFX::s_coronaMesh->SetStaticLight(-1);
+	zCLensFlareFX::s_coronaMesh->ResetLightDynToLightStat();
+	zCLensFlareFX::s_lensFlareMesh->SetStaticLight(-1);
+	zCLensFlareFX::s_lensFlareMesh->ResetLightDynToLightStat();
+	zCLensFlareFX::s_glowMesh->SetStaticLight(-1);
+	zCLensFlareFX::s_glowMesh->ResetLightDynToLightStat();
+
+	zoptions->ChangeDir(DIR_PRESETS);
+
+	auto arc = zCArchiverFactory::CreateArchiverRead("lensflare.zen", 0);
+	if ( arc ) {
+		zSTRING name;
+		uint16_t ver;
+		arc->ReadChunkStart(name, ver);
+		arc->SetNoReadSearchCycles(1);
+		while ( arc->ReadObject(nullptr) );
+
+		zINFO("D: Loading lensflare-script 'lensflare.zen' (" + classdef.objectList.GetNum() + " fx).");
+
+		arc->Close();
+		arc->Release();
+	}
+}

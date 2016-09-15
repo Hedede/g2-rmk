@@ -78,6 +78,7 @@ class zCVobLight : public zCVob {
 private:
 	static zCArray<zCVobLightPreset*> lightPresetList;
 public:
+	static void LoadLightPresets();
 	static void CleanupVobLight();
 
 	zCVobLight()
@@ -123,6 +124,26 @@ private:
 	zTRayTurboValMap<zCPolygon *, int> lightMap;
 	zSTRING lightPreset;
 };
+
+void zCVobLight::LoadLightPresets()
+{
+	zCOption::ChangeDir(zoptions, DIR_PRESETS);
+
+	auto arc = zCArchiverFactory::CreateArchiverRead("lightPresets.zen", 0);
+	if ( arc ) {
+		lightPresetList.Clear();
+
+		auto num = arc->ReadWord("numVobLightPresets");
+
+		lightPresetList.Resize(num);
+
+		for (auto preset : lightPresetList)
+			preset = arc->ReadObject(nullptr);
+
+		arc->Close();
+		arc->Release();
+	}
+}
 
 void zCVobLight::CleanupVobLight()
 {

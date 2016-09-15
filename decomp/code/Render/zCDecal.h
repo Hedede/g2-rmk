@@ -66,6 +66,17 @@ private:
 	zBOOL ignoreDayLight = false;
 };
 
+//------------------------------------------------------------------------------
+void zCDecal::CreateDecalMeshes()
+{
+	zCDecal::mesh1Sided = zCMesh::CreateQuadMesh(0);
+	zCDecal::mesh2Sided = zCMesh::CreateQuadMesh(1);
+	zCDecal::mesh1Sided->SetStaticLight(GFX_CYAN);
+	zCDecal::mesh1Sided->SetLightDyn(GFX_CYAN);
+	zCDecal::mesh2Sided->SetStaticLight(GFX_CYAN);
+	zCDecal::mesh2Sided->SetLightDyn(GFX_CYAN);
+}
+
 void zCDecal::Archive(zCArchiver& arc)
 {
 

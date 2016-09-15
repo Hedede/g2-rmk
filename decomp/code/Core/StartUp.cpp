@@ -74,7 +74,7 @@ void oBert_StartUp()
 	zcon.Register("TOGGLE CS LIST", "Toggle list of running cutscenes on screen");
 	zcon.Register("TOGGLE CUTSCENES ENABLED", "Enable or disable cutscene-system");
 	zcon.Register("HERO EXPORT", "Exports your hero to the given file.");
-	zcon.Register("Imports your hero from the given file.", "HERO IMPORT");
+	zcon.Register("HERO IMPORT", "Imports your hero from the given file.");
 	zcon.AddEvalFunc(oBert_EvalFunc);
 	oBert_Options();
 }
@@ -208,6 +208,7 @@ void zDieter_StartUp(HWND* initContextHandle)
 		zINFO("D: RENDERER: no renderer specified, trying D3D (dev0)");
 		zrenderer = new zCRnd_D3D;
 	}
+
 	auto resX       = zoptions->ReadInt(zOPT_SEC_VIDEO, "zVidResFullscreenX", 800);
 	auto resY       = zoptions->ReadInt(zOPT_SEC_VIDEO, "zVidResFullscreenY", 600);
 	auto bpp        = zoptions->ReadInt(zOPT_SEC_VIDEO, "zVidResFullscreenBPP",16);
@@ -266,7 +267,7 @@ void zDieter_StartUp(HWND* initContextHandle)
 
 	zsndMan = new zCSoundManager;
 
-
+	auto convData = zoptions->Parm("ZAUTOCONVERTDATA");
 
 	zCModelPrototype::s_autoConvertAnis = convData;
 	zCMesh::s_autoConvertMeshes = convData;

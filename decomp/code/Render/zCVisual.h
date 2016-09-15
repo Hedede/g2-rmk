@@ -1,6 +1,9 @@
 class zCVisual : zCObject {
 	Z_OBEJCT(zCVisual);
 public:
+	static zCArray<zCVisual*> s_visualClassList;
+	static void InitVisualSystem();
+
 	virtual ~zCVisual() = default;
 
 	virtual void Render(zTRenderContext&) = 0;
@@ -30,3 +33,25 @@ private:
 	zREAL       lodFarDistance;
 	zREAL       lodNearFadeOutDistance;
 };
+
+void zCVisual::InitVisualSystem()
+{
+	auto& classDefList = *zCClassDef::classDefList;
+	size_t num = classDefList.size();
+	for (size_t i = 0; i < num; ++i) {
+		auto cd = classDefList.GetSafe(i);
+		if (!cd)
+			continue;
+		if (!cd.IsDerivedFrom(&zCVisual::classDef)) // pseudocode
+			continue;
+		if (!cd.IsAbstract())
+			continue;
+
+		auto vis = cd.CreateNewInstance();
+		if ( !vis->GetFileExtension(0) ) {
+			Release(vis);
+			continue;
+		}
+		s_visualClassList.InsertEnd(vis);
+	}
+}

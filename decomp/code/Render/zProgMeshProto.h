@@ -22,6 +22,9 @@ struct zCProgMeshBuilder {
 class zCProgMeshProto : zCVisual {
 	Z_OBJECT(zCProgMeshProto);
 public:
+	static zVEC3 s_posCacheList[2048];
+	static uint16_t* s_wedgeRemap[2048];
+
 	static int BuildProgMeshProto(zCMesh *sourceMesh, zCProgMeshProto* destProgMesh, zCArray<int>* posListRemap, int buildFlags);
 	static void SetLODParamStrength(float val)
 	{
@@ -131,4 +134,15 @@ int zCProgMeshProto::BuildProgMeshProto(zCMesh *sourceMesh, zCProgMeshProto* des
 	auto builder = std::make_unique<zCProgMeshBuilder>();
 
 	return builder->BuildProgMeshProto(sourceMesh, destProgMesh, posListRemap, buildFlags);
+}
+
+void zCProgMeshProto::InitProgMeshProto()
+{
+	memset(&s_posCacheList, 0, sizeof(s_posCacheList));
+	memset(&s_wedgeRemap, 0, sizeof(s_wedgeRemap));
+	s_frameCtr = 0;
+	s_vertBufferNormal = new zCVertexBufferDyn(0x15u, 0x1000u);
+
+	s_autoSubdivEnabled = zoptions->ReadBool("ENGINE", "zSubdivSurfacesEnabled", 0);
+	zCModel::s_bSmoothRootNode = zoptions->ReadBool("ENGINE", "zSmoothModelRootNode", zCModel::s_bSmoothRootNode);
 }

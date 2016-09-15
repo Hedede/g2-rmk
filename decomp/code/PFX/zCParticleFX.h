@@ -1,6 +1,10 @@
 class zCParticleFX : public zCVisual {
 	Z_OBJECT(zCParticleFX);
 public:
+	static zSParticle* s_globPartList;
+	static unsigned s_globNumPart;
+	static InitParticleFX();
+
 	virtual ~zCParticleFX();
 
 	void Render(zTRenderContext &);
@@ -76,3 +80,46 @@ private:
 
 	char unk3[60];
 };
+
+void zCParticleFX::InitParticleFX()
+{
+	if ( zCParticleFX::s_globPartList )
+		delete[] s_globPartList;
+
+	s_globPartList = new zSParticle[10000];
+	s_globNumPart = 10000;
+
+	for (unsigned i = 0; i < s_globNumPart; ++i)
+		s_globNumPart[i].next = &s_globPartList[i+1];
+	s_globPartList[s_globNumPart - 1].next = 0;
+
+	if ( !zCParticleFX::s_partMeshTri ) {
+		s_partMeshTri = zCMesh::CreateTriMesh();
+
+		auto mat = new zCMaterial("Z_PART_TRI");
+
+		s_partMeshTri->SetMaterial(mat);
+		s_partMeshTri->SetStaticLight(GFX_CYAN);
+		s_partMeshTri->ResetLightDynToLightStat();
+
+		mat->alphaFunc = 2;
+		mat->color = GFX_CYAN;
+		mat->Release();
+
+		s_partMeshQuad = zCMesh::CreateQuadMesh(0);
+
+		mat = new zCMaterial("Z_PART_QUAD");
+
+		s_partMeshQuad->SetMaterial(GFX_CYAN);
+		s_partMeshQuad->SetStaticLight(GFX_CYAN);
+		s_partMeshQuad->ResetLightDynToLightStat();
+
+		mat->alphaFunc = 2;
+		mat->color = GFX_CYAN;
+		mat->Release();
+
+	}
+
+	s_emitterPresetList.Compare = CompareEmitterNames;
+	ParseParticleFXScript();
+}

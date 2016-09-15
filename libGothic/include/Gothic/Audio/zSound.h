@@ -1,5 +1,4 @@
-#ifndef GOTHIC_ZSOUND_H
-#define GOTHIC_ZSOUND_H
+#pragma once
 #include <Hook/Externals.h>
 #include <Gothic/Types/zSTRING.h>
 
@@ -53,11 +52,11 @@ struct zCSoundSystem {
 		vtab->SetMasterVolume(this, vol);
 	}
 
-private:
+protected:
 	zCSoundSystem_vt* vtab;
+
+private:
 	float volume;
 };
 
 auto& zsound = Value<zCSoundSystem*>(0x99B03C);
-
-#endif//GOTHIC_OCBINKPLAYER_H

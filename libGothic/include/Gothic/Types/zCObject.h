@@ -1,5 +1,4 @@
-#ifndef Gothic_zCObject_H
-#define Gothic_zCObject_H
+#pragma once
 #include <Gothic/Types/zSTRING.h>
 struct zCObject {
 	void Release()
@@ -15,5 +14,3 @@ struct zCObject {
 	int hashNext  = 0;
 	zSTRING objectName;
 };
-
-#endif//Gothic_zCObject_H

@@ -14,3 +14,13 @@ void zCMenu::CreateParser()
 	menuParser = new zCParser(100);
 }
 
+
+#include <Gothic/Graphics/zTexture.h>
+#include <Gothic/Graphics/zModelPrototype.h>
+#include <Gothic/Graphics/zMesh.h>
+#include <Gothic/Graphics/zMorphMeshProto.h>
+zBOOL& zCTexture::s_globalLoadTextures = Value<zBOOL>(0x8A6AA9);
+zBOOL& zCModelPrototype::autoConvertAnis = Value<zBOOL>(0x8A31F8);
+zBOOL& zCMesh::autoConvertMeshes = Value<zBOOL>(0x8D8868);
+zBOOL& zCMorphMeshProto::autoConvertBinaryFile = Value<zBOOL>(0x8D8CC8);
+

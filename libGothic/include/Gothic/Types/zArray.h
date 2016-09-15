@@ -17,6 +17,7 @@ template <class T>
 struct zCArraySort : zCArray<T> {
 	zCArraySort() = default;
 
-	bool (*Compare)(T const&,T const&);
+	using CompareFunc = int(T const&,T const&);
+	CompareFunc *Compare;
 };
 #endif//Gothic_zArray_H

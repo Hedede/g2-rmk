@@ -1,5 +1,4 @@
-#ifndef GOTHIC_ZMUSIC_H
-#define GOTHIC_ZMUSIC_H
+#pragma once
 #include <Hook/Externals.h>
 #include <Gothic/Types/Base.h>
 #include <Gothic/Types/zSTRING.h>
@@ -31,18 +30,40 @@ struct zCMusicSystem_vt {
 	void (__thiscall *IsAvailable)(zCMusicSystem *, const zSTRING *);
 };
 
+auto& zmusic = Value<zCMusicSystem*>(0x8D1F14);
 
 struct zCMusicSystem {
+protected:
+	static int& GetDisabled()
+	{
+		static int& s_musicSystemDisabled = Value<int>(0x8D1F18);
+		return s_musicSystemDisabled;
+	}
+public:
+	static void DisableMusicSystem(int b);
+
 	void SetVolume(float vol)
 	{
 		vtab->SetVolume(this, vol);
 	}
 
-private:
+	void Stop()
+	{
+		vtab->Stop(this);
+	}
+
+protected:
 	zCMusicSystem_vt* vtab;
+
+private:
 	float volume;
 };
 
-auto& zmusic = Value<zCMusicSystem*>(0x8D1F14);
-
-#endif//GOTHIC_OCBINKPLAYER_H
+void zCMusicSystem::DisableMusicSystem(int b)
+{
+	GetDisabled() = b;
+	if ( b ) {
+		if ( zmusic )
+			zmusic->Stop();
+	}
+}

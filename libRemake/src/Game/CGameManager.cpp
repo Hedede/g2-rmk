@@ -86,6 +86,9 @@ void CGameManager::Init(void* hwnd)
 #include <Graphics/FontMan.h>
 #include <Gothic/Script/zParser.h>
 #include <Gothic/System/zMemPoolBase.h>
+#include <Gothic/Graphics/zModelPrototype.h>
+#include <Gothic/Graphics/zMorphMeshProto.h>
+#include <Gothic/Graphics/zMesh.h>
 void CGameManager::PreGraphicsInit()
 {
 	using namespace g2;
@@ -378,12 +381,14 @@ void g2::InitConsole()
 	zcon.AddEvalFunc( zBert_EvalFunc );
 	zcon.AddEvalFunc( oBert_EvalFunc );
 
-	auto zDieter_EvalFunc = reinterpret_cast<zCConsole::EvalFunc*>(0x);
+	auto zDieter_EvalFunc = reinterpret_cast<zCConsole::EvalFunc*>(0x632E00);
 	zcon.AddEvalFunc( zDieter_EvalFunc );
 }
 
 //#include <aw/utility/filesystem.h>
-
+#include <Gothic/Types/zCOLOR.h>
+#include <Gothic/Game/zTimer.h>
+#include <Gothic/Graphics/zRnd_D3D.h>
 #include <aw/utility/string/split.h>
 void g2::InitRenderer(void* hwnd)
 {
@@ -438,8 +443,7 @@ void g2::InitRenderer(void* hwnd)
 	zrenderer->Vid_SetDevice(deviceNo);
 	zrenderer->Vid_SetScreenMode(windowed != 0);
 	zrenderer->Vid_SetMode(resX, resY, bpp, hwnd);
-	zCOLOR clearcolor = 0;
-	zrenderer->Vid_Clear(&clearcolor, 3);
+	zrenderer->Vid_Clear(colors::black, 3);
 	zrenderer->Vid_SetGammaCorrection(gamma, contrast, brightness);
 
 	zCTexture::AutoDetectRendererTexScale();
@@ -450,6 +454,15 @@ void g2::InitRenderer(void* hwnd)
 	Log("Startup", "Renderer is initialized");
 }
 
+#include <Gothic/Bsp/zRayTurbo.h>
+#include <Gothic/Game/zVob.h>
+#include <Gothic/Game/zVobLight.h>
+#include <Gothic/Graphics/zVisual.h>
+#include <Gothic/Graphics/zMapDetailTexture.h>
+#include <Gothic/Graphics/zProgMeshProto.h>
+#include <Gothic/Graphics/zLensFlareFX.h>
+#include <Gothic/Graphics/zDecal.h>
+#include <Gothic/PFX/zParticleFX.h>
 void g2::InitGraphics()
 {
 	Log("Startup", "Initializing graphics subsystems");
@@ -468,6 +481,9 @@ void g2::InitGraphics()
 	zCRayTurboAdmin::SetPolyTreshold(polyTreshold);
 }
 
+#include <Gothic/Audio/zSoundSystemDummy.h>
+#include <Gothic/Audio/zSoundSys_MSS.h>
+#include <Gothic/Audio/zSoundManager.h>
 void g2::InitSound()
 {
 	Log("Startup", "Initializing Sound");
@@ -490,6 +506,8 @@ void g2::InitSound()
 		zsound->SetMasterVolume(masterVol);
 }
 
+#include <Gothic/Audio/zMusicSys_Dummy.h>
+#include <Gothic/Audio/zMusicSys_DM.h>
 auto ChangeMusicEnabled = func<zCOptions::ChangeHandler>(0x42D240);
 void g2::InitMusic()
 {

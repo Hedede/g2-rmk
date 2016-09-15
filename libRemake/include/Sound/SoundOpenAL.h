@@ -8,22 +8,35 @@
 
 namespace g2 {
 
-struct SoundOpenAL : zCSoundSystemDummy {
-	SoundOpenAL()
-	{
-		vtab->LoadSoundFX =
-		[] (zCSoundSystem* ss, zSTRING const& name) __thiscall -> zCSoundFX*
-		{
-			auto _this = static_cast<SoundOpenAL*>(ss);
-			return _this->LoadSoundFX(std::string(name));
-		};
 
-		vtab->LoadSoundFXScript =
-		[] (zCSoundSystem* ss, zSTRING const& name) __thiscall -> zCSoundFX*
+struct SoundOpenAL : zCSoundSystemDummy {
+	struct TypeInfo {
+		TypeInfo(zCSoundSystem_vt const& proto)
+			: vt{proto}
 		{
-			auto _this = static_cast<SoundOpenAL*>(ss);
-			return _this->LoadSoundFXScript(std::string(name));
-		};
+			vt.LoadSoundFX =
+			[] (zCSoundSystem* ss, zSTRING const& name) __thiscall -> zCSoundFX*
+			{
+				auto _this = static_cast<SoundOpenAL*>(ss);
+				return _this->LoadSoundFX(std::string(name));
+			};
+
+			vt.LoadSoundFXScript =
+			[] (zCSoundSystem* ss, zSTRING const& name) __thiscall -> zCSoundFX*
+			{
+				auto _this = static_cast<SoundOpenAL*>(ss);
+				return _this->LoadSoundFXScript(std::string(name));
+			};
+		}
+
+		void* rtti = reinterpret_cast<void*>(0x846CF8);
+		zCSoundSystem_vt vt;
+	};
+
+	SoundOpenAL() : zCSoundSystemDummy()
+	{
+		static const TypeInfo tinfo{*vtab};
+		vtab = &tinfo.vt;
 	}
 
 	~SoundOpenAL();

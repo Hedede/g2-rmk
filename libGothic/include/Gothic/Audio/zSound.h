@@ -53,7 +53,7 @@ struct zCSoundSystem {
 	}
 
 protected:
-	zCSoundSystem_vt* vtab;
+	zCSoundSystem_vt const* vtab;
 
 private:
 	float volume;

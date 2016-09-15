@@ -1,3 +1,4 @@
+#pragma once
 #include <Gothic/Audio/zSound.h>
 
 struct zCSoundSystemDummy : zCSoundSystem {

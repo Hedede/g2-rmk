@@ -12,8 +12,8 @@ enum zTSpeakerType {};
 
 struct zCSoundSystem_vt {
 	void (__thiscall *dtor)(zCSoundSystem *);
-	zCSoundFX *(__thiscall *LoadSoundFX)(zCSoundSystem *, const zSTRING *);
-	zCSoundFX *(__thiscall *LoadSoundFXScript)(zCSoundSystem *, const zSTRING *);
+	zCSoundFX *(__thiscall *LoadSoundFX)(zCSoundSystem *, const zSTRING&);
+	zCSoundFX *(__thiscall *LoadSoundFXScript)(zCSoundSystem *, const zSTRING&);
 	void (__thiscall *GetSFXParser)(zCSoundSystem *);
 	float (__thiscall *GetPlayingTimeMSEC)(zCSoundSystem *, const zSTRING *);
 	void (__thiscall *SetSound3DDefaultRadius)(zCSoundSystem *, float);

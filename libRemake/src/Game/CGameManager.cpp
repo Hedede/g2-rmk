@@ -487,6 +487,7 @@ void g2::InitGraphics()
 
 #include <Gothic/Audio/zSoundSystemDummy.h>
 #include <Gothic/Audio/zSoundSys_MSS.h>
+#include <Sound/SoundOpenAL.h>
 #include <Gothic/Audio/zSoundManager.h>
 void g2::InitSound()
 {
@@ -498,7 +499,8 @@ void g2::InitSound()
 	auto soundEnabled = zoptions->ReadBool("SOUND", "soundEnabled", 1);
 
 	if ( soundEnabled ) {
-		zsound = new zCSndSys_MSS;
+		//zsound = new zCSndSys_MSS;
+		zsound = new g2::SoundOpenAL;
 	} else {
 		zsound = new zCSoundSystemDummy;
 	}

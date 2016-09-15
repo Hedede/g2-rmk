@@ -92,7 +92,7 @@ struct zCRenderer_vt {
 	int (__thiscall *Vid_GetNumModes)(zCRenderer *);
 	int (__thiscall *Vid_GetModeInfo)(zCRenderer *, zTRnd_VidModeInfo *, int);
 	int (__thiscall *Vid_GetActiveModeNr)(zCRenderer *);
-	void (__thiscall *Vid_SetMode)(zCRenderer *, int, void*);
+	void (__thiscall *Vid_SetMode)(zCRenderer *, int, void*&);
 	void (__thiscall *Vid_SetScreenMode)(zCRenderer *, zTRnd_ScreenMode);
 	zTRnd_ScreenMode (__thiscall *Vid_GetScreenMode)(zCRenderer *);
 	void (__thiscall *Vid_SetGammaCorrection)(zCRenderer *, float, float, float);
@@ -129,13 +129,13 @@ struct zCRenderer {
 		vtab->Vid_SetScreenMode(this, zTRnd_ScreenMode(mode));
 	}
 
-	int Vid_SetMode(int newXDim, int newYDim, int newBpp, void *hwnd)
+	int Vid_SetMode(int newXDim, int newYDim, int newBpp, void *&hwnd)
 	{
-		Thiscall<void(zCRenderer*,int,int,int,void*)> func{0x5D3C20};
+		Thiscall<void(zCRenderer*,int,int,int,void*&)> func{0x5D3C20};
 		func(this,newXDim, newYDim, newBpp, hwnd);
 	}
 
-	void Vid_SetMode(int mode, void* hwnd)
+	void Vid_SetMode(int mode, void*& hwnd)
 	{
 		vtab->Vid_SetMode(this, mode, hwnd);
 	}

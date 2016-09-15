@@ -8,9 +8,9 @@ struct zCViewBase {
 
 
 struct zCView : zCViewBase, zCInputCallback {
-	static void SetMode(int x, int y, int b, void* w)
+	static void SetMode(int x, int y, int b, void*& w)
 	{
-		Cdecl<void(int,int,int,void*)> call{0x7ABDB0};
+		Cdecl<void(int,int,int,void*&)> call{0x7ABDB0};
 		call(x,y,b,w);
 	}
 };

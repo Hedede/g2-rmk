@@ -64,6 +64,7 @@ private:
 	zVEC2 decalOffset;
 	zBOOL decal2Sided;
 	zBOOL ignoreDayLight = false;
+	zBOOL decalOnTop;
 };
 
 //------------------------------------------------------------------------------

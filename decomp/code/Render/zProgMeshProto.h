@@ -1,23 +1,31 @@
 struct zTPMEdge {
-	short unk[2];
-};
-struct zTPMWedge {
-	int unk[6];
-};
-struct zTPMVertexUpdate {
-	int unk;
-};
-struct zTPMTriangle {
-	short unk[3];
-};
-struct zTPMTriangleEdges {
-	short unk[3];
+	short wedge[2];
 };
 
-// Empty class (no fields)
+struct zTPMWedge {
+	zVEC3 normal;
+	zVEC2 uv;
+	int position;
+};
+
+struct zTPMVertexUpdate {
+	short numNewTri;
+	short numNewWedge;
+};
+struct zTPMTriangle {
+	short edge[3];
+};
+struct zTPMTriangleEdges {
+	short edge[3];
+};
+
 struct zCProgMeshBuilder {
 	int BuildProgMeshProto(zCMesh *sourceMesh, zCProgMeshProto* destProgMesh, zCArray<int>* posListRemap, int buildFlags);
+
+private:
+	// Empty class (no fields)
 };
+
 
 class zCProgMeshProto : zCVisual {
 	Z_OBJECT(zCProgMeshProto);
@@ -32,21 +40,20 @@ public:
 	}
 
 	struct zCSubMesh {
-		  zCMaterial* material;
+		zCMaterial* material;
+		zCArrayAdapt<zTPMTriangle> triList;
+		zCArrayAdapt<zTPMWedge> wedgeList;
+		zCArrayAdapt<float> colorList;
+		zCArrayAdapt<VERTEX_INDEX> triPlaneIndexList;
+		zCArrayAdapt<zTPlane> triPlaneList;
+		zCArrayAdapt<zTPMTriangleEdges> triEdgeList;
+		zCArrayAdapt<zTPMEdge> edgeList;
+		zCArrayAdapt<float> edgeScoreList;
 
-		  int unk1;
-		  int numTris;
+		zCArrayAdapt<VERTEX_INDEX> wedgeMap;
+		zCArrayAdapt<zTPMVertexUpdate> vertexUpdates;
 
-		  zCArrayAdapt<zTPMWedge> wedges;
-		  zCArrayAdapt<float> unk2;
-		  zCArrayAdapt<uint16_t> unk3;
-		  zCArrayAdapt<zTPlane> unk4;
-		  zCArrayAdapt<uint16_t> unk5;
-		  zCArrayAdapt<zTPMVertexUpdate> vertexUpdates;
-		  zCArrayAdapt<zTPMTriangleEdges> triangleEdges;
-		  zCArrayAdapt<float> unk6;
-
-		  int unk7;
+		int vbStartIndex;
 	};
 
 	~zCProgMeshProto();
@@ -106,10 +113,8 @@ public:
 	virtual void Save(zCFileBIN&);
 
 private:
-	int unk0;
-	int numVerts;
-
-	zCArrayAdapt<VEC3> unk1;
+	zCArrayAdapt<VEC3> vertList;
+	zCArrayAdapt<VEC3> normalList;
 
 	zTBBox3D bbox3d;
 	zCOBBox3D obbox3d;

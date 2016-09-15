@@ -9,27 +9,30 @@ struct zCModelNode {
 		}
 	}
 
-	void *unk;
+	zCModelNode* parentNode;
+
 	zSTRING name; // e.g. ZS_POS (attachment slot)
+	zCVisual *visual;
+	zMAT4 transform;
+	zVEC3 nodeRotAxis;
+	float nodeRotAngle;
+	zVEC3 translation;
+	zMAT4 trafoObjToWorld;
+	zMAT4* nodeTransformList;
+	zCModelNodeInst* lastInstNode;
 
-	zCVisual* visual;
-
-	zMAT4 __maru;
-	zVEC3 __posmb;
-	int __intmh;
-	zVEC3 __whaaa;
-	zMAT4 __anudaermat;
-	int __also[2];
 };
 
+
 struct zCModelNodeInst {
-	void *_somep;
-	whatels *name;
-	zCModel *_model;
-	zMAT4 mat1;
-	zMAT4 trafoWorld;
+	zCModelNodeInst* parentNode;
+	zCModelNode* protoNode;
+
+	zCModel *nodeVIsual;
+	zMAT4 trafo;
+	zMAT4 trafoObjToCam;
 	zTBBox3D bbox;
-	zCModelTexAniState *texanistate;
+	zCModelTexAniState *texAniState;
 	void **somep;
 	// char unk[236];
 };

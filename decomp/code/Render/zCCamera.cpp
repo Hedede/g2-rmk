@@ -12,128 +12,125 @@ public:
 		SetFOV(fov, aspect * fov);
 	}
 private:
-    //enum { CLIP_FLAGS_FULL        = 63, CLIP_FLAGS_FULL_WO_FAR    = 15 };
-    //enum { NUM_FRUSTUM_PLANES_WO_FAR  =  4 };
-    //enum { FRUSTUM_PLANE_FAR  =  4 };
+	enum {
+		CLIP_FLAGS_FULL        = 63,
+		CLIP_FLAGS_FULL_WO_FAR    = 15 };
+	enum { NUM_FRUSTUM_PLANES_WO_FAR  =  4 };
+	enum { FRUSTUM_PLANE_FAR  =  4 };
 
-    //           frustumplanes   [NUM_FRUSTUM_PLANES];
 	zTPlane frustumplanes[NUM_FRUSTUM_PLANES];
-        int signbits[/*NUM_FRUSTUM_PLANES als Bytes*/ 2];   //zBYTE
+	zBYTE signbits[NUM_FRUSTUM_PLANES];
 
-    struct zTViewportData {
-        int xmin;               //int           // oben rechts
-        int ymin;
-        int xdim;
-        int ydim;               //int         
-        float xminFloat;          //zVALUE        // oben links
-        float yminFloat;          //zVALUE    
-        float xmaxFloat;          //zVALUE        // unten rechts
-        float ymaxFloat;          //zVALUE    
-        float xdimFloat;          //zVALUE        
-        float ydimFloat;          //zVALUE    
-        float xdimFloatMinus1;    //zVALUE    
-        float ydimFloatMinus1;    //zVALUE    
-        float xcenter;            //zVALUE
-        float ycenter;            //zVALUE
-    } vpData;
-    
-    int targetView;                         //zCViewBase
+	struct zTViewportData {
+		int xmin;     // oben rechts
+		int ymin;
+		int xdim;
+		int ydim;
+		float xminFloat;          // oben links
+		float yminFloat;
+		float xmaxFloat;          // unten rechts
+		float ymaxFloat;
+		float xdimFloat;
+		float ydimFloat;
+		float xdimFloatMinus1;
+		float ydimFloatMinus1;
+		float xcenter;
+		float ycenter;
+	} vpData;
 
-    //Transformationsmatrizzen:
-    zMATRIX4 camMatrix   ;       //
-    zMATRIX4 camMatrixInv;       //
+	zCViewBase* targetView;
 
-    zBOOL  tremorToggle;       //
-    zREAL  tremorScale;        //
-    zVEC3  tremorAmplitude; //
-    zVEC3  tremorOrigin;    //
-    zREAL  tremorVelo;         //
+	//Transformationsmatrizzen:
+	zMATRIX4 camMatrix;
+	zMATRIX4 camMatrixInv;
 
-    // Transformation matrices
-    zMATRIX4  trafoView   ;   //
-    zMATRIX4  trafoViewInv;   //
-    zMATRIX4  trafoWorld  ;   //
-    
-    /*
-    template <class T, int SIZE> class zCMatrixStack {
-        int     pos;
-        T       stack[SIZE];
-    }*/
-    //zCMatrixStack<zMATRIX4,8> trafoViewStack;
-        int trafoViewStack[/* 1 + 16 * 8 */129];
-    //zCMatrixStack<zMATRIX4,8> trafoWorldStack;
-        int trafoWorldStack[/* 1 + 16 * 8 */129];
-    //zCMatrixStack<zMATRIX4,8> trafoWorldViewStack;
-        int trafoWorldViewStack[/* 1 + 16 * 8 */129];
-    
-    zMATRIX4 trafoProjection; //
+	zBOOL  tremorToggle;
+	zREAL  tremorScale;
+	zVEC3  tremorAmplitude;
+	zVEC3  tremorOrigin;
+	zREAL  tremorVelo;
 
-    //enum { zTCAM_POLY_NUM_VERT = 4 };
-    
-    /*
-    struct zTCamVertSimple {
-        zREAL       x,y,z;      
-        zVEC2       texuv;
-        zCOLOR      color;
-    };
-    */
-    
-    //zTCamVertSimple polyCamVerts[zTCAM_POLY_NUM_VERT];
-        int polyCamVerts[/*zTCAM_POLY_NUM_VERT * (3 + 2 + 1)*/ 24];
-    
-    zCPolygon*   poly;           //
-    zCMesh*      polyMesh;       //
-    zCMaterial*  polyMaterial;   //
+	// Transformation matrices
+	zMATRIX4  trafoView;
+	zMATRIX4  trafoViewInv;
+	zMATRIX4  trafoWorld;
 
-    // Screen-Effects
-    zBOOL   screenFadeEnabled;         //
-    zCOLOR  screenFadeColor;           //
-    zSTRING screenFadeTexture;         //
-    zREAL   screenFadeTextureAniFPS;   //
-    
-    /*
-    enum zTRnd_AlphaBlendFunc   {   zRND_ALPHA_FUNC_MAT_DEFAULT,
-                                zRND_ALPHA_FUNC_NONE,                   
-                                zRND_ALPHA_FUNC_BLEND,              
-                                zRND_ALPHA_FUNC_ADD,                    
-                                zRND_ALPHA_FUNC_SUB,                    
-                                zRND_ALPHA_FUNC_MUL,                    
-                                zRND_ALPHA_FUNC_MUL2,                   
-                                zRND_ALPHA_FUNC_TEST,   
-                                zRND_ALPHA_FUNC_BLEND_TEST
-                            };  */
-    int screenFadeTextureBlendFunc;     //zTRnd_AlphaBlendFunc
-    zBOOL cinemaScopeEnabled;             //zBOOL 
-    zCOLOR cinemaScopeColor;               //zCOLOR
 
-    //ungenutzt:
-    //enum zPROJECTION  { PERSPECTIVE, ORTHOGONAL };
-    int projection;     //zPROJECTION
-    
-    /*
-    enum zTCam_DrawMode { zCAM_DRAW_NORMAL, zCAM_DRAW_NOTHING, 
-                      zCAM_DRAW_WIRE, zCAM_DRAW_FLAT, zCAM_DRAW_TEX }; */
-    int drawMode; //zTCam_DrawMode
-    
-    /*
-    enum zTShadeMode    { zSHADE_NORMAL, zSHADE_NOTHING, zSHADE_CONSTANT, zSHADE_GOURAUD, zSHADE_LIGHTMAP }; */
-    int shadeMode;  //zTShadeMode
-    
-    zBOOL drawWire;   //zBOOL
+	template <class T, int SIZE>
+	class zCMatrixStack {
+		int     pos;
+		T       stack[SIZE];
+	};
 
-    zVALUE    farClipZ;          //
-    zVALUE    nearClipZ;         //
-    zVALUE    viewDistanceX;     //
-    zVALUE    viewDistanceY;     //
-    zVALUE    viewDistanceXInv;  //
-    zVALUE    viewDistanceYInv;  //
-    zBOOL     vobFarClipZ;       //
-    zREAL     fovH;              //
-    zREAL     fovV;              //
-    zCVob*    connectedVob;      //
-             
-    zVALUE    topBottomSin;      //
-    zVALUE    topBottomCos;      //
-    zVALUE    leftRightSin;      //
-    zVALUE    leftRightCos;      //
+	zCMatrixStack<zMATRIX4,8> trafoViewStack;
+	zCMatrixStack<zMATRIX4,8> trafoWorldStack;
+	zCMatrixStack<zMATRIX4,8> trafoWorldViewStack;
+
+	zMATRIX4 trafoProjection;
+
+	enum { zTCAM_POLY_NUM_VERT = 4 };
+
+	struct zTCamVertSimple {
+		zREAL       x,y,z;
+		zVEC2       texuv;
+		zCOLOR      color;
+	};
+
+	zTCamVertSimple polyCamVerts[zTCAM_POLY_NUM_VERT];
+
+	zCPolygon*   poly;
+	zCMesh*      polyMesh;
+	zCMaterial*  polyMaterial;
+
+	// Screen-Effects
+	zBOOL   screenFadeEnabled;
+	zCOLOR  screenFadeColor;
+	zSTRING screenFadeTexture;
+	zREAL   screenFadeTextureAniFPS;
+
+	zTRnd_AlphaBlendFunc screenFadeTextureBlendFunc;
+	zBOOL cinemaScopeEnabled;
+	zCOLOR cinemaScopeColor;
+
+	//ungenutzt:
+	enum zPROJECTION {
+		PERSPECTIVE,
+		ORTHOGONAL
+	} projection;
+
+	enum zTCam_DrawMode {
+		zCAM_DRAW_NORMAL,
+		zCAM_DRAW_NOTHING,
+		zCAM_DRAW_WIRE,
+		zCAM_DRAW_FLAT,
+		zCAM_DRAW_TEX
+	};
+	zTCam_DrawMode drawMode;
+
+	enum zTShadeMode {
+		zSHADE_NORMAL,
+		zSHADE_NOTHING,
+		zSHADE_CONSTANT,
+		zSHADE_GOURAUD,
+		zSHADE_LIGHTMAP
+	};
+	zTShadeMode shadeMode;
+
+	zBOOL drawWire;
+
+	zVALUE    farClipZ;
+	zVALUE    nearClipZ;
+	zVALUE    viewDistanceX;
+	zVALUE    viewDistanceY;
+	zVALUE    viewDistanceXInv;
+	zVALUE    viewDistanceYInv;
+	zBOOL     vobFarClipZ;
+	zREAL     fovH;
+	zREAL     fovV;
+	zCVob*    connectedVob;
+
+	zVALUE    topBottomSin;
+	zVALUE    topBottomCos;
+	zVALUE    leftRightSin;
+	zVALUE    leftRightCos;
 };

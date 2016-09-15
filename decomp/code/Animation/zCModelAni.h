@@ -36,8 +36,10 @@ private:
 };
 
 struct zCModelAniActive {
-	zCModelAni *ani;
-	int unk0[4];
+	zCModelAni *protoAni;
+	zCModelAni *nextAni;
+	int someflag;
+	int unk0[2];
 	float flt1;
 	float flt2;
 	int unk1[5];

@@ -48,3 +48,8 @@ private:
 	size_t len;
 	int res;
 };
+
+unsigned ToUnsigned(std::string const& str)
+{
+	return std::strtol(str.data(), 0, 10);
+}

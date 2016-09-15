@@ -7,23 +7,8 @@
 #include <Gothic/System/System.h>
 
 namespace g2 {
-void InitSound()
-{
-	Log("Startup", "Initializing Sound");
-	float masterVol = zoptions->ReadReal("SOUND", "soundVolume", 1.0);
-	if ( zsound )
-		zsound->SetMasterVolume(masterVol);
-}
-
-auto ChangeMusicEnabled = func<zCOptions::ChangeHandler>(0x42D240);
-void InitMusic()
-{
-	Log("Startup", "Initializing Music");
-	zoptions->InsertChangeHandler("SOUND", "musicEnabled", ChangeMusicEnabled);
-	float musicVol = zoptions->ReadReal("SOUND", "musicVolume", 0.8);
-	if ( zmusic )
-		zmusic->SetVolume(musicVol);
-}
+void InitSound();
+void InitMusic();
 
 auto DefineMenuScriptFunctions = Cdecl<int()>(0x42C1D0);
 void InitMenu()
@@ -34,21 +19,12 @@ void InitMenu()
 	DefineMenuScriptFunctions();
 }
 
-void InitOptions()
-{
-	zoptions->ReadInt("PERFORMANCE", "sightValue" , 4);
-	zoptions->ReadReal("PERFORMANCE", "modelDetail" , 0.5);
-	zoptions->ReadReal("INTERNAL", "texDetailIndex" , 0.6);
-	zoptions->ReadInt("GAME", "skyEffects" , 1);
-	zoptions->ReadInt("GAME", "bloodDetail" , 2);
-	zoptions->ReadReal("VIDEO", "zVidBrightness" , 0.5);
-	zoptions->ReadReal("VIDEO", "zVidContrast"   , 0.5);
-	zoptions->ReadReal("VIDEO", "zVidGamma"      , 0.5);
-}
-
+void InitOptions();
 void InitGameOptions();
 
 void InitConsole();
+void InitRenderer(void* hwnd);
+void InitGraphics();
 } // namespace g2
 
 
@@ -76,11 +52,8 @@ void CGameManager::Init(void* hwnd)
 
 	sysEvent();
 
-	g2::InitSound();
-	g2::InitMusic();
 	g2::InitMenu();
 	g2::InitOptions();
-
 
 	if ( zoptions->Parm("PLAYER") ) {
 		std::string playerInst = zoptions->ParmValue("PLAYER");
@@ -112,6 +85,7 @@ void CGameManager::Init(void* hwnd)
 #include <Gothic/Menu/zView.h>
 #include <Graphics/FontMan.h>
 #include <Gothic/Script/zParser.h>
+#include <Gothic/System/zMemPoolBase.h>
 void CGameManager::PreGraphicsInit()
 {
 	using namespace g2;
@@ -123,10 +97,6 @@ void CGameManager::PreGraphicsInit()
 
 	zCClassDef::EndStartup();
 
-	if ( zfactory ) {
-		Warning("Startup", "zfactory already exists?");
-		zfactory->Release();
-	}
 	zfactory = new oCObjectFactory;
 
 	Cdecl<void()> zInitOptions{0x4701F0};
@@ -135,6 +105,7 @@ void CGameManager::PreGraphicsInit()
 	bool memProfiler = zoptions->Parm("ZMEMPROFILER");
 	//stub in .exe
 	//zCMallocGeneric::Init(memProfiler);
+	zCMemPoolBase::DisablePools(zoptions->Parm("ZNOMEMPOOL"));
 
 	zFILE_VDFS::InitFileSystem();
 
@@ -156,8 +127,12 @@ void CGameManager::PreGraphicsInit()
 
 	sysEvent();
 
-	Cdecl<void(void*&)> zDieter_StartUp{0x630580};
-	zDieter_StartUp(sysContextHandle);
+	g2::InitRenderer(sysContextHandle);
+	g2::InitSound();
+	g2::InitMusic();
+
+
+
 	Cdecl<void(void*&)> zCarsten_StartUp{0x509580};
 	zCarsten_StartUp(sysContextHandle);
 
@@ -166,6 +141,12 @@ void CGameManager::PreGraphicsInit()
 		std::string val = zoptions->ParmValue("ZTEXCONVERT");
 		zCTexture::ScanConvertTextures(val);
 	}
+
+	bool convData = zoptions->Parm("ZAUTOCONVERTDATA");
+
+	zCModelPrototype::autoConvertAnis = convData;
+	zCMesh::autoConvertMeshes = convData;
+	zCMorphMeshProto::autoConvertBinaryFile = convData;
 
 	// zfpuControler->RestoreDefaultControlWord()
 	// zfpuControler->SaveCurrentControlWord();
@@ -332,16 +313,225 @@ void g2::InitConsole()
 	zcon.Register("HERO EXPORT", "Exports your hero to the given file.");
 	zcon.Register("Imports your hero from the given file.", "HERO IMPORT");
 
+	zcon.Register("ZMARK", "marks outdoor occluder polys");
+	zcon.Register("ZWORLD STATUS", "prints some engine-world data");
+	zcon.Register("ZWORLD ACTIVEVOBS", "prints engine-world activeVobList");
+	zcon.Register("ZWORLD VOBTREE", "prints engine-world globalVobTree");
+	zcon.Register("ZWORLD VOBPROPS", "prints props of vob with specified name [VOB_NAME | VOB_ID]");
+	zcon.Register("ZRMODE MAT", "rendermode material/normal");
+	zcon.Register("ZRMODE WMAT", "rendermode material with overlaid wireframe");
+	zcon.Register("ZRMODE FLAT", "rendermode flat");
+	zcon.Register("ZRMODE WIRE", "rendermode wireframe");
+	zcon.Register("ZTOGGLE LIGHTSTAT", "toggles lightmaps/vertLight");
+	zcon.Register("ZTOGGLE VOBBOX", "toggles bbox3D drawing of vobs");
+	zcon.Register("ZTOGGLE RENDERVOB", "toggles drawing of vobs");
+	zcon.Register("ZTOGGLE MODELSKELETON", "toggles drawing of all models node-hierarchies");
+	zcon.Register("ZTOGGLE SMOOTHROOTNODE", "toggles smooothing of model root nodes translation");
+	zcon.Register("ZTOGGLE TEXSTATS", "toggles display of scene texture statistics");
+	zcon.Register("ZRNDSTAT", "renderer statistics");
+	zcon.Register("ZRNDMODELIST", "enumerates the renderers available modes and devices");
+	zcon.Register("ZVIDEORES", "sets video resolution");
+	zcon.Register("ZLIST MAT", "enumerating materials");
+	zcon.Register("ZLIST TEX", "enumerating textures");
+	zcon.Register("ZLIST MESH", "enumerating meshes");
+	zcon.Register("ZLIST CLASSTREE", "enumerating class hierarchy");
+	zcon.Register("ZMODEL PRINTTREE", "prints a model's node hierarchy [MODEL_NAME]");
+	zcon.Register("ZMOVECAMTOVOB", "[VOB_NAME | VOB_ID]");
+	zcon.Register("ZSOUNDMAN DEBUG", "toggles SoundManager debug info");
+	zcon.Register("ZTRIGGER", "sends trigger-message to vob [VOB_NAME | VOB_ID]");
+	zcon.Register("ZUNTRIGGER", "sends untrigger-message to vob [VOB_NAME | VOB_ID]");
+	zcon.Register("ZARCTEST", "tests integrity of each classes' arc/unarc funcs");
+	zcon.Register("ZOVERLAYMDS APPLY", "applies overlay-.MDS to vob's model [VOB_NAME | VOB_ID] [MDS_NAME]");
+	zcon.Register("ZOVERLAYMDS REMOVE", "removes overlay-.MDS from vob's model [VOB_NAME | VOB_ID] [MDS_NAME]");
+	zcon.Register("ZLIST", "list every living object of class [CLASS_NAME], if the class has SHARED_OBJECTS flag");
+	zcon.Register("ZTOGGLE SHOWZONES", "lists all zones the camera is currently located in (sound,reverb,fog,..)");
+	zcon.Register("ZTOGGLE SHOWTRACERAY", "displays all rays traced in the world as lines");
+	zcon.Register("ZTOGGLE SHOWPORTALS", "displays portals processed during occlusion during");
+	zcon.Register("ZTOGGLE SHOWHELPVERVISUALS", "displays helper visuals for vobs that don't have a natural visualization (eg zCTriggers)");
+	zcon.Register("ZTOGGLE PFXINFOS", "");
+	zcon.Register("ZSTARTANI", "starts ani on specified vob if it has a animatable visual [VOB_NAME] [ANI_NAME]");
+	zcon.Register("ZLIST VOBSWITHBIGBBOX", "lists suspicious vobs with very large bboxes");
+	zcon.Register("ZLIST MESHESWITHLOTSOFMATERIALS", "lists suspicious meshes with large material counts [NUM_MIN]");
+	zcon.Register("ZTOGGLE RESMANSTATS", "displays resource manager statistics (textures,sounds,..)");
+	zcon.Register("ZPROGMESHLOD", "apply global strength value to all pm LOD rendering, -1(default), 0..1..x");
+	zcon.Register("ZTOGGLE MARKPMESHMATERIALS", "marks vob/pmesh materials with color-code: red=1st mat, blue=2nd mat, green=3rd, yellow..white..brown..black=7th");
+	zcon.Register("ZTOGGLE PMESHSUBDIV", "debug");
+	zcon.Register("ZTOGGLE SHOWMEM", "displays information on heap allocations realtime onscreen");
+	zcon.Register("ZTOGGLE VOBMORPH", "toggles morphing of vobs");
+	zcon.Register("ZTOGGLE MATMORPH", "toggles morphing of materials");
+	zcon.Register("ZTOGGLE TNL", "toggles using of hardware transform and lightning");
+	zcon.Register("ZMEM DUMPHEAP BYTESPERLINE", "dumps current heap allocations sorted by bytes per line");
+	zcon.Register("ZMEM DUMPHEAP BLOCKSPERLINE", "dumps current heap allocations sorted by block per line");
+	zcon.Register("ZMEM CHECKHEAP", "checks consistency of current heap allocations");
+	zcon.Register("ZSTARTRAIN", "starts outdoor rain effect [STRENGTH]");
+	zcon.Register("ZSTARTSNOW", "starts outdoor snow effect [STRENGTH]");
+	zcon.Register("ZSET VOBFARCLIPZSCALER", "adjusts far clipping plane for objects, 1 being default");
+	zcon.Register("ZSET LEVELFARCLIPZSCALER", "adjusts far clipping plane for static level mesh, 1 being default");
+	zcon.Register("ZHIGHQUALITYRENDER", "batch activation of high-quality render options: vob/level farClip, LevelLOD-Strength, Object-LOD, TexMaxSize");
+	zcon.Register("ZTIMER MULTIPLIER", "sets factor for slow/quick-motion timing");
+	zcon.Register("ZTIMER REALTIME", "resets factor for slow/quick-motion timing to realtime");
+	zcon.Register("ZFOGZONE", "inserts test fog-zones");
+
+
 	auto zBert_EvalFunc = reinterpret_cast<zCConsole::EvalFunc*>(0x471520);
 	auto oBert_EvalFunc = reinterpret_cast<zCConsole::EvalFunc*>(0x430A70);
 	zcon.AddEvalFunc( zBert_EvalFunc );
 	zcon.AddEvalFunc( oBert_EvalFunc );
+
+	auto zDieter_EvalFunc = reinterpret_cast<zCConsole::EvalFunc*>(0x);
+	zcon.AddEvalFunc( zDieter_EvalFunc );
 }
 
 //#include <aw/utility/filesystem.h>
+
+#include <aw/utility/string/split.h>
+void g2::InitRenderer(void* hwnd)
+{
+	Log("Initializing renderer.");
+
+	if ( zoptions->Parm("ZMAXFRAMERATE")) {
+		auto val = zoptions->ParmValue("ZMAXFRAMERATE");
+		ztimer.LimitFPS( ToUnsigned(val) );
+	}
+
+	int deviceOverride = -1;
+	if ( zoptions->Parm("ZRND") ) {
+		auto val = zoptions->ParmValue("ZRND");
+		if (val.find("D3D") != std::string::npos) {
+			zrenderer = new zCRnd_D3D; // 0x82E7C
+			if ( val.find("1") != std::string::npos )
+				deviceOverride = 1;
+		}
+	}
+
+	if ( !zrenderer ) {
+		Log("No renderer specified, initializing default: D3D7");
+		zrenderer = new zCRnd_D3D;
+	}
+
+	auto resX       = zoptions->ReadInt( "VIDEO", "zVidResFullscreenX", 800);
+	auto resY       = zoptions->ReadInt( "VIDEO", "zVidResFullscreenY", 600);
+	auto bpp        = zoptions->ReadInt( "VIDEO", "zVidResFullscreenBPP",16);
+	auto deviceNo   = zoptions->ReadInt( "VIDEO", "zVidDevice", 0);
+	auto gamma      = zoptions->ReadReal("VIDEO", "zVidGamma", 0.5);
+	auto contrast   = zoptions->ReadReal("VIDEO", "zVidContrast", 0.5);
+	auto brightness = zoptions->ReadReal("VIDEO", "zVidBrightness", 0.5);
+
+	if ( zoptions->Parm("ZRES") ) {
+		auto val = zoptions->ParmValue("ZRES");
+		auto vals = aw::string::split(val, ",");
+		if (vals.size() > 0)
+			resX = ToUnsigned( vals[0] );
+		if (vals.size() > 1)
+			resY = ToUnsigned( vals[1] );
+		if (vals.size() > 2)
+			bpp  = ToUnsigned( vals[2] );
+	}
+
+	if ( deviceOverride >= 0 )
+		deviceNo = deviceOverride;
+
+	auto windowed = zoptions->ReadBool("VIDEO", "zStartupWindowed", 0);
+	if ( zoptions->Parm("ZWINDOW") )
+		windowed = 1;
+	
+	zrenderer->Vid_SetDevice(deviceNo);
+	zrenderer->Vid_SetScreenMode(windowed != 0);
+	zrenderer->Vid_SetMode(resX, resY, bpp, hwnd);
+	zCOLOR clearcolor = 0;
+	zrenderer->Vid_Clear(&clearcolor, 3);
+	zrenderer->Vid_SetGammaCorrection(gamma, contrast, brightness);
+
+	zCTexture::AutoDetectRendererTexScale();
+
+	zCTexture::s_globalLoadTextures = !zoptions->Parm("ZNOTEX");
+	zCView::SetMode(resX, resY, bpp, hwnd);
+
+	Log("Startup", "Renderer is initialized");
+}
+
+void g2::InitGraphics()
+{
+	Log("Startup", "Initializing graphics subsystems");
+
+	zCMapDetailTexture::S_Init();
+	zCVisual::InitVisualSystem();
+	zCVob::InitVobSystem();
+	zCLensFlareFX::LoadLensFlareScript();
+	zCVobLight::LoadLightPresets();
+	zCDecal::CreateDecalMeshes();
+	zCParticleFX::InitParticleFX();
+	zCProgMeshProto::InitProgMeshProto();
+
+	auto polyTreshold = zCRayTurboAdmin::GetPolyTreshold();
+	polyTreshold = zoptions->ReadInt("ENGINE", "zRayTurboPolyTreshold", polyTreshold);
+	zCRayTurboAdmin::SetPolyTreshold(polyTreshold);
+}
+
+void g2::InitSound()
+{
+	Log("Startup", "Initializing Sound");
+
+	if ( zoptions->Parm("ZNOSOUND") )
+		zoptions->WriteBool("SOUND", "soundEnabled", 0, 1);
+
+	auto soundEnabled = zoptions->ReadBool("SOUND", "soundEnabled", 1);
+
+	if ( soundEnabled ) {
+		zsound = new zCSndSys_MSS;
+	} else {
+		zsound = new zCSoundSystemDummy;
+	}
+
+	zsndMan = new zCSoundManager;
+
+	float masterVol = zoptions->ReadReal("SOUND", "soundVolume", 1.0);
+	if ( zsound )
+		zsound->SetMasterVolume(masterVol);
+}
+
+auto ChangeMusicEnabled = func<zCOptions::ChangeHandler>(0x42D240);
+void g2::InitMusic()
+{
+	Log("Startup", "Initializing Music");
+	
+	if ( zoptions->Parm("ZNOMUSIC") )
+		zoptions->WriteBool("SOUND", "musicEnabled", 0, 1);
+
+	auto musicEnabled = zoptions->ReadBool("SOUND", "musicEnabled", 1);
+	zCMusicSystem::DisableMusicSystem(!musicEnabled);
+
+	if ( musicEnabled ) {
+		zmusic = new zCMusicSys_DirectMusic;
+	} else {
+		zmusic = new zCMusicSys_Dummy;
+	}
+
+	zoptions->InsertChangeHandler("SOUND", "musicEnabled", ChangeMusicEnabled);
+	float musicVol = zoptions->ReadReal("SOUND", "musicVolume", 0.8);
+	if ( zmusic )
+		zmusic->SetVolume(musicVol);
+}
+
 #include <aw/utility/string/case.h>
+void g2::InitOptions()
+{
+	Log("Startup", "Initializing options");
+
+	zoptions->ReadInt("PERFORMANCE", "sightValue" , 4);
+	zoptions->ReadReal("PERFORMANCE", "modelDetail" , 0.5);
+	zoptions->ReadReal("INTERNAL", "texDetailIndex" , 0.6);
+	zoptions->ReadInt("GAME", "skyEffects" , 1);
+	zoptions->ReadInt("GAME", "bloodDetail" , 2);
+	zoptions->ReadReal("VIDEO", "zVidBrightness" , 0.5);
+	zoptions->ReadReal("VIDEO", "zVidContrast"   , 0.5);
+	zoptions->ReadReal("VIDEO", "zVidGamma"      , 0.5);
+}
+
 void g2::InitGameOptions()
 {
+	Log("Startup", "Initializing game options");
+
 	std::string parse;
 	if ( zoptions->Parm("PARSE") )
 		parse = zoptions->ParmValue( "PARSE" );

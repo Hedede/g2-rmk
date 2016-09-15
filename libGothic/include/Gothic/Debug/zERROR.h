@@ -1,5 +1,4 @@
-#ifndef GOTHIC_ZERROR_H
-#define GOTHIC_ZERROR_H
+#pragma once
 #include <Hook/Externals.h>
 #include <Gothic/Types/zSTRING.h>
 
@@ -28,6 +27,7 @@ struct zERROR {
 	}*/
 
 private:
+	void* vtab;
 	void (*onexit)();
 
 	zSTRING filter_authors;
@@ -45,4 +45,6 @@ private:
 };
 
 static zERROR& zerr = Value<zERROR>(0x8CDCD0);
-#endif//GOTHIC_ZERROR_H
+
+#include <Hook/size_checker.h>
+CHECK_SIZE(zERROR, 0x3C);

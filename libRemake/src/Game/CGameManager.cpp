@@ -131,6 +131,7 @@ void CGameManager::PreGraphicsInit()
 	sysEvent();
 
 	g2::InitRenderer(sysContextHandle);
+	g2::InitGraphics();
 	g2::InitSound();
 	g2::InitMusic();
 

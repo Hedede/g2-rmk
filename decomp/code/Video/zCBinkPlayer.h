@@ -143,7 +143,7 @@ int zCBinkPlayer::OpenVideo(zSTRING fileName)
 	zINFO_B(4, "B: VP: Open Videofile: \"" + file.GetFile() "\""); // 78
 
 	if (auto mss = dynamic_cast<zCSndSys_MSS*>(zsound)) {
-		if ( auto drv = zCSndSys_MSS::GetDigitalDriverHandle() ) {
+		if ( auto drv = mss->GetDigitalDriverHandle() ) {
 			BinkSetSoundSystem(BinkOpenMiles, drv);
 			BinkSetSoundOnOff(binkHandle, 1);
 			BinkSetVolume(binkHandle, 0, 0x10000);

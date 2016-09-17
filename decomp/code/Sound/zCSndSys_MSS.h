@@ -1,19 +1,46 @@
 // _carsten\\zSndMss.cpp
+zCParser* sfxParser;
 struct zCSndSys_MSS : zCSoundSystem {
 	void ~zCSndSys_MSS() override;
 	zCSoundFX* LoadSoundFX(zSTRING const& name) override;
 	zCSoundFX* LoadSoundFXScript(zSTRING const& name) override;
-	void GetSFXParser() override;
+	zCParser* GetSFXParser() override
+	{
+		return sfxParser;
+	}
 	void GetPlayingTimeMSEC(zSTRING const &) override;
 
-	void SetMasterVolume(float) override;
-	void GetMasterVolume() override;
+	void SetMasterVolume(float vol) override
+	{
+		if ( vol == -1.0 )
+			prefs.volume = 127.0 / AIL_get_preference(MDI_DEFAULT_VOLUME);
+		else
+			prefs.volume = vol;
+		AIL_set_digital_master_volume_level(sndDrv, prefs.volume);
+	}
+	float GetMasterVolume() override
+	{
+		// not sure about this one
+		if (AIL_get_preference(MDI_DEFAULT_VOLUME) == prefs.volume)
+			return -1.0;
+		return prefs.volume / 127;
+	}
 	void PlaySound(zCSoundFX *,int,int,float,float) override;
 	void PlaySound(zCSoundFX *,int) override;
 	void PlaySound3D(zSTRING const &,zCVob *,int,zCSoundSystem::zTSound3DParams *) override;
 	void PlaySound3D(zCSoundFX *,zCVob *,int,zCSoundSystem::zTSound3DParams *) override;
 	void StopSound(int const &) override;
-	void StopAllSounds() override;
+	void StopAllSounds() override
+	{
+
+		for (auto snd : zCActiveSnd::activeSndList) {
+			auto sfx = snd->sndFx;
+			if (!sfx || sfx->GetIsFixed())
+				zCActiveSnd::RemoveSound(snd);
+		}
+		handleManager.DisposeAllSamples();
+	}
+
 	void GetSound3DProps(int const &,zCSoundSystem::zTSound3DParams &) override;
 	void UpdateSound3D(int const &,zCSoundSystem::zTSound3DParams *) override;
 	void GetSoundProps(int const &,int &,float &,float &) override;
@@ -22,23 +49,97 @@ struct zCSndSys_MSS : zCSoundSystem {
 	void DoSoundUpdate() override;
 	void SetListener(zCVob *) override;
 	void SetGlobalReverbPreset(int,float) override;
-	void SetReverbEnabled(int) override;
-	void GetReverbEnabled() override;
-	void GetNumProvider() override;
-	void GetProviderName(int) override;
-	void SetProvider(int) override;
+
+	void SetReverbEnabled(int) override
+	{
+		if ( reverbEnabled ) {
+			if ( !b )
+				SetGlobalReverbPreset(0, 0.0);
+		}
+		reverbEnabled = b;
+	}
+	int GetReverbEnabled() override
+	{
+		return reverbEnabled;
+	}
+
+	int GetNumProvider() override
+	{
+		return zoptions->ReadInt("SOUND", "extendedProviders", 0) ? 13 : 3;
+	}
+	zSTRING const& GetProviderName(int idx) override
+	{
+		return soundProviders[idx].name;
+	}
+	int SetProvider(int) override { return 1; }
+
 	void SetSpeakerType(zCSoundSystem::zTSpeakerType) override;
-	void GetSpeakerType() override;
-	void SetGlobalOcclusion(float) override;
-	void GetCPULoad() override;
+	zTSpeakerType GetSpeakerType() override
+	{
+		return speakerType;
+	}
+	void SetGlobalOcclusion(float val) override
+	{
+		s_globalOcclusion = val;
+	}
+	float GetCPULoad() override
+	{
+		return AIL_digital_CPU_percent(sndDrv) * 0.01;
+	}
 
 	void SfxCon_ParamChanged(zSTRING const&) { }
 
+	static int GetNumSoundsPlaying()
+	{
+		int result = 0;
+		for (auto* snd : zCActiveSnd::activeSndList) {
+			if ( snd->bitField & 1 )
+				++result;
+		}
+		return result;
+	}
+
+	static int zCSndSys_MSS::RemoveAllActiveSounds()
+	{
+		for (auto* snd : zCActiveSnd::activeSndList) {
+			if ( snd->bitField & 1 )
+				zCActiveSnd::RemoveSound(snd);
+		}
+		return zCActiveSnd::activeSndList.GetNum();
+	}
+
+	static int GetUsedSoundMem()
+	{
+		return sndMemUsed;
+	}
+
+	_DIG_DRIVER* GetDigitalDriverHandle() const
+	{
+		return sndDrv;
+	}
+
+	int MuteSFX()
+	{
+		swap(lastVol, prefs.volume);
+		return AIL_set_digital_master_volume_level(sndDrv, prefs.volume);
+	}
+
 private:
-	int unk1;
+	zTSpeakerType speakerType;
 	int unk2;
-	int unk3;
+	zBOOL reverbEnabled;
 };
+
+//------------------------------------------------------------------------------
+void zCSndSys_MSS::SetListener(zCVob* listenerVob)
+{
+	Release(listener);
+	if ( listenerVob ) {
+		listener = listenerVob;
+		listener->AddRef();
+		trafoWStoLS = listener->trafoObjToWorld.InverseLinTrafo();
+	}
+}
 
 //------------------------------------------------------------------------------
 zCSoundFX* zCSndSys_MSS::LoadSoundFX(zSTRING const& fileName)

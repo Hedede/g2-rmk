@@ -9,7 +9,36 @@ void ReplaceDirSeparators(zSTRING& str)
 
 
 struct zFILE_FILE : public zFILE {
-	~zFILE_FILE() override;
+	static bool zFILE_FILE::InitFileSystem()
+	{
+		if ( !zFILE::s_virtPath )
+			zFILE::s_virtPath = new zFILE_FILE();
+		return zFILE::InitFileSystem();
+	}
+	static bool zFILE_FILE::DeinitFileSystem()
+	{
+		if ( zFILE::s_virtPath )
+			delete zFILE::s_virtPath;
+		return zFILE::DeinitFileSystem();
+	}
+
+	zFILE_FILE() : zFILE() { Init(""); }
+	zFILE_FILE(zSTRING const& path) : zFILE(path) { Init(path); }
+	~zFILE_FILE() override
+	{
+		if (IsOpened())
+			Close();
+	}
+
+	void Init(zSTRING const& path)
+	{
+		SetPath(path);
+		handle = 0;
+		unkf2 = 0;
+		buf = 0;
+		unkf1 = 0;
+		unk1 = 0;
+	}
 
 	void SetMode(int32_t mode) override
 	{
@@ -35,8 +64,9 @@ struct zFILE_FILE : public zFILE {
 
 	zSTRING GetFullPath() override;
 	zSTRING GetPath()  override { return path; }
+	zSTRING GetDirectoryPath() override { return dirPath; }
 	zSTRING GetDrive() override { return drive; }
-	zSTRING GetDir() override { return dir; }
+	zSTRING GetDir()   override { return dir; }
 	zSTRING GetFile()  override { return filename + "." + ext; }
 	zSTRING GetFilename() override { return filename; }
 	zSTRING GetExt() override { return ext; }
@@ -55,41 +85,70 @@ struct zFILE_FILE : public zFILE {
 	void FileMove(zSTRING,bool) override;
 	void FileCopy(zFILE *) override;
 	void FileCopy(zSTRING,bool) override;
-	void FileDelete() override;
+	bool FileDelete() override
+	{
+		if (IsOpened())
+			Close();
+		return remove(GetFullPath().Data());
+	}
 
 	bool IsOpened() override { return file != 0; }
 
-	void Create(zSTRING const &) override;
-	void Create() override;
-	void Open(zSTRING const &,bool) override;
-	void Open(bool) override;
-	void Exists(zSTRING const &) override;
-	void Exists() override;
+	bool Create(zSTRING const& path) override
+	{
+		SetPath(path);
+		return Create();
+	}
+	bool Create() override;
+	bool Open(zSTRING const& path, bool writeMode) override
+	{
+		SetPath(path);
+		return Open(writeMode);
+	}
+	bool Open(bool writeMode) override;
+	bool Exists(zSTRING const& path) override
+	{
+		SetPath(path);
+		return Exists();
+	}
+	bool Exists() override
+	{
+		if (file)
+			return true;
+		return _access(GetFullPath().Data(), 0) == 0;
+	}
 	void Close() override;
 
 	int Reset() override { return Seek(0); }
 
-	void Append() override;
+	void Append() override { fseek(file, 0, SEEK_END); }
 	void Size() override;
 	int Pos() override { return ftell(handle); }
-	void Seek(long) override;
-
-	int Seek(int32_t Offset) override
+	int Seek(int32_t offset) override
 	{
-		fseek(handle, Offset, 0);
+		fseek(file, offset, 0);
 		return 0;
 	}
 
-	void Eof() override;
+	int Eof() override { return feof(file); }
 
 	void GetStats(zFILE_STATS &) override;
-	void Write(void const *,long) override;
-	void Write(zSTRING const &) override;
-	void Write(char const *) override;
-	void Read(zSTRING &) override;
-	void Read(char *) override;
-	void Read(void *,long) override;
-	void ReadChar(char &) override;
+	int Write(void const* src, long count) override;
+	int Write(zSTRING const& str) override
+	{
+		return Write(str.Data);
+	}
+	int Write(char const *) override;
+	int Read(zSTRING &) override;
+	int Read(char* buf) override
+	{
+		fgets(buf, 1024, file);
+	}
+	int Read(void *,long) override;
+	int ReadChar(char& c) override
+	{
+		Read(&c, 1) != 1 ? 2 : 0;
+	}
 	void SeekText(zSTRING const &) override;
 	void ReadBlock(long,long) override;
 	void UpdateBlock(zSTRING const &,long,long) override;
@@ -112,8 +171,11 @@ private:
 
 	int unk;
 
-	FILE* file;
+	FILE* file; // handle
 	int mode;
+
+	int uunk[70];
+	int unkf2;
 }
 
 size_t zFILE_FILE::FlushBuffer()

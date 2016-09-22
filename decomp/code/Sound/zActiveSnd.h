@@ -34,13 +34,19 @@ private:
 	int unk2[2];
 	float unk3_;
 	int unk4[3];
-	char bitField;
+	struct {
+		uint8_t playing : 1;
+		uint8_t loop  : 1;
+		uint8_t unk   : 3;
+		uint8_t slot  : 3;
+	} bitfield;
 	char unko;
-	char __volume;
-	int frequency;
+	char volume;
+	int frequency; // pitch?
 	int __lastUpdate;
 	int updateFrameCtr;
 	int unk[4];
+
 	zCVob *sourceVob;
 	zCSndFrame *frame;
 	zCSoundFX *sndFx;

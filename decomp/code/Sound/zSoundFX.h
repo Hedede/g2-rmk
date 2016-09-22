@@ -4,9 +4,11 @@ public:
 	zCSoundFX() = default;
 	virtual ~zCSoundFX() = default;
 
-	virtual void LoadResourceData();
-	virtual void ReleaseResourceData();
-	virtual void GetResSizeBytes();
+	void LoadResourceData() override;
+	void ReleaseResourceData() override;
+	void GetResSizeBytes() override;
+	void GetCacheConfig(unsigned& timeout, unsigned& maxSize) override;
+
 	virtual int GetNumChannels() { return 0 ;}
 	virtual int GetNumChannelFrames(int) { return 0; }
 	virtual void GetChannelFrame(int,int) {}
@@ -22,6 +24,15 @@ public:
 	virtual void IsLooping() { return 0; }
 	virtual void SetIsFixed(int) {}
 	virtual int GetIsFixed() { return 0; }
+
+private:
+	float volume;
+	float pan;
+	int frequency;
+
+	int unk;
+
+	float timeStart;
 };
 
 void zCSoundFX::GetCacheConfig(unsigned& timeout, unsigned& size)

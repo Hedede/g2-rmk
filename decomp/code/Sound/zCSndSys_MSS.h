@@ -87,7 +87,14 @@ struct zCSndSys_MSS : zCSoundSystem {
 		return AIL_digital_CPU_percent(sndDrv) * 0.01;
 	}
 
-	void SfxCon_ParamChanged(zSTRING const&) { }
+	static void SfxCon_ParamChanged(zSTRING const&) { }
+
+	void SetNumAudioChannels(int num)
+	{
+		AIL_set_preference(1, num);
+		zCActiveSnd::maxChannels = num;
+		zCSndSys_MSS::prefs.numChannels = num;
+	}
 
 	static int GetNumSoundsPlaying()
 	{
@@ -126,7 +133,7 @@ struct zCSndSys_MSS : zCSoundSystem {
 
 private:
 	zTSpeakerType speakerType;
-	int unk2;
+	int eaxEnvironment;
 	zBOOL reverbEnabled;
 };
 
@@ -238,4 +245,100 @@ zCSoundFX* zCSndSys_MSS::LoadSoundFXScript(zSTRING const& identifier)
 	if ( multi )
 		return LoadMulti(name1.Copied(0, name1.Length() - 1), chan);
 	return LoadSingle(name1);
+}
+
+zTSndHandle zCSndSys_MSS::PlaySound(zCSoundFX* sfx, int slot)
+{
+	if (!sfx)
+		return 0;
+
+	// was inlined, private
+	// friend or part of bigger func?
+	sfx->ChooseVariance();
+	auto chan = sfx->channels[sfx->curChannel];
+	if ( chan->frames.GetNum() <= 1) {
+		sfx->curFrame = 0;
+	} else {
+		if (sfx->selFrame == -1) {
+			sfx->curFrame = rand() * (frames.GetNum() - 1) / 32767.0 + 0.5;
+		} else {
+			sfx->curFrame = sfx->selFrame;
+		}
+	}
+
+	sfx->CacheIn();
+
+	sfx->GetCurFrame()->SetDefaultProperties();
+
+	if ( !sfx->GetCurFrame()->waveData->CheckForCorrectFormat(0) )
+		return -1;
+
+	auto actSnd = zCActiveSnd::AllocNextFreeSnd();
+	if ( !actSnd ) {
+		return -1;
+	}
+
+
+	// looks very similar to part of other func,
+	// need to find common inlined stuff
+	actSnd->handle = ++zCActiveSnd::lastHandle;
+	actSnd->frame = sfx->GetCurFrame();
+	// maybe not frequency?
+	actSnd->frequency = actSnd->frame->CalcPitchVariance();
+	actSnd->pan       = actSnd->frame->pan;
+	actSnd->volume    = actSnd->frame->volume;
+
+	actSnd->bitfield.loop = actSnd->frame->loop;
+
+	if ( GetReverbEnabled() )
+		actSnd->reverbLevel = actSnd->frame->reverbLevel;
+	else
+		actSnd->reverbLevel = 0.0;
+	actSnd->reverbLevel *= 0.5 * globalReverbWeight;
+
+	if ( slot ) {
+		for (auto& snd : zCActiveSnd::activeSndList) {
+			if (snd->bitfield.slot == slot) {
+				zCActiveSnd::RemoveSound( snd );
+				break;
+			}
+		}
+	}
+
+	if ( !zCActiveSnd::RequestChannel(actSnd) )
+		return -1;
+
+	auto sample = actSnd->sampleHandle;
+
+	if ( !sample ) {
+		zWARNING("C: could not allocate sample"); //1349,
+		return -1;
+	}
+
+	AIL_init_sample(sample);
+
+	if ( eaxEnvironment ) {
+		AIL_set_sample_processor(sample, 1, reverb3Filter);
+		AIL_set_filter_sample_preference(sample, "Reverb EAX Environment", &eaxEnvironment);
+		AIL_set_filter_sample_preference(sample, "Reverb Mix", &actSnd->reverbLevel);
+	}
+
+	AIL_set_sample_file(sample, actSnd->frame->waveData->soundData, 0);
+	AIL_set_sample_playback_rate(sample, actSnd->frequency);
+
+	auto vol = actSnd->volume / 127.0;
+	auto pan = actSnd->pan    / 127.0;
+	AIL_set_sample_volume_pan(sample, vol, pan);
+	auto start = actSnd->frame->loopStartOffset;
+	auto end   = actSnd->frame->loopEndOffset;
+	AIL_set_sample_loop_block(sample, start, end);
+	AIL_set_sample_loop_count(sample, !actSnd.bitfield.loop);
+	AIL_start_sample(sample);
+
+	zCActiveSnd.activeSndList.InsertSort(actSnd);
+	D_SpyFrameInfo(actSnd, 0);
+	actSnd->bitfield.playing = true;
+	actSnd->sndFx = sfx;
+	sfx->AddRef();
+	return actSnd->handle;
 }

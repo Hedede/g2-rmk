@@ -81,3 +81,21 @@ private:
 	// used by NewFrame(), i.e. unused
 	zCArray<zCWaveData*> wtf;
 };
+
+
+int zCWavePool::NewFrame()
+{
+	wtf.DeleteList();
+	auto num = zCActiveSnd::activeSndList.GetNum();
+	for (auto i = 0; i < num; ++i) {
+		auto* frame = zCActiveSnd::activeSndList[i]->frame;
+		if (!frame)
+			continue;
+		auto* wave = frame->waveData;
+		if (!wave || !wave->soundData)
+			continue;
+		if (wtf.Search(wave) == -1)
+			wtf.Insert(wave);
+	}
+	return num;
+}

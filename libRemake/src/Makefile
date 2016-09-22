@@ -20,6 +20,9 @@ includes=\
 -I$(awlib_path)/include \
 -I$(sdl_path)/include
 
+#CXX = winegcc -m32
+CXX = i686-w64-mingw32-g++
+
 cxx_flags = -std=c++1z -g -fno-strict-aliasing -fno-exceptions -fno-rtti
 
 linker_flags=$(libraries)
@@ -28,10 +31,11 @@ libs= -lgdi32 -lSDL2_image -lSDL2main -lSDL2
 
 %.o: %.cpp
 	@ echo [Build] Compiling $@
-	@ i686-w64-mingw32-g++ $(includes) $(cxx_flags) -c $< -o $@
+	@ $(CXX) $(includes) $(cxx_flags) -c $< -o $@
 
 hook: $(objects)
-	i686-w64-mingw32-g++ $(includes) $(cxx_flags) $(linker_flags) $(static_gcc) $(objects) $(libs) -shared -o testlib.dll
+	@ echo [Build] Linking:
+	$(CXX) $(includes) $(cxx_flags) $(linker_flags) $(static_gcc) $(objects) $(libs) -shared -o testlib.dll
 
 rebuild:
 	touch $(sources)

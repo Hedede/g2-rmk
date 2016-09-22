@@ -2,6 +2,10 @@
 #define Gothic_Remake_Externals_H
 #include <cstdint>
 
+#if defined(__WINE__)
+#define __thiscall __attribute__((__thiscall__))
+#endif
+
 /*!
  * Obtain reference to object at address addr.
  */

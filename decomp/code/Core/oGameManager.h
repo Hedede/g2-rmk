@@ -462,6 +462,25 @@ void CGameManager::Init(HWND& hWndApp)
 	zINFO_C(3,""); // 572
 }
 
+[[noreturn]] void emergency_exit()
+{
+	zSTRING unk1,unk2;
+
+	zsound = nullptr;
+
+	_OSVERSIONINFOA osver;
+	osver.dwOSVersionInfoSize = 148;
+
+	if (GetVersionExA(&osver) && osver.dwPlatformId == 1) {
+		zDieter_ShutDown(0);
+		zCarsten_ShutDown();
+	} else {
+		zDieter_ShutDown_Fast();
+	}
+
+	exit(0);
+}
+
 void CGameManager::Done()
 {
 	if ( !dontStartGame ) {
@@ -470,22 +489,9 @@ void CGameManager::Done()
 		zCCacheBase::S_ClearCaches();
 		sysKillWindowsKeys(0);
 
-		bool fastExit = zCOption::Parm(zoptions, "ZNOFASTEXIT") == 0;
-		if ( fastExit ) {
-			_OSVERSIONINFOA VersionInformation;
-			if ( GetVersionExA(&VersionInformation) != 1 ||
-					VersionInformation.dwPlatformId != 1 )
-			{
-				zDieter_ShutDown_Fast();
-			}
-			else
-			{
-				zDieter_ShutDown(0);
-				zCarsten_ShutDown();
-			}
-
-			exit(0);
-		}
+		bool fastExit = !zCOption::Parm(zoptions, "ZNOFASTEXIT");
+		if ( fastExit )
+			emergency_exit();
 
 		GameSessionDone();
 

@@ -68,7 +68,7 @@ private:
 	}
 
 private:
-	int unk0;
+	zSParticle *particles;
 	char emitter_vars[28];
 	zCParticleEmitter *emitter;
 

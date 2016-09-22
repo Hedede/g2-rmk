@@ -24,74 +24,127 @@ struct zCParticleEmitter {
 
 	void ResetStrings()
 	{
-
-		str1.Clear();
-		str2.Clear();
-		str3.Clear();
-		str4.Clear();
-		str5.Clear();
-		str6.Clear();
-		str7.Clear();
-		visualName.Clear();
-		str8.Clear();
-		str9.Clear();
-		str10.Clear();
-		str11.Clear();
-		str12.Clear();
-		str13.Clear();
-		str14.Clear();
-		str15.Clear();
-		str18.Clear();
-		str16.Clear();
-		str17.Clear();
-		str19.Clear();
-		str20.Clear();
-		str21.Clear();
-		str22.Clear();
-		str23.Clear();
+		ppsScaleKeys_S.Clear();
+		ppsCreateEm_S.Clear();
+		shpType_S.Clear();
+		shpFOR_S.Clear();
+		shpOffsetVec_S.Clear();
+		shpDistribType_S.Clear();
+		shpDim_S.Clear();
+		shpMesh_S.Clear();
+		shpScaleKeys_S.Clear();
+		dirMode_S.Clear();
+		dirFOR_S.Clear();
+		dirModeTargetFOR_S.Clear();
+		dirModeTargetPos_S.Clear();
+		flyGravity_S.Clear();
+		visName_S.Clear();
+		visOrientation_S.Clear();
+		visSizeStart_S.Clear();
+		visTexColorStart_S.Clear();
+		visTexColorEnd_S.Clear();
+		visAlphaFunc_S.Clear();
+		trlTexture_S.Clear();
+		mrkTexture_S.Clear();
+		flockMode.Clear();
+		timeStartEnd_S.Clear();
 	}
 
 	void UpdateVelocity() {}
 
 public:
+
+	// 1) Emitter: zeitliches  Austoss-Verhalten, particles-per-second
+	float    ppsValue;
+	zSTRING  ppsScaleKeys_S;
+	int      ppsIsLooping;
+	int      ppsIsSmooth;
+	float    ppsFPS;
+	zSTRING  ppsCreateEm_S;
+	float    ppsCreateEmDelay;
+
+	// 2) Emitter: raeumliches Austoss-Verhalten
+	zSTRING   shpType_S;     // "point, line, box, circle, sphere, mesh"
+	zSTRING   shpFOR_S;     // "object,world"
+	zSTRING   shpOffsetVec_S;
+	zSTRING   shpDistribType_S;    // "RAND, UNIFORM, WALK"
+	float     shpDistribWalkSpeed;
+	int       shpIsVolume;
+	// "", "30", "10 20 30", "30", "30", ""
+	// line: nur 1 Dimension !=0 // shape Dimensions
+	zSTRING   shpDim_S;
+	zSTRING   shpMesh_S;     // "cross.3ds"
+	int       shpMeshRender_B;
+	zSTRING   shpScaleKeys_S;    // "[1.0] [0.8 0.9 0.2] [1.0]"
+	int       shpScaleIsLooping;
+	int       shpScaleIsSmooth;
+	float     shpScaleFPS;
+
+	// 3) Partikel: Start Richtung/Speed:
+	zSTRING   dirMode_S;    // "DIR, TARGET, MESH_POLY"
+	zSTRING   dirFOR_S;     // "OBJECT, WORLD"
+	zSTRING   dirModeTargetFOR_S;
+	zSTRING   dirModeTargetPos_S;   // "30 23 67"
+	float     dirAngleHead;
+	float     dirAngleHeadVar;
+	float     dirAngleElev;
+	float     dirAngleElevVar;
+	float     velAvg;
+	float     velVar;
+
+	// 4) Partikel: Lebensdauer
+	float     lspPartAvg;
+	float     lspPartVar;
+
+	// 5) Partikel: Flugverhalten (gravity, nicht-linear?, mesh-selfRot?,..)
+	// grav: a) nur Y, b) XYZ, c) auf Ziel zu steuern
+	// zSTRING  flyMode_S;        // "LINEAR, LIN_SINUS,.."
+	// flyMeshSelfRotSpeedMin, flyMeshSelfRotSpeedMax
+	zSTRING  flyGravity_S;
+	int      flyCollDet_B;
+
+	// 6) Partikel: Visualisierung
+	zSTRING  visName_S;     // "NAME_V0_A0.TGA/.3DS" (Variation, Animation)
+	zSTRING  visOrientation_S;   // "NONE, VELO"
+	int      visTexIsQuadPoly;   // 0=triMesh, 1=quadMesh
+	float    visTexAniFPS;
+	int      visTexAniIsLooping;   // 0=oneShot, 1=looping
+	// color  (nur Tex, lifeSpan-Sync)   
+	zSTRING  visTexColorStart_S;
+	zSTRING  visTexColorEnd_S;
+	// size-ani  (nur Tex, lifeSpan-Sync)
+	zSTRING  visSizeStart_S;
+	float    visSizeEndScale;
+	// alpha  (lifeSpan-Sync)
+	zSTRING  visAlphaFunc_S;
+	float    visAlphaStart;
+	float    visAlphaEnd;
+
+	// 7) misc effects
+	
+	// trail
+	float    trlFadeSpeed;
+	zSTRING  trlTexture_S;
+	floa     trlWidth;
+
+	// marks
+	float    mrkFadeSpeed;
+	zSTRING  mrkTexture_S;
+	float    mrkSize;
+	
+	// flocking
+	zSTRING  flockMode;
+	float    flockStrength;
+	
+	// local frame of reference override
+	int      useEmittersFOR;
+	
+	zSTRING  timeStartEnd_S;
+	
+	int      m_bIsAmbientPFX;
+
 	int unk;
-	zSTRING str1;
-	int unk0[3];
-	zSTRING str2;
-	int unk1;
-	zSTRING str3;
-	zSTRING str4;
-	zSTRING str5;
-	zSTRING str6;
-	int unk2[2];
-	zSTRING str7;
-	zSTRING visualName;
-	int unk3;
-	zSTRING str8;
-	int unk4[3];
-	zSTRING str9;
-	zSTRING str10;
-	zSTRING str11;
-	zSTRING str12;
-	int unk5[8];
-	zSTRING str13;
-	int unk6;
-	zSTRING str14;
-	zSTRING str15;
-	int unk7[3];
-	zSTRING str16;
-	zSTRING str17;
-	zSTRING str18;
-	int unk8;
-	zSTRING str19;
-	int unk9[3];
-	zSTRING str20;
-	int unk10[2];
-	zSTRING str21;
-	int unk11;
-	zSTRING str22;
-	int unk12[2];
-	zSTRING str23;
+
 	char unk13[8];
 	zSTRING pfxName;
 	zCArray<float> arr1;

@@ -305,7 +305,7 @@ zTSndHandle zCSndSys_MSS::PlaySound(zCSoundFX* sfx, int slot)
 		}
 	}
 
-	if ( !zCActiveSnd::RequestChannel(actSnd) )
+	if ( !actSnd->RequestChannel() )
 		return -1;
 
 	auto sample = actSnd->sampleHandle;

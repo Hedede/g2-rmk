@@ -67,7 +67,7 @@ void InitWin32Stuff(char const* cmdLine)
 	Time70 = PerformanceCount.LowPart;
 	BeginTime70 = Time70;
 
-	sysParseCommandLine(cmdLine);
+
 	hHandle = CreateMutexA(0, 0, 0);
 	GetModuleFileNameA(0, winModuleName, 0x104u);
 

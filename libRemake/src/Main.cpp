@@ -38,11 +38,7 @@ extern "C" void __attribute__((dllexport)) aw_main(void* hinst, char const* args
 	Log("Main", "Exception handler is ", handler ? "active" : "disabled");
 	zCExceptionHandler::SetIsActive(handler);
 
-	// TODO: remove k chertyam sobachim
-	std::string log = "DemoW.log";
-	std::copy(begin(log), end(log), std::begin(sysLogName));
-
-	InitWin32Stuff(cmdLine.c_str());
+	InitWin32Stuff(cmdLine.data());
 
 	InitFunctions();
 

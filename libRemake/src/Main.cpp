@@ -15,7 +15,6 @@ extern void InitFunctions();
 #include <Gothic/Debug/zExceptionHandler.h>
 
 void GameLoop();
-char(&sysLogName)[260] = Value<char[260]>(0x8D3A90);
 
 extern "C" void __attribute__((dllexport)) aw_main(void* hinst, char const* args)
 {

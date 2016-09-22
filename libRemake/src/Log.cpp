@@ -3,7 +3,7 @@
 #include <cstdio>
 
 namespace g2 {
-aw::LogProvider logger;
+aw::log_provider logger;
 
 LogFile::LogFile()
 {
@@ -16,7 +16,7 @@ LogFile::~LogFile()
 		std::fclose((FILE*)logfile);
 }
 
-void LogFile::log(Level level, std::string const& src, std::string const& msg)
+void LogFile::message(level lvl, std::string const& src, std::string const& msg)
 {
 	if (logfile) {
 		constexpr size_t nsrc = 32;
@@ -26,17 +26,17 @@ void LogFile::log(Level level, std::string const& src, std::string const& msg)
 		str += src;
 		str += " :";
 		str.resize(nsrc + sizeof(" :"), ' ');
-		switch (level) {
-		case Info:
+		switch (lvl) {
+		case info:
 			str += " Info : ";
 			break;
-		case Warning:
+		case warning:
 			str += " Wrng : ";
 			break;
-		case Error:
+		case error:
 			str += " Errr : ";
 			break;
-		case Critical:
+		case critical:
 			str += " Crit : ";
 			break;
 		default:

@@ -21,7 +21,7 @@ extern "C" void __attribute__((dllexport)) aw_main(void* hinst, char const* args
 {
 	using namespace g2;
 	LogFile file_log;
-	logger.setLogger(&file_log);
+	logger.set_logger(&file_log);
 
 	Log("Main", "Successfully hooked.");
 

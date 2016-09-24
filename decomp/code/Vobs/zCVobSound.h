@@ -1,8 +1,8 @@
 class zCVobSound : public zCZone {
 	Z_OBJECT(zCVobSound);
 public:
-	virtual void Archive(zCArchiver& arc);
-	virtual void Unarchive(zCArchiver& arc);
+	void Archive(zCArchiver& arc) override;
+	void Unarchive(zCArchiver& arc) override;
 	virtual ~zCVobSound();
 	virtual void OnTrigger(zCVob *,zCVob *);
 	virtual void OnUntrigger(zCVob *,zCVob *);
@@ -16,6 +16,12 @@ public:
 
 	void StopSound();
 	void SetSoundRadius(float radius);
+
+	void zCVobSound::SetSoundVolume(float volume)
+	{
+		sndVolume = volume;
+	}
+
 private:
 	int unk1;
 

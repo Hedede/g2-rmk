@@ -18,7 +18,32 @@ struct zCActiveSnd {
 		preAllocedSndList.DeleteList();
 	}
 
+	static void AddSound(zCActiveSnd* snd)
+	{
+		activeSndList.InsertSort(snd);
+	}
+
 	static int GetNumActive() { return activeSndList.GetNum(); }
+
+	static int GetNumAmbientSamplesUsed()
+	{
+		int count = 0;
+		for (auto& snd : activeSndList) {
+			if (!snd->bitfield.is3d && snd->sampleHandle)
+				++count;
+		}
+		return count;
+	}
+
+	static int GetNum3DSamplesUsed()
+	{
+		int count = 0;
+		for (auto& snd : activeSndList) {
+			if (snd->bitfield.is3d && snd->sampleHandle3d)
+				++count;
+		}
+		return count;
+	}
 
 	static void RemoveSoundsByFrame(zCSndFrame *frame)
 	{
@@ -58,6 +83,20 @@ struct zCActiveSnd {
 		}
 		return nullptr;
 	}
+
+	static bool GetFrameActive(zCSndFrame *frame)
+	{
+		if (!frame)
+			return false;
+
+		for (auto& snd : activeSndList) {
+			if (snd->bitfield.playing && snd->frame == frame)
+				return true;
+		}
+		return false;
+	}
+
+	static zCActiveSnd* AllocNextFreeSnd();
 
 	zCActiveSnd() { Initialize(); }
 	~zCActiveSnd()
@@ -117,7 +156,7 @@ private:
 		uint8_t loop    : 1; // 2
 		uint8_t unk1    : 1; // 4
 		uint8_t is3d    : 1; // 8
-		uint8_t unk2    : 1; // 16
+		uint8_t in_use  : 1; // 16
 		uint8_t slot    : 3;
 	} bitfield;
 	char unko;
@@ -226,4 +265,26 @@ int zCActiveSnd::RequestChannel3D()
 
 	zWARNING("C: ARGLKABARGL: (zCActiveSnd::RequestChannel3D): no sample3d found"); // 3449,
 	return 0;
+}
+
+zCActiveSnd* zCActiveSnd::AllocNextFreeSnd()
+{
+	auto result = nextFreeSnd;
+	if (result) {
+		result->bitfield.in_use = true;
+		nextFreeSnd = nullptr;
+		return result;
+	}
+
+	for (auto& snd : preAllocedSndList) {
+		if (!snd->bitfield.in_use) {
+			snd->bitfield.in_use = true;
+			return snd;
+		}
+	}
+
+	result = new zCActiveSnd;
+	preAllocedSndList.InsertEnd(result);
+	result->bitfield.in_use = true;
+	return result;
 }

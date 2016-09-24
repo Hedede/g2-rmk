@@ -27,6 +27,8 @@ public:
 		force += forceVec;
 	}
 
+	void ComputeForceTorque(float t) {}
+
 private:
 	struct {
 		uint32_t gravOn  : 1;

@@ -50,4 +50,6 @@ public:
 	virtual void ProcessMessageList();
 	virtual void SendMessageToHost(zCEventMessage *,zCVob *,zCVob *);
 	virtual void Delete(zCEventMessage *);
+
+	void Print_db(zSTRING const&, zCVob*) {}
 };

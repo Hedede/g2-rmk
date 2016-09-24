@@ -4,8 +4,12 @@ public:
 		~zCClassCache() = default;
 	};
 
-	virtual ~zCResourceManager();
-	virtual void ThreadProc();
+	~zCResourceManager() override
+	{
+		PurgeCaches(0);
+	}
+
+	void ThreadProc() override;
 
 	void SetThreadingEnabled(zBOOL enabled)
 	{

@@ -1,5 +1,4 @@
-#ifndef Gothic_zFILE_VDFS_H
-#define Gothic_zFILE_VDFS_H
+#pragma once
 #include <Hook/Externals.h>
 
 struct zFILE_VDFS {
@@ -8,6 +7,10 @@ struct zFILE_VDFS {
 		Cdecl<void()> call{0x44AD60};
 		call();
 	}
-};
 
-#endif//Gothic_zFILE_VDFS_H
+	static void DeinitFileSystem()
+	{
+		Cdecl<void()> call{0x471050};
+		call();
+	}
+};

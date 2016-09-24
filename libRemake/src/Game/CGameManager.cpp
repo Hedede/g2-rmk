@@ -268,8 +268,15 @@ void CGameManager::Run()
 	}
 }
 
+#include <Gothic/System/zCache.h>
 void CGameManager::Done()
 {
+	Cdecl<void()> oCarsten_ShutDown{0x4839A0};
+	Cdecl<void()> zCarsten_ShutDown{0x50AB30};
+	Cdecl<void()> zDieter_ShutDown{0x639040};
+	Cdecl<void()> zUlfi_ShutDown{0x7B43B0};
+	Cdecl<void()> zDeinitOptions{0x471050};
+
 	g2::Log("GameManager", "Exiting game.");
 
 	if (menu_chgkeys)
@@ -286,8 +293,25 @@ void CGameManager::Done()
 	menu_save          = 0;
 	menu_load          = 0;
 
-	Thiscall<void(CGameManager*)> _g_Done{0x4254E0};
-	_g_Done(this);
+	zCCacheBase::S_ClearCaches();
+	// sysKillWindowsKeys() // won't reimplement
+
+	// Always no fast exit
+
+	GameSessionDone();
+	oCarsten_ShutDown();
+	zCarsten_ShutDown();
+	zDieter_ShutDown();
+	zUlfi_ShutDown();
+
+	zresMan->EndThread();
+	delete zresMan;
+
+	zDeinitOptions();
+
+	zFILE_VDFS::DeinitFileSystem();
+
+	g2::Log("GameManager", "Game exit done.");
 }
 
 #include <Gothic/Game/zConsole.h>

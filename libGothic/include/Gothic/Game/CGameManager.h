@@ -99,6 +99,12 @@ struct CGameManager : zCInputCallback {
 		call(this, zSTRING{fileName});
 	}
 
+	void GameSessionDone()
+	{
+		Thiscall<void(CGameManager*)> _g_GameSessionDone{0x426F70};
+		_g_GameSessionDone(this);
+	}
+
 	int    oldAlphaBlendFunc;
 	void*  sysContextHandle;
 

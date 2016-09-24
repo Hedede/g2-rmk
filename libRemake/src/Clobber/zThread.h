@@ -1,111 +1,79 @@
-#include <Gothic/Types/Base.h>
-struct zCThread;
-struct zCThread_vt {
-	static void* __thiscall dtor_thunk(zCThread *, size_t);
-	static void  __thiscall BeginThread_thunk(zCThread*);
-	static void  __thiscall EndThread_thunk(zCThread*);
-	static int   __thiscall IsThreadRunning_thunk(zCThread*);
-	static int   __thiscall SuspendThread_thunk(zCThread *);
-	static int   __thiscall ResumeThread_thunk(zCThread *);
-	static int   __thiscall GetTerminationRequested_thunk(zCThread *);
-	static void  __thiscall SetTerminationRequested_thunk(zCThread *, int);
-	static int   __thiscall ThreadProc_thunk(zCThread *);
-
-	void* (__thiscall* dtor)(zCThread *, size_t)  = dtor_thunk;
-	void (__thiscall* BeginThread)(zCThread *) = BeginThread_thunk;
-	void (__thiscall* EndThread)(zCThread *)   = EndThread_thunk;
-	int (__thiscall* IsThreadRunning)(zCThread *) = IsThreadRunning_thunk;
-	int (__thiscall* SuspendThread)(zCThread *) = SuspendThread_thunk;
-	int (__thiscall* ResumeThread)(zCThread *)  = ResumeThread_thunk;
-	int (__thiscall* GetTerminationRequested)(zCThread *)       = GetTerminationRequested_thunk;
-	void (__thiscall* SetTerminationRequested)(zCThread *, int) = SetTerminationRequested_thunk;
-	int  (__thiscall* ThreadProc)(zCThread *) = ThreadProc_thunk;
-};
-
+#include <Gothic/System/zThread.h>
 #include <process.h>
+
+zCThread_vt mythread_vt;
+
 unsigned __stdcall zThreadProc(void* thread);
-struct zCThread {
-	zCThread() = default;
-	~zCThread()
-	{
+zCThread::~zCThread()
+{
+	EndThread();
+}
+
+void zCThread::BeginThread()
+{
+	if (threadHandle)
 		EndThread();
+	threadHandle = (void*)_beginthreadex(0, 0, zThreadProc, this, 0, &threadId);
+	if (threadHandle <= 0) {
+		exit(1);
 	}
+	isRunning = 1;
+}
 
-	void BeginThread()
-	{
-		if (threadHandle)
-			EndThread();
-		threadHandle = (void*)_beginthreadex(0, 0, zThreadProc, this, 0, &threadId);
-		if (threadHandle <= 0) {
-			exit(1);
-		}
-		isRunning = 1;
+void zCThread::EndThread()
+{
+	if (threadHandle) {
+		terminationRequested = 1;
+		ResumeThread();
+		WaitForSingleObject(threadHandle, -1);
+		CloseHandle(threadHandle);
 	}
+}
 
-	void EndThread()
-	{
-		if (threadHandle) {
-			terminationRequested = 1;
-			ResumeThread();
-			WaitForSingleObject(threadHandle, -1);
-			CloseHandle(threadHandle);
-		}
+bool zCThread::IsThreadRunning() const
+{
+	return isRunning;
+}
+
+bool zCThread::SuspendThread()
+{
+	if (!threadSuspended) {
+		g2::Log("zThread", "Suspending thread:", uintptr_t(this));
+		threadSuspended = 1;
+		return ::SuspendThread(threadHandle) != -1;
 	}
+	return 0;
+}
 
-	bool IsThreadRunning() const
-	{
-		return isRunning;
+bool zCThread::ResumeThread()
+{
+	if (threadSuspended) {
+		g2::Log("zThread", "Resuming thread:", uintptr_t(this));
+		threadSuspended = 0;
+		return ::ResumeThread(threadHandle) != -1;
 	}
+	return 0;
+}
 
-	bool SuspendThread()
-	{
-		if (!threadSuspended) {
-			g2::Log("zThread", "Suspending thread:", uintptr_t(this));
-			threadSuspended = 1;
-			return ::SuspendThread(threadHandle) != -1;
-		}
-		return 0;
-	}
+bool zCThread::GetTerminationRequested() const
+{
+	return terminationRequested;
+}
 
-	bool ResumeThread()
-	{
-		if (threadSuspended) {
-			g2::Log("zThread", "Resuming thread:", uintptr_t(this));
-			threadSuspended = 0;
-			return ::ResumeThread(threadHandle) != -1;
-		}
-		return 0;
-	}
+void zCThread::SetTerminationRequested(zBOOL b)
+{
+	terminationRequested = b;
+}
 
-	bool GetTerminationRequested() const
-	{
-		return terminationRequested;
-	}
+int zCThread::ThreadProc()
+{
+	return 0;
+}
 
-	void SetTerminationRequested(zBOOL b)
-	{
-		terminationRequested = b;
-	}
-
-	int ThreadProc()
-	{
-		return 0;
-	}
-
-	void SleepThread(unsigned msec)
-	{
-		Sleep(msec);
-	}
-
-private:
-	zCThread_vt* vtab;
-	void*    threadHandle = 0;
-	unsigned threadId     = 0;
-
-	zBOOL threadSuspended      = 0;
-	zBOOL isRunning            = 0;
-	zBOOL terminationRequested = 0;
-};
+void zCThread::SleepThread(unsigned msec)
+{
+	Sleep(msec);
+}
 
 unsigned __stdcall zThreadProc(void* thread)
 {
@@ -120,6 +88,7 @@ void* __thiscall zCThread_vt::dtor_thunk(zCThread* self, size_t d)
 		operator delete(self);
 	return self;
 }
+
 void __thiscall zCThread_vt::BeginThread_thunk(zCThread* self)
 {
 	self->BeginThread();
@@ -151,4 +120,8 @@ void __thiscall zCThread_vt::SetTerminationRequested_thunk(zCThread* self, int b
 int  __thiscall zCThread_vt::ThreadProc_thunk(zCThread* self)
 {
 	return self->ThreadProc();
+}
+void __thiscall zCThread_vt::SleepThread_thunk(zCThread* self, unsigned ms)
+{
+	self->SleepThread(ms);
 }

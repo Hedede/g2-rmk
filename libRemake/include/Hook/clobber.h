@@ -10,7 +10,10 @@
 
 namespace x86 {
 enum Opcode {
-	jmp = 0xFF,
+	mov_i8 = 0xB0,
+	mov_i  = 0xB8,
+	retn   = 0xC3,
+	jmp    = 0xFF,
 };
 
 enum Register {
@@ -23,18 +26,50 @@ enum Register {
 	esi,
 	edi
 };
+} // namespace x86
+
+namespace as {
+uint8_t modrm(uint8_t mod, uint8_t reg, uint8_t rm)
+{
+	mod &= 0b11;
+	reg &= 0b111;
+	rm  &= 0b111;
+	return (mod << 6) | (reg << 3) | (rm);
 }
 
-void make_jump(char* out, uintptr_t addr, x86::Register reg)
+void u32(char*& out, uint32_t value)
 {
-	*out++ = 0xB8 + reg;
-	*out++ = (addr >> 0)  & 0xFF;
-	*out++ = (addr >> 8)  & 0xFF;
-	*out++ = (addr >> 16) & 0xFF;
-	*out++ = (addr >> 24) & 0xFF;
-	*out++ = x86::jmp;
-	*out++ = 0xE0 | reg;
+	*out++ = (value >> 0)  & 0xFF;
+	*out++ = (value >> 8)  & 0xFF;
+	*out++ = (value >> 16) & 0xFF;
+	*out++ = (value >> 24) & 0xFF;
 }
+
+void mov_u32(char* out, x86::Register reg, uint32_t value)
+{
+	*out++ = x86::mov_i + reg;
+	u32(out, value);
+}
+
+void jump_m(char* out, uintptr_t addr)
+{
+	*out++ = x86::jmp;
+	*out++ = modrm(0b00, 0b100, 0b101);
+	u32(out, addr);
+}
+
+void jump_r(char* out, x86::Register reg)
+{
+	*out++ = x86::jmp;
+	*out++ = modrm(0b11, 0b100, reg);
+}
+
+void retn(char* out)
+{
+	*out = x86::retn;
+}
+} // namespace as
+
 
 #if 0
 int test(int& x)

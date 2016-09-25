@@ -1,9 +1,3 @@
-#ifndef G2_zCClassDef
-#define G2_zCClassDef
-#include <functional>
-#include <Gothic/types/zSTRING.h>
-#include <Gothic/types/zCArray.h>
-#include <Gothic/types/zCArraySort.h>
 //--------------------------------------
 // zCClassDef
 //--------------------------------------
@@ -94,4 +88,3 @@ private:
 	uint16_t archiveVersion    = 0; //vermutlich nutzlos
 	uint16_t archiveVersionSum = 0; //vermutlich nutzlos
 };
-#endif//G2_zCClassDef

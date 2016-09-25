@@ -51,6 +51,12 @@ public:
 		return stateChangeGuard.Unlock();
 	}
 
+	void TouchTimeStamp()
+	{
+		// was inlined
+		zresMan->TouchTimeStamp(this);
+	}
+
 	void TouchTimeStampLocal()
 	{
 		timeStamp = ztimer.totalTime;

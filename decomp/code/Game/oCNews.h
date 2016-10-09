@@ -1,22 +1,20 @@
 struct oCNews {
-public:
 	virtual void Archive(zCArchiver& arc);
 	virtual void Unarchive(zCArchiver& arc);
 
-	int GetID() const
+	int GetID() const { return id; }
+
+	bool IsGossip() const { return gossip; }
+
+	bool IsGuildVictim() const { return guildvictim; }
+
+	float GetSpreadTime() const { return spreadTime; }
+
+	bool IsIdentical(int nid,  oCNpc *o, oCNpc *v) const
 	{
-		return id;
+		return nid == id && o == offender && v = victim;
 	}
 
-	bool IsGossip() const
-	{
-		return gossip;
-	}
-
-	bool IsGuildVictim() const
-	{
-		return guildvictim;
-	}
 private:
 	zBOOL told;
 	float spreadTime;

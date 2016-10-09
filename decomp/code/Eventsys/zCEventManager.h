@@ -37,7 +37,7 @@ public:
 	virtual void IsEmpty(int);
 	virtual void GetCutsceneMode();
 	virtual void SetCutscene(zCCutscene *);
-	virtual void GetCutscene();
+	virtual zCCutscene* GetCutscene() { return cutscene; }
 	virtual void IsRunning(zCEventMessage *);
 	virtual void SetActive(int);
 	virtual void GetNumMessages();
@@ -52,4 +52,11 @@ public:
 	virtual void Delete(zCEventMessage *);
 
 	void Print_db(zSTRING const&, zCVob*) {}
+
+private:
+	int cleared;
+	int isActive;
+	zCCutscene *cutscene;
+	zCArray msgList;
+	zCVob* hostVob = nullptr;
 };

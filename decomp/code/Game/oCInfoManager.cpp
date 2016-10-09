@@ -1,7 +1,7 @@
 class oCInfoManager : public zCObject {
 	Z_OBJECT(oCInfoManager);
 public:
-	virtual void Archive(zCArchiver& archiver)
+	void Archive(zCArchiver& archiver) override
 	{
 		if (!archiver.InSaveGame())
 			return;
@@ -16,7 +16,7 @@ public:
 		}
 	}
 
-	virtual void  Unarchive(zCArchiver& archiver)
+	void Unarchive(zCArchiver& archiver) override
 	{
 		if (!archiver.InSaveGame(archiver))
 			return;
@@ -49,8 +49,10 @@ private:
 	zCParser* parser;
 };
 
-class oCInformationManager 
-{
+class oCInformationManager {
+	bool WaitingForEnd() const { return IsWaitingForEnd; }
+	bool HasFinished() const { return IsDone; }
+
 	typedef enum zEInformationManagerMode
 	{
 		INFO_MGR_MODE_IMPORTANT ,
@@ -59,22 +61,26 @@ class oCInformationManager
 		INFO_MGR_MODE_TRADE
 	} zTInfoMgrMode;
 
-	zSTRING LastMethod           ;  //zSTRING                         
-	zCViewDialogChoice* DlgStatus;  //   //das sind Views. Das heiﬂt vermutlich nur Anzeige
-	oCViewDialogTrade*  DlgTrade ;  //   //das sind Views. Das heiﬂt vermutlich nur Anzeige
-	zCViewDialogChoice* DlgChoice;  //   //das sind Views. Das heiﬂt vermutlich nur Anzeige
-	oCNpc*       Npc                     ;  //                
-	oCNpc*       Player                  ;  //                
-	oCInfo*      Info                    ;  //                   
-	zBOOL        IsDone                  ;  //        //== InfoManager_HasFinished         
-	zBOOL        IsWaitingForEnd         ;  //                 
-	zBOOL        IsWaitingForScript      ;  //                 
-	zBOOL        IsWaitingForOpen        ;  //                 
-	zBOOL        IsWaitingForClose       ;  //                 
-	zBOOL        IsWaitingForSelection   ;  //                 
-	zBOOL        MustOpen                ;  //                 
-	int          IndexBye                ;  //                      
-	int          ImportantCurrent        ;  //                      
-	int          ImportantMax            ;  //                      
-	zTInfoMgrMode Mode                    ;  //           
+	zSTRING LastMethod;
+
+	//das sind Views. Das heiﬂt vermutlich nur Anzeige
+	zCViewDialogChoice* DlgStatus;
+	oCViewDialogTrade*  DlgTrade;
+	zCViewDialogChoice* DlgChoice;
+
+	oCNpc*  Npc;
+	oCNpc*  Player;
+	oCInfo* Info;
+
+	zBOOL         IsDone;
+	zBOOL         IsWaitingForEnd;
+	zBOOL         IsWaitingForScript;
+	zBOOL         IsWaitingForOpen;
+	zBOOL         IsWaitingForClose;
+	zBOOL         IsWaitingForSelection;
+	zBOOL         MustOpen;
+	int           IndexBye;
+	int           ImportantCurrent;
+	int           ImportantMax;
+	zTInfoMgrMode Mode;
 };

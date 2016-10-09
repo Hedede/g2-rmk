@@ -1,0 +1,3 @@
+struct zTOverlayIndex {
+	zSTRING name;
+};

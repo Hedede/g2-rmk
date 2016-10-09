@@ -9,13 +9,13 @@ void ReplaceDirSeparators(zSTRING& str)
 
 
 struct zFILE_FILE : public zFILE {
-	static bool zFILE_FILE::InitFileSystem()
+	static bool InitFileSystem()
 	{
 		if ( !zFILE::s_virtPath )
 			zFILE::s_virtPath = new zFILE_FILE();
 		return zFILE::InitFileSystem();
 	}
-	static bool zFILE_FILE::DeinitFileSystem()
+	static bool DeinitFileSystem()
 	{
 		if ( zFILE::s_virtPath )
 			delete zFILE::s_virtPath;
@@ -156,8 +156,6 @@ struct zFILE_FILE : public zFILE {
 	void ReadCodeline(zSTRING &) override;
 	void ReadLines(zSTRING &,long) override;
 	void DirStepInto(zSTRING) override;
-
-
 
 private:
 	zCBuffer* buf;

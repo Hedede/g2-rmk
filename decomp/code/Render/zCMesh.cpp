@@ -4,7 +4,7 @@ public:
 	virtual ~zCMesh();
 	virtual void Render(zTRenderContext &);
 	virtual void GetBBox3D();
-	virtual void GetOBBox3D();
+	zCOBBox3D* GetOBBox3D() override { return &obbox3D; }
 	virtual void GetVisualName();
 	virtual void DynLightVisual(zCArray<zCVobLight *>	const &,zMAT4 *);
 	virtual void CanTraceRay();

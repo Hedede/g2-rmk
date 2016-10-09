@@ -11,16 +11,16 @@ struct zCSndFX_MSS : zCSoundFX {
 	virtual void GetChannelFrame(int,int) override { }
 	virtual void SetChannelFrame(int,int);
 	virtual void GetPlayingTimeMSEC();
-	virtual void GetPan();
+	void GetPan() override { return pan; }
 	virtual void SetPan(float);
-	virtual void GetVolume();
+	void GetVolume() override { return volume; }
 	virtual void SetVolume(float);
-	virtual void GetFrequency();
+	int GetFrequency() override { return frequency; }
 	virtual void SetFrequency(int);
 	virtual void SetLooping(int);
 	virtual void IsLooping();
-	virtual void SetIsFixed(int);
-	virtual void GetIsFixed();
+	void SetIsFixed(int b) override { isFixed = b; }
+	void GetIsFixed() override { return isFixed; }
 
 	// actually no such func in .exe
 	zCSndChannel* GetCurChannel()

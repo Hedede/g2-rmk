@@ -130,10 +130,9 @@ public:
 	}
 
 	virtual void AI_UseMobToState(oCNpc *,int);
-	bool IsIn(int) override
-	{
-		return false;
-	}
+
+	bool IsIn(int) override { return false; }
+
 	virtual void IsInState(oCNpc *,int);
 	virtual void StartInteraction(oCNpc *);
 	virtual void StartStateChange(oCNpc *,int,int);
@@ -161,9 +160,7 @@ public:
 	virtual void SendCallOnStateFunc(oCNpc *,int);
 
 
-	void ScanIdealPositions()
-	{
-	}
+	void ScanIdealPositions();
 
 	virtual void SearchFreePosition(oCNpc *,float);
 
@@ -178,7 +175,7 @@ public:
 		return false;
 	}
 
-	void MarkAsused(float timeDelta, zCVob* vob)
+	void MarkAsUsed(float timeDelta, zCVob* vob)
 	{
 		inUseVob = vob;
 		timerEnd = ztimer.totalTimeFloat + timeDelta;

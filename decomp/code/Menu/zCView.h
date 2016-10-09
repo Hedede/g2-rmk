@@ -42,6 +42,8 @@ struct zCView : zCInputCallback {
 			StdPrintwin(text);
 	}
 
+	zCView() { Init(); }
+
 	virtual ~zCView();
 
 	void HandleEvent(int key) override;

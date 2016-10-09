@@ -1329,17 +1329,17 @@ private:
 		uint16_t showaidebug      : 1;
 		uint16_t showNews         : 1;
 		uint16_t csAllowedAsRole  : 1;
-		uint16_t isSummoned       : 1;
-		uint16_t respawnOn        : 1;
-		uint16_t movlock          : 1;
-		uint16_t drunk            : 1;
-		uint16_t mad              : 1;
-		uint16_t overlay_wounded  : 1;
-		uint16_t inOnDamage       : 1;
-		uint16_t autoremoveweapon : 1;
-		uint16_t openinventory    : 1;
-		uint16_t askroutine       : 1;
-		uint16_t spawnInRange     : 1;
+		uint16_t isSummoned       : 1; // 8
+		uint16_t respawnOn        : 1; // 0x10
+		uint16_t movlock          : 1; // 0x20
+		uint16_t drunk            : 1; // 0x40
+		uint16_t mad              : 1; // 0x80
+		uint16_t overlay_wounded  : 1; // 0x100
+		uint16_t inOnDamage       : 1; // 0x200
+		uint16_t autoremoveweapon : 1; // 0x400
+		uint16_t openinventory    : 1; // 0x800
+		uint16_t askroutine       : 1; // 0x1000
+		uint16_t spawnInRange     : 1; // 0x2000
 	} flags;
 
 	uint16_t body_TexVarNr   = 0;

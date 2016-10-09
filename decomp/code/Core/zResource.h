@@ -3,6 +3,13 @@ void GiveFatal()
 	zFATAL("D: This method should be overriden! Illegal zCResource class setup!");
 }
 
+enum ResourceState {
+	CACHED_OUT = 0,
+	QUEUED = 1,
+	LOADING = 2,
+	CACHED_IN = 3
+};
+
 class zCResource : public zCObject {
 	Z_OBJECT(zCResource);
 public:
@@ -26,7 +33,7 @@ public:
 
 	int CacheIn(float priority)
 	{
-		if ( cacheState == 3 ) {
+		if ( cacheState == CACHED_IN ) {
 			TouchTimeStamp();
 		} else {
 			TouchTimeStampLocal();
@@ -37,7 +44,7 @@ public:
 
 	void CacheOut()
 	{
-		if (!cacheState)
+		if (!locked)
 			zresMan.CacheOut(this);
 	}
 
@@ -75,6 +82,7 @@ private:
 	zCCriticalSection stateChangeGuard;
 
 	uint8_t cacheState : 2;
+	uint8_t locked : 1;
 	uint8_t cacheClassIndex = -1;
 	bool cacheOutLock = false;
 	bool managedByResMan;

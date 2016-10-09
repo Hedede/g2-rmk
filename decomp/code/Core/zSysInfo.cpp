@@ -89,7 +89,7 @@ void AnalyseMemory()
 
 void zCSystemInfo::AnalyseNow()
 {
-	zINFO(3,"B: SYS: Analysing system ...", 109);
+	zINFO(3,"B: SYS: Analysing system ..."); // 109
 	AnalyseCpu();
 	AnalyseOs();
 	AnalyseGcard();

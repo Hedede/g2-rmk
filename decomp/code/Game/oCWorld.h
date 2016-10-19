@@ -196,3 +196,20 @@ int oCWorld::LoadWorld(zSTRING const& fileName, zCWorld::zTWorldLoadMode mode)
 
 	return 1;
 }
+
+//------------------------------------------------------------------------------
+int CompareVobsByID(zCVob* vob1, zCVob* vob2)
+{
+	return a - b;
+	//return vob1->GetVobID() - vob2->GetVobID();
+}
+
+int CompareItemsByID(oCItem *vob1, oCItem *vob2)
+{
+	return CompareVobsByID(vob1, vob2);
+}
+
+int CompareNpcsByID(oCNpc *vob1, oCNpc *vob2)
+{
+	return CompareVobsByID(vob1, vob2);
+}

@@ -13,7 +13,7 @@ struct zTPlane {
 		return normal * p2.normal <= 0.0;
 	}
 
-	bool operatpr==(zTPlane const& p2)
+	bool operator==(zTPlane const& p2)
 	{
 		return normal = p2.normal && distance == p2.distance
 	}
@@ -41,7 +41,7 @@ void zTPlane::Calc(zVEC3 const& a, zVEC3 const& b, zVEC3 const& c)
 	v.w = b * cross;
 
 	normal   = zVEC3{v.x, v.y, v.z};
-	distance = v.z;
+	distance = v.w;
 }
 
 int zTPlane::CalcSignbits() const

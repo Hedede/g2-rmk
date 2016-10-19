@@ -1,19 +1,27 @@
 class zCEventManager : public zCObject {
 	Z_OBJECT(zCEventManager);
+private:
+	static int showMsgCommunication;
+
 public:
 	static int GetShowMessageCommunication()
 	{
 		return showMsgCommunication;
 	}
 
-	virtual void Archive(zCArchiver& arc)
+	static void GetShowMessageCommunication(int v)
+	{
+		showMsgCommunication = v;
+	}
+
+	void Archive(zCArchiver& arc) override
 	{
 		arc.WriteBool("cleared", cleared);
 		arc.WriteBool("active", isActive);
 		arc.WriteObject("emCutscene", cutscene);
 	}
 
-	virtual void Unarchive(zCArchiver& arc)
+	void Unarchive(zCArchiver& arc) override
 	{
 		arc.ReadBool("cleared", cleared);
 
@@ -26,25 +34,29 @@ public:
 	}
 
 	virtual ~zCEventManager();
+
 	virtual void OnTrigger(zCVob *,zCVob *);
 	virtual void OnUntrigger(zCVob *,zCVob *);
 	virtual void OnTouch(zCVob *);
 	virtual void OnUntouch(zCVob	*);
-	virtual void OnTouchLevel();
+	virtual void OnTouchLevel() { hostVob->OnTouchLevel(); }
 	virtual void OnDamage(zCVob *,zCVob *,float,int,zVEC3 const &);
 	virtual void OnMessage(zCEventMessage *,zCVob *);
+
 	virtual void Clear();
 	virtual void IsEmpty(int);
-	virtual void GetCutsceneMode();
+	virtual bool GetCutsceneMode() { return cutscene != 0; }
 	virtual void SetCutscene(zCCutscene *);
 	virtual zCCutscene* GetCutscene() { return cutscene; }
 	virtual void IsRunning(zCEventMessage *);
 	virtual void SetActive(int);
-	virtual void GetNumMessages();
-	virtual void GetEventMessage(int);
+
+	virtual int GetNumMessages() { return msgList.GetNum(); }
+	virtual zCEventMessage* GetEventMessage(int idx) { return msgList[idx]; }
 	virtual void GetActiveMessage();
+
 	virtual void ShowList(int,int);
-	virtual void GetNetVobControl(int);
+	virtual zCNetVobControl* GetNetVobControl(int) { return nullptr; }
 	virtual void RemoveFromList(zCEventMessage *);
 	virtual void InsertInList(zCEventMessage	*);
 	virtual void ProcessMessageList();
@@ -57,6 +69,6 @@ private:
 	int cleared;
 	int isActive;
 	zCCutscene *cutscene;
-	zCArray msgList;
+	zCArray<zCEventMessage*> msgList;
 	zCVob* hostVob = nullptr;
 };

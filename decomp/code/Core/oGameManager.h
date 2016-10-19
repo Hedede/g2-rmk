@@ -106,6 +106,13 @@ void CGameManager::RemoveSplashScreen()
 		PostThreadMessageA(SplashThreadId, WM_QUIT, 0, 0);
 }
 
+void __noreturn ExitGameFunc()
+{
+	gameMan->Done();
+	Delete(gameMan);
+	sysExit();
+}
+
 void CGameManager::ExitGame()
 {
 	exitGame = 1;

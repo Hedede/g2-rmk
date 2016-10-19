@@ -1,3 +1,4 @@
+//_ulf/oGameExternal.cpp
 //----------- INTERNAL HELPERS -----------
 void ScriptWarning(zSTRING msg, bool print_func = true)
 {
@@ -6394,4 +6395,10 @@ void oCGame::DefineExternals_Ulfi(zCParser* parser)
 	parser->DefineExternal("Game_InitGerman", Game_InitGerman, 2, 0);
 	parser->DefineExternal("Game_InitEnglish", Game_InitEnglish, 2, 0);
 	parser->DefineExternal("Game_InitEngIntl", Game_InitEngIntl, 2, 0);
+}
+
+//------------------------------------------------------------------------------
+void  NotifyInfoToSpy(zSTRING& str)
+{
+	zINFO(8, "R: INF: " + str); // 842
 }

@@ -37,11 +37,34 @@ struct zCExceptionHandler {
 		ExceptionReleaseCallbackList.DeleteList();
 	}
 
+	using InfoCallback = void(*)(EXCEPTION_DESCR *);
+	static void RemoveUnhandledExceptionInfoCallback(InfoCallback cb)
+	{
+		ExceptionInfoCallbackList.Remove(cb);
+	}
+
+	static void AddUnhandledExceptionInfoCallback(InfoCallback cb)
+	{
+		ExceptionInfoCallbackList.Insert(cb);
+	}
+
+	using ReleaseCallback = void(*)();
+	static void RemoveUnhandledExceptionReleaseCallback(ReleaseCallback cb)
+	{
+		ExceptionReleaseCallbackList.Remove(cb);
+	}
+
+	static void AddUnhandledExceptionReleaseCallback(ReleaseCallback cb)
+	{
+		ExceptionReleaseCallbackList.Insert(cb);
+	}
+
 private:
 	static zBOOL isActive;
 	static LPTOP_LEVEL_EXCEPTION_FILTER m_previousFilter;
 	static char* m_szLogFileName;
-	static zCArray<void(*)(EXCEPTION_DESCR *)> ExceptionReleaseCallbackList;
+	static zCArray<ReleaseCallback> ExceptionReleaseCallbackList;
+	static zCArray<InfoCallback>    ExceptionInfoCallbackList;
 };
 
 zBOOL zExHandler;

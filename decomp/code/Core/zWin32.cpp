@@ -402,6 +402,15 @@ struct {
 	int X,Y;
 } iwPos;
 
+void winCalcSizes()
+{
+	winExtraX = 2 * GetSystemMetrics(32) + 5;
+	winExtraY = 2 * GetSystemMetrics(33) + 5 + GetSystemMetrics(4);
+
+	if ( !vidHideMenu )
+		winExtraY += GetSystemMetrics(15);
+}
+
 int HandledWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
 	hInstApp = hInstance;
@@ -455,11 +464,7 @@ int HandledWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	dcScreen = CreateCompatibleDC(0);
 
-	winExtraX = 2 * GetSystemMetrics(32) + 5;
-	winExtraY = 2 * GetSystemMetrics(33) + 5 + GetSystemMetrics(4) ;
-
-	if ( !vidHideMenu )
-		winExtraY += GetSystemMetrics(15);
+	winCalcSizes();
 
 	WNDCLASSA WndClass;
 	memset(&WndClass, 0, sizeof(WndClass));
@@ -888,3 +893,14 @@ DWORD WINAPI SplashThreadProc(LPVOID lpThreadParameter)
 	}
 	return 0;
 }
+
+const char *vidGetLastError()
+{
+	return vidLastError ? vidLastError : "No error";
+}
+
+BOOL vidIsMinimized()
+{
+	return IsIconic(hWndApp);
+}
+

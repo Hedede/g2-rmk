@@ -1,3 +1,11 @@
+struct TMobOptPos {
+	~TMobOptPos() = default;
+	zMAT4 trafo;
+	int unk[1];
+	oCNpc *npc;
+	zSTRING name;
+};
+
 class oCMobInter : public oCMob {
 	Z_OBJECT(oCMobInter);
 public:

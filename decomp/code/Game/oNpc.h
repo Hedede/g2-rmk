@@ -80,6 +80,43 @@ enum ATR_INDEX {
 	ATR_INDEX_MAX = 8,
 };
 
+struct TNpcSlot {
+	~TNpcSlot() { ClearVob(); }
+	void ClearVob()
+	{
+		if (object) {
+			auto refCtr = object->refCtr;
+			if (tree)
+				vob->ReleaseVobSubtree(0);
+			if (refCtr == object->refCtr)
+				object->Release();
+			object = nullptr;
+		}
+	}
+
+	void SetVob(oCVob* vob)
+	{
+		if (vob != object) {
+			ClearVob();
+			object = vob;
+			auto refCtr = object->refCtr;
+			object->AddRefVobSubtree(0, 1);
+			if (refCtr == object->refCtr)
+				object->AddRef();
+			tree = refCtr != object->refCtr;
+			ogame->GetGameWorld()->InsertVobInWorld(object);
+		}
+	}
+
+	zSTRING name;
+	zBOOL inInv;
+	int unko;
+	zSTRING nume;
+	zCVob *object = nullptr;
+	int tree;
+};
+
+
 class oCNpc : public oCVob {
 	CLASSDEF_DEFINE;
 public:

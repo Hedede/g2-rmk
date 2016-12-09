@@ -788,7 +788,6 @@ int zCConsole::AutoCompletion(zSTRING& cmd)
 	bool found = false;
 	for ( int i = 1; ; ++i ) {
 		auto word = tmp.PickWord(i, " ", zSTR_SKIP);
-		std::string::assign(&str.data, v6, 0, 0xFFFFFFFF);
 
 		if ( word == "" )
 			break;

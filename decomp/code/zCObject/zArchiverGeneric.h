@@ -1,4 +1,4 @@
-// _dieter\\zArchiverGeneric.cpp
+// _dieter/zArchiverGeneric.cpp
 class zCArchiverGeneric : public zCArchiver {
 	Z_OBJECT(zCArchiverGeneric);
 private:
@@ -213,7 +213,8 @@ private:
 	zCSparseArray<zCObject*,zTWriteObjectEntry> writeObjectEntries;
 
 	int __skipped_some_chunks;
-	int unk_6[2];
+	int __has_missing_entries;
+	int __object_loaded;
 };
 
 
@@ -365,6 +366,83 @@ void zCArchiverGeneric::RestoreBuffer(void* out, size_t size)
 		buffer->Read(out, outsize);
 	else
 		file->Read(out, outsize);
+}
+
+void zCArchiverGeneric::RestoreStringEOL(zSTRING& resultLine)
+{
+	int i = 0;
+	char tmpBuf[5000];
+	char peg = 0;
+	useBuffer = this->useBuffer;
+	if ( inBinaryMode ) {
+		if ( useBuffer ) {
+			buffer->Read(tmpBuf, 1);
+			if ( tmpBuf[0] ) {
+				do {
+					if ( tmpBuf[i] == '\n' )
+						break;
+					if ( ++i == 5000 ) {
+						peg = 0;
+						resStr += tmpBuf;
+						i = 0;
+					}
+					buffer->Read(tmpBuf + i, 1);
+				} while ( tmpBuf[i] );
+			}
+		} else {
+			file->Read(tmpBuf, 1);
+			if ( tmpBuf[0] ) {
+				do {
+					if ( tmpBuf[i] == '\n' )
+						break;
+					if ( ++i == 5000 ) {
+						peg = 0;
+						resStr += tmpBuf;
+						i = 0;
+					}
+					file->Read(tmpBuf + i, 1);
+				} while ( tmpBuf[i] );
+
+			}
+		}
+	} else if ( useBuffer ) {
+		buffer->Read(tmpBuf, 1);
+		if ( tmpBuf[0] != '\n' ) {
+			do {
+				if ( tmpBuf[i] == '\r' )
+					break;
+				if ( tmpBuf[i] != '\t' )
+					++i;
+				if ( i == 5000 ) {
+					peg = 0;
+					resStr += tmpBuf;
+					i = 0;
+				}
+				buffer->Read(tmpBuf + i, 1);
+			}
+			while ( tmpBuf[i] != '\n' );
+		}
+	} else {
+		file->Read(tmpBuf, 1);
+		if ( tmpBuf[0] != '\n' ) {
+			do {
+				if ( tmpBuf[i] == '\r' )
+					break;
+				if ( tmpBuf[i] != '\t' )
+					++i;
+				if ( i == 5000 ) {
+					peg = 0;
+					resStr += tmpBuf;
+					i = 0;
+				}
+				file->Read(tmpBuf + i, 1);
+			}
+			while ( tmpBuf[i] != '\n' );
+		}
+	}
+
+	tmpBuf[i] = 0;
+	resStr += tmpBuf;
 }
 
 void zCArchiverGeneric::RestoreString0(zSTRING& out)
@@ -883,6 +961,37 @@ void zCArchiverGeneric::ReadChunkStartASCII(const char *chunkName, zSTRING& resu
 
 		SkipChunk(0);
 	}
+}
+
+int zCArchiverGeneric::ReadChunkStart(const char *chunkName)
+{
+	zCArchiver::zTChunkRecord chunk;
+	if ( inBinaryMode ) {
+		chunk.start = RestoreGetPos();
+		RestoreBuffer(&chunk.length, 4);
+		RestoreBuffer(&chunk.versionSum, 2);
+		RestoreBuffer(&chunk.objectIndex, 4);
+		RestoreString0(&chunk.className);
+		RestoreString0(&chunk.chunkName);
+		if ( chunkName && chunkName != chunk.className ) {
+			RestoreSeek(chunk.start);
+			return 0;
+		}
+	} else {
+		zSTRING chunkHead;
+		ReadChunkStartASCII(chunkName, chunkHead);
+		if ( chunkHead.IsEmpty() )
+			return 0;
+
+		chunk.start = RestoreGetPos();
+		chunk.className   = chunkHead.PickWord(1, " [", " [");
+		chunk.chunkName   = chunkHead.PickWord(2, " ",  " ");
+		chunk.versionSum  = chunkHead.PickWord(3, " ",  " ");
+		chunk.objectIndex = chunkHead.PickWord(4, " ]", " ]");
+	}
+
+	chunkRecords.InsertEnd(chunk);
+	return 1;
 }
 
 int zCArchiverGeneric::ReadChunkStart(zSTRING& chunkName, uint16_t& chunkVersion)

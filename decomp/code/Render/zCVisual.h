@@ -8,11 +8,11 @@ public:
 
 	virtual void Render(zTRenderContext&) = 0;
 
-	virtual bool IsBBox3DLocal();
-	virtual zTBBox3D  GetBBox3D() = 0;
+	virtual bool IsBBox3DLocal() { return true; }
+	virtual zTBBox3D   GetBBox3D() = 0;
 	virtual zCOBBox3D* GetOBBox3D() { return nullptr; }
 
-	virtual void GetVisualName() = 0;
+	virtual zSTRING* GetVisualName() = 0;
 
 	virtual bool GetVisualDied() { return false; }
 
@@ -22,22 +22,25 @@ public:
 	virtual void* GetRenderSortKey() { return this; }
 
 	virtual void CanTraceRay() { return false; }
-	virtual void TraceRay(zVEC3 const &,zVEC3 const &,int,zTTraceRayReport &);
+	virtual int TraceRay(zVEC3 const &,zVEC3 const &,int,zTTraceRayReport &)
+	{
+		return 1;
+	}
 
 	virtual void HostVobRemovedFromWorld(zCVob *,zCWorld *) {}
 	virtual void HostVobAddedToWorld(zCVob *,zCWorld *) {}
 
-	virtual void GetFileExtension(int);
+	virtual zSTRING* GetFileExtension(int);
 	virtual void GetLODVisualAndAlpha(float,zCVisual * &,float &);
 	virtual bool GetAlphaTestingEnabled() { return false; }
 	virtual void SetAlphaTestingEnabled(int) {}
-	virtual void LoadVisualVirtual(zSTRING const &);
+	virtual zCVisual* LoadVisualVirtual(zSTRING const &) { return nullptr; }
 
 private:
-	zCVisual*   nextLODVisual;
-	zCVisual*   prevLODVisual;
-	zREAL       lodFarDistance;
-	zREAL       lodNearFadeOutDistance;
+	zCVisual*   nextLODVisual = nullptr;
+	zCVisual*   prevLODVisual = nullptr;
+	zREAL       lodFarDistance = 50000.0;
+	zREAL       lodNearFadeOutDistance = 49000.0;
 };
 
 void zCVisual::InitVisualSystem()

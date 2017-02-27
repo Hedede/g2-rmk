@@ -11,3 +11,8 @@ void zClamp01(float& val)
 {
 	zClamp(val, 0.0, 1.0);
 }
+
+void zMin(float a, float b)
+{
+	return (a >= b) ? a : b;
+}

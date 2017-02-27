@@ -1,4 +1,22 @@
 struct oCRtnEntry {
+	oCRtnEntry() = default;
+	oCRtnEntry(int h1, int m1, int h2, int m2, int func, ZSTRING const& wp, int i)
+	{
+		hour_start = h1;
+		min_start = m1;
+		hour_end = h2;
+		min_end = m2;
+		state = func;
+		waypoint = wp;
+		unk0 = i;
+	}
+
+	~oCRtnEntry()
+	{
+		if (unk3)
+			delete unk3;
+	}
+
 	int GetState() const { return state; }
 	zSTRING GetWaypoint() const { return waypoint; }
 
@@ -26,8 +44,8 @@ struct oCRtnEntry {
 	zSTRING waypoint;
 	int unk0 = -1;
 	int unk1 = 0;
-	int unk2 = 0;
-	int unk3 = 0;
+	oCNpc* npc = 0;
+	void* unk3 = 0;
 	int unk4 = 0;
 	int unk[2];
 };

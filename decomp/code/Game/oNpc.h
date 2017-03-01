@@ -44,19 +44,12 @@ enum NpcPercId {
 	PERC_MAX = 33;
 };
 
-zSTRING strPlayerStatesEnabled[] = {
-	"ZS_ASSESSMAGIC", "ZS_ASSESSSTOPMAGIC", "ZS_MAGICFREEZE",
-	"ZS_WHIRLWIND", "ZS_SHORTZAPPED", "ZS_ZAPPED",
-	"ZS_PYRO", "ZS_MAGICSLEEP"
-};
 
 enum Sense {
 	SENSE_SEE = 1,
 	SENSE_HEAR = 2,
 	SENSE_SMELL = 4,
 };
-
-
 
 
 enum oEFightMode

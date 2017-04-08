@@ -219,3 +219,28 @@ void zCBspTree::GetPolyNeighbours(zCPolygon* sourcePoly, zCPolygon **& foundPoly
 		}
 	}
 }
+
+zTBBox3D* zCBspTree::CalcLeafRealBBox3D(zVEC3 const& point)
+{
+	auto node = &bspRoot->parent
+	zTBBox3D bbox = node->bbox3D;
+	while ( 1 ) {
+		if ( node->nodeType == zBSP_LEAF )
+			break;
+
+		int sign = node->planeSignbits;
+		auto dist = node->plane.DistanceToPoint(point);
+		if ( dist > 0.001 || dist >= -0.001 ) {
+			bbox.mins[sign] = node->plane.distance;
+			node = node->left;
+		} else {
+			bbox.maxs[sign] = node->plane.distance;
+			node = node->right;
+		}
+
+		if ( !node )
+			break;
+	}
+
+	return bbox;
+}

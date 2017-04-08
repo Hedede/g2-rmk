@@ -48,7 +48,7 @@ public:
 	virtual void Cast(int);
 	virtual void Stop(int);
 	virtual void Kill();
-	virtual void Play(float,zMAT4 const *,zMAT4 const *);
+	virtual void Play(float keyCycleTime,zMAT4 const* orgTrafo, zMAT4 const* targetTrafo) {}
 	virtual void CanBeDeleted();
 	virtual void IsFinished();
 	virtual void IsLooping();
@@ -128,6 +128,22 @@ public:
 	virtual void Collide(int);
 	virtual void CollisionResponse(zVEC3 const &,int);
 
+	void CreateBackup();
+	static void PreSaveGameProcessing(bool destroyAllObjects)
+	{
+		// TODO: gothic1
+		// (g1 has some code, in g2 it is removed)
+#ifdef G1
+		oCVisualFX::RemoveInstancesOfClass(&oCVisualFX::classDef, destroyAllObjects);
+		oCVisualFX::RemoveInstancesOfClass(&oCVisFX_Lightning::classDef, destroyAllObjects);
+		oCVisualFX::RemoveInstancesOfClass(&oCVisFX_MultiTarget::classDef, destroyAllObjects);
+#endif
+  ;
+	}
+	static void PostSaveGameProcessing()
+	{
+		// TODO: gothic1
+	}
 private:
 	struct {
 		zSTRING visName;

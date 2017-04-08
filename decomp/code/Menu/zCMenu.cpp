@@ -21,7 +21,12 @@ struct zCMenu : zCInputCallback {
 	virtual void Enter();
 	virtual void Leave();
 	virtual void Render();
-	virtual void RedrawItems();
+	virtual void RedrawItems()
+	{
+		for (auto& it : listItems) {
+			it->DrawFront();
+		}
+	}
 	virtual void HandleFrame(int);
 	virtual void Activate();
 	virtual ~zCMenu();
@@ -148,12 +153,12 @@ class zCViewText {
 //#################################################################
 
 class oCViewStatusBar : zCView
-{    
+{
     zREAL  minLow, maxHigh;         //
     zREAL  low, high;               //
     zREAL  previewValue;            //
     zREAL  currentValue;            //
-    
+
     float     scale;                   //
     zCView*   range_bar;               //
     zCView*   value_bar;               //
@@ -202,4 +207,17 @@ void zCMenu::Render()
 		zsound->DoSoundUpdate();
 		timer->ResetTimer();
 	}
+}
+
+int DefineMenuScriptFunctions()
+{
+	auto parser = zCMenu::GetParser();
+	parser.DefineExternal("Update_ChoiceBox", Update_ChoiceBox, 0, 3, 0);
+	parser.DefineExternal("Apply_Options_Performance", Apply_Options_Performance, 0, 0);
+	parser.DefineExternal("Apply_Options_Video", Apply_Options_Video, 0, 0);
+	parser.DefineExternal("Apply_Options_Audio", Apply_Options_Audio, 0, 0);
+	parser.DefineExternal("Apply_Options_Game", Apply_Options_Game, 0, 0);
+	parser.DefineExternal("Apply_Options_Controls", Apply_Options_Controls, 0, 0);
+	parser.DefineExternal("PlayVideo", PlayVideo, 2, 3, 0);
+  return 1;
 }

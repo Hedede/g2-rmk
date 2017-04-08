@@ -12,7 +12,7 @@ public:
 	virtual void InvestNext();
 	virtual void Cast(int);
 	virtual void Stop(int);
-	virtual void Play(float,zMAT4	const *,zMAT4 const *);
+	void Play(float keyCycleTime,zMAT4 const* orgTrafo, zMAT4 const* targetTrafo) override {}
 	virtual void IsFinished();
 	virtual void SetByScript(zSTRING const	&);
 	virtual void Reset();

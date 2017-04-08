@@ -883,3 +883,58 @@ void oCItem::RenderItem(zCWorld* world, zCViewBase* viewItem, float addon)
 	zCCamera::activeCam = active;
 	playerLightInt = light;
 }
+
+int oCItem::Render(zTRenderContext& ctx)
+{
+	if ( HasFlag(ITEM_NFOCUS) )
+		ctx.flags.2 = 0;
+	else
+		ctx.flags.2 = lightingSwell;
+	if ( one_of(GetSoundMaterial(), MAT_METAL, MAT_GLASS) && mainflag != ITEM_KAT_NF) {
+		if (auto vis = zDYNAMIC_CAST<zCProgMeshProto>(visual)) {
+			static zCArray<zSEnvValues> envValues;
+			static zSEnvValues tmpEnv;
+			if (vis->numSubMeshes > 0) {
+				for (auto& sm : vis->subMeshes) {
+					auto mtl = sm.material;
+					auto matGroup  = mtl->matGroup;
+					tmpEnv.envMapEnabled = mtl->flags.environmentalMapping;
+					tmpEnv.envMapStrength = mtl->environmentalMappingStrength;
+					envValues.InsertEnd(tmpEnv);
+					mtl->flags.environmentalMapping = 1;
+					float envStrength = 1.0;
+					switch (matGroup) {
+					case MAT_WOOD:
+						envStrength = 0.2;
+						break;
+					case MAT_EARTH:
+						envStrength = 0.5;
+						break;
+					case MAT_STONE:
+						envStrength = 0.6;
+						break;
+
+					}
+					if (GetSoundMaterial() == MAT_GLASS)
+						envStrength *= 0.4;
+					else
+						envStrength *= 0.8;
+					mtl->environmentalMappingStrength = envStrength;
+				}
+			}
+
+			auto res = oCVob::Render(ctx);
+
+			for ( i = 0; i < i->numSubMeshes; ++i ) {
+				mtl = vis->subMeshes[i].material;
+				mtl->flags.environmentalMapping = envValues[i].envMapEnabled;
+				mtl->flags.environmentalMappingStrength = envValues[i].envMapStrength;
+			}
+
+			envValues.Clear();
+			return res;
+		}
+	}
+
+	return oCVob::Render(ctx);
+}

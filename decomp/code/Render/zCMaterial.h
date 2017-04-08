@@ -124,9 +124,9 @@ private:
 		uint8_t texAniMap            : 1; // 4
 		uint8_t lodDontCollapse      : 1; // 8
 		uint8_t noCollDet            : 1; // 0x10
-		uint8_t forceOccluder        : 1;
-		uint8_t environmentalMapping : 1;
-		uint8_t polyListNeedsSort    : 1;
+		uint8_t forceOccluder        : 1; // 0x20
+		uint8_t environmentalMapping : 1; // 0x40
+		uint8_t polyListNeedsSort    : 1; // 0x80
 	} flags;
 
 	uint8_t matUsage;
@@ -377,4 +377,42 @@ void zCMaterial::SetTexture(zSTRING& texName)
 	auto tex = zCTexture::Load(texName);
 	SetTexture(tex);
 	Release(tex);
+}
+
+// actually missing in G2 executable (took from g1/spacer2)
+// ("SNOW" was added in G2)
+zSTRING s_MatGroupStrings[] = { "UNDEF", "METAL", "STONE", "WOOD", "EARTH", "WATER", "SNOW" };
+
+// static
+zSTRING& zCMaterial::GetMatGroupString(oTMatGroup grp)
+{
+	switch ( grp ) {
+	case MAT_METAL:
+		result = s_MatGroupStrings[1];
+		break;
+	case MAT_STONE:
+		result = s_MatGroupStrings[2];
+		break;
+	case MAT_WOOD:
+		result = s_MatGroupStrings[3];
+		break;
+	case MAT_EARTH:
+		result = s_MatGroupStrings[4];
+		break;
+	case MAT_WATER:
+		result = s_MatGroupStrings[5];
+		break;
+	case MAT_SNOW:
+		result = s_MatGroupStrings[6];
+		break;
+	default:
+		result = s_MatGroupStrings[0]; // UNDEF
+		break;
+	}
+	return result;
+}
+
+zSTRING& zCMaterial::GetMatGroupString()
+{
+	return GetMatGroupString(this->matGroup);
 }

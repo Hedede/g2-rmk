@@ -10,7 +10,10 @@ public:
 	virtual void GetChromaKeyingEnabled();
 	virtual void SetChromaKeyingEnabled(int);
 
-	virtual void HasAlpha();
+	virtual void HasAlpha()
+	{
+		return hasAlpha;
+	}
 
 private:
 	zCTexture*  nextAni     [3];
@@ -96,4 +99,39 @@ int zCTextureFileFormatInternal::ReadHeader(zFILE& file)
 
 	memcpy(&this->texInfo, &header.TexInfo, sizeof(zCTextureInfo));
 	return 1;
+}
+
+zCTexture* zCTexture::GetAniTexture()
+{
+	zCTexture* result = this;
+	if ( hasAlpha & 2 ) // probably should be "isAnimated"
+	{
+#if 0
+		// I hate funtions like this, it looked like this:
+		auto frame = actAniFrame;
+		auto bullshit = -24 - this;
+		for (...)
+		{
+			for (...) {
+				if (!*(frame + result + bullshit))
+					break;
+				result = *(frame + result + bullshit);
+			}
+
+			++frame;
+		}
+#endif
+		
+		for (int i = 3; i > 0; --i) {
+			if ( actAniFrame[i] ) {
+				int e = actAniFrame[i];
+				for (int j = 0; j<e;) {
+					if (!result->nextAni[i])
+						break;
+					result = result->nextAni[i]; // moved here for clarity
+				}
+			}
+		}
+	}
+	return result;
 }

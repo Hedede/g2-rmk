@@ -416,3 +416,34 @@ zSTRING& zCMaterial::GetMatGroupString()
 {
 	return GetMatGroupString(this->matGroup);
 }
+
+void zCMaterial::RefreshAvgColorFromTexture()
+{
+	if ( texture ) {
+		auto texInfo = texture->GetTextureInfo();
+		zCOLOR tmp = texInfo.averageColor;
+		tmp[3] = this->color[3];
+		this->color = tmp;
+		if (texture->cacheState == 0)
+			texture->CacheOut();
+	}
+}
+
+// static
+zCMaterial* zCMaterial::SearchName(zSTRING& name)
+{
+	name.Upper();
+	return zCMaterial::classDef.SearchHashTable(name);
+}
+
+zCTexture* zCMaterial::GetAniTexture()
+{
+	if ( texture ) {
+		if ( texture->hasAlpha & 2 ) { // probably "flags.animated"
+			aniCtrl.AdvanceAni(texture);
+			return texture->GetAniTexture();
+		}
+	}
+
+	return nullptr;
+}

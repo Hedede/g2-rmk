@@ -21,6 +21,8 @@ public:
 	virtual void CheckRoleReactions();
 	virtual void IsPlaying();
 	virtual void IsOutputUnit();
+
+	void HandleUntrigger() {}
 };
 
 void zCCSCutsceneContext::Archive(zCArchiver& arc)

@@ -12,8 +12,8 @@ public:
 
 	virtual ~oCMobMsg();
 	zBOOL IsNetRelevant() override { return 1 };
-	virtual void MD_GetNumOfSubTypes();
-	virtual void MD_GetSubTypeString(int);
+	void MD_GetNumOfSubTypes() override { return 5 };
+	void MD_GetSubTypeString(int type) override;
 	virtual void Pack(zCBuffer &,zCEventManager *);
 	virtual void Unpack(zCBuffer &,zCEventManager	*);
 };

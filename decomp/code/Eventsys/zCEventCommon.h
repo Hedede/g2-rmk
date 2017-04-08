@@ -7,9 +7,9 @@ public:
 		TOGGLE_ENABLED,
 	};
 	virtual ~zCEventCommon();
-	virtual void IsNetRelevant();
-	virtual void MD_GetNumOfSubTypes();
-	virtual void MD_GetSubTypeString(int);
+	bool IsNetRelevant() override { return true; }
+	int MD_GetNumOfSubTypes() override { return 4 };
+	void MD_GetSubTypeString(int type) override;
 };
 
 zSTRING zCEventCommon::MD_GetSubTypeString(int type);

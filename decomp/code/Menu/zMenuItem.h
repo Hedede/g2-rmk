@@ -576,6 +576,11 @@ private:
 	zBOOL firstTimeInserted;
 };
 
+struct zCMenuItemInput : zCMenuItem {
+	void Leave() override { }
+}
+
+//--------------------------------------------------------------------------------
 void zCMenuItem::SetByScript(zSTRING& name)
 {
 	SetName(name);

@@ -17,7 +17,7 @@ public:
 	virtual void DeleteChild(int);
 	virtual void GetNumOfChilds();
 	virtual void GetRoleNumOfChild(int);
-	virtual void BlockCorrection();
+	virtual void BlockCorrection() {}
 	virtual void BlockAsFocus(int);
 	virtual void GetChildPos(int);
 };

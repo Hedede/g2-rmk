@@ -15,7 +15,9 @@ struct myThunder {
 
 /* Ist in Gothic 2 fürs Rendern von Wetter-Blitzen verantwortlich
  * hier heran kommt man über MEM_SkyController.barrier */
-class oCBarrier {
+struct oCBarrier {
+	void AddTremor(zTRenderContext& ctx) {}
+private:
 	zCMesh*     skySphereMesh;
 
 	myPoly*      myPolyList;

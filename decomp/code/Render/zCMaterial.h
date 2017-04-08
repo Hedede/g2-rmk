@@ -17,7 +17,7 @@ public:
 		InitThisByMaterial(other);
 	}
 
-	zCMaterial& operator = (zCMaterial const& other)
+	zCMaterial& operator=(zCMaterial const& other)
 	{
 		InitThisByMaterial(other);
 	}
@@ -85,6 +85,13 @@ public:
 		} else {
 			detailObject = new zSTRING(name);
 		}
+	}
+
+	zSTRING const* zCMaterial::GetDetailObjectVisual() const
+	{
+		if ( !detailObject )
+			return &zSTR_EMPTY;
+		return detailObject;
 	}
 
 	void SetWaveMode(uint32_t mode)
@@ -355,8 +362,8 @@ void zCMaterial::SetTexture(zCTexture* newTex)
 
 		float scale;
 		if ( detinfo ) {
-			SetDetailTexture(detinfo->self.name);
-			scale = detinfo->self.scale;
+			SetDetailTexture(detinfo.name);
+			scale = detinfo.scale;
 		} else if (detailObject) {
 			SetDetailTexture(*detailObject);
 			scale = detailObjectScale;
@@ -379,12 +386,20 @@ void zCMaterial::SetTexture(zSTRING& texName)
 	Release(tex);
 }
 
-// actually missing in G2 executable (took from g1/spacer2)
-// ("SNOW" was added in G2)
+// "SNOW" was added in G2
+enum zTMat_Group {
+	MAT_UNDEF,
+	MAT_METAL,
+	MAT_STONE,
+	MAT_WOOD,
+	MAT_EARTH,
+	MAT_WATER,
+	MAT_SNOW,
+};
 zSTRING s_MatGroupStrings[] = { "UNDEF", "METAL", "STONE", "WOOD", "EARTH", "WATER", "SNOW" };
 
 // static
-zSTRING& zCMaterial::GetMatGroupString(oTMatGroup grp)
+zSTRING& zCMaterial::GetMatGroupString(zTMat_Group grp)
 {
 	switch ( grp ) {
 	case MAT_METAL:
@@ -417,6 +432,24 @@ zSTRING& zCMaterial::GetMatGroupString()
 	return GetMatGroupString(this->matGroup);
 }
 
+void zCMaterial::SetMatGroupByString(zSTRING const& s)
+{
+	if (s == s_MatGroupStrings[1])
+		matGroup = MAT_METAL;
+	else if (s == s_MatGroupStrings[2])
+		matGroup = MAT_STONE;
+	else if (s == s_MatGroupStrings[3])
+		matGroup = MAT_WOOD;
+	else if (s == s_MatGroupStrings[4])
+		matGroup = MAT_EARTH;
+	else if (s == s_MatGroupStrings[5])
+		matGroup = MAT_WATER;
+	else if (s == s_MatGroupStrings[6])
+		matGroup = MAT_SNOW;
+	else
+		matGroup = MAT_UNDEF;
+}
+
 void zCMaterial::RefreshAvgColorFromTexture()
 {
 	if ( texture ) {
@@ -446,4 +479,202 @@ zCTexture* zCMaterial::GetAniTexture()
 	}
 
 	return nullptr;
+}
+
+void zCMaterial::ApplyTexAniMapping(zCPolygon *poly)
+{
+	if ( flags.texAniMap ) {
+		float x = ztimer.totalTimeFloat * this->texAniMapDir.x;
+		float y = ztimer.totalTimeFloat * this->texAniMapDir.y;
+
+		x = x - floor(x);
+		y = y - floor(y);
+		for ( int i = 0; i < poly->numClipVert; ++i)
+			poly->clipFeat[i].texuv += zVEC2{x, y};
+	}
+}
+
+void zCMaterial::InitThisByMaterial(zCMaterial const& other)
+{
+	zCMaterial::InitValues();
+
+	if ( texture != other.texture ) {
+		Release(texture);
+		texture = other.texture;
+		if ( texture ) {
+			++texture->refCtr;
+			AutoAssignDetailTexture();
+		}
+	}
+
+	color = other.color;
+
+	flags.smooth = other.smooth;
+	smoothAngle  = other.smoothAngle;
+
+	matGroup  = other.matGroup;
+	alphaFunc = other.alphaFunc;
+
+	flags.noLightmap      = other.flags.noLightmap;
+	flags.lodDontCollapse = other.flags.lodDontCollapse;
+	flags.noCollDet       = other.flags.noCollDet;
+	flags.forceOccluder   = other.flags.forceOccluder;
+
+	flags.texAniMapMode   = other.flags.texAniMapMode;
+	texAniMapDir          = other.texAniMapDir;
+
+	matUsage = other.matUsage;
+
+	flags.environmentalMapping   = other.flags.environmentalMapping;
+	environmentalMappingStrength = other.environmentalMappingStrength;
+
+	waveMode  = other.waveMode;
+	waveSpeed = other.waveSpeed;
+
+	waveGridSize     = other.waveGridSize;
+	waveMaxAmplitude = other.waveMaxAmplitude;
+
+	ignoreSun = other.ignoreSun;
+}
+
+void zCMaterial::AutoAssignDetailTexture()
+{
+	if (!texture)
+		return;
+	auto texName = texture->GetObjectName();
+	if (!texName)
+		return;
+
+	if (auto detInfo = zCMapDetailTexture::S_GetDetailTextureInfo(texName)) {
+		if ( detailTexture ) {
+			auto detName = detailTexture->GetObjectName();
+			if (detName == detInfo.name) {
+				detailObjectScale = detInfo.scale;
+				return;
+			}
+			Release(detailTexture);
+		}
+
+		if ( detInfo.name ) {
+			auto tex = zCTexture::Load(detInfo.name, 0);
+
+			SetDetailTexture(tex);
+			Release(tex);
+		}
+
+		detailObjectScale = detInfo.scale;
+		return;
+	}
+
+	if ( detailObject ) {
+		if ( detailTexture ) {
+			auto detName = detailTexture->GetObjectName();
+			if (*detailObject == detName) {
+				// not a type on my part
+				detailObjectScale = this->detailObjectScale;
+				return;
+			}
+
+			Release(detailTexture);
+		}
+
+		if ( detailObject->Length() ) {
+			auto tex = zCTexture::Load(*detailObject, 0);
+
+			SetDetailTexture(tex);
+			Release(tex);
+		}
+
+		detailObjectScale = this->detailObjectScale;
+		return;
+	}
+}
+
+zVEC3* zCMaterial::GetTexAniVector(zCPolygon* poly)
+{
+	if (!flags.texAniMap)
+		return zVEC3::ZERO; // *made up*
+
+	int n = 2;
+	for (; n < poly->numVerts; ++i) {
+		if ( poly->numVerts <= 3 )
+			break;
+
+		auto v0 = poly->vertex[0];
+		auto v1 = poly->vertex[1];
+		auto vN = poly->vertex[2];
+
+		auto v1v0 = v1.pos - v0.pos;
+		auto vNv1 = vN.pos - v1.pos;
+
+		auto len = v1v0.Length();
+		if (len != 0.0) {
+			v1v0 /= len;
+			auto len = vNv1.Length();
+			if (len != 0.0) {
+				vNv1 /= len;
+				if (!v1v0.IsEqualEps(vNv1)) {
+					if (!v1v0.IsEqualEps(-vNv1)) {
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	if ( n == poly->numVerts )
+		return zVEC3::ZERO;
+
+	zMAT3 mat; // CONSTRUCT(&mat, 12, 3, zVEC3::zVEC3);
+	// (actually called mat in original code)
+
+	mat[0][0] = 1.0;
+	mat[1][0] = 1.0;
+	mat[2][0] = 1.0;
+	mat[0][1] = poly->feature[0]->texuv.x;
+	mat[1][1] = poly->feature[1]->texuv.x;
+	mat[2][1] = poly->feature[2]->texuv.x;
+	mat[0][2] = poly->feature[0]->texuv.y;
+	mat[1][2] = poly->feature[1]->texuv.y;
+	mat[2][2] = poly->feature[2]->texuv.y;
+	float det;
+	mat = mat.Inverse(&det);
+	if (det == 0.0)
+		return zVEC3::ZERO;
+
+	zVEC3 U;
+	zVEC3 V;
+
+	// not sure if this is correct, I was tired at the moment of writing,
+	// and frustrated and confused by compiler's instruction reordering
+	// like
+	//
+	// add esi, 4
+	// esp + (offset_of_var-4) + esi
+	//
+	// instead of
+	//
+	// esp + (offset_of_var) + esi
+	// add esi, 4
+	//
+	// anyway, this is barycentric coordinates, I should read how they are calculated
+
+	for (int i = 0; i < 3; ++i) {
+		auto v0 = poly->vertex[0];
+		auto v1 = poly->vertex[1];
+		auto vN = poly->vertex[n];
+		auto pos0 = v0->Position[i];
+		auto pos1 = v1->Position[i];
+		auto posN = vN->Position[i];
+
+		auto vec = mat * zVEC3{pos0, pos1, posN};
+
+		U[i] = vec.y;
+		V[i] = vec.z;
+	}
+
+
+	auto u = U * -texAniMapDir.x;
+	auto v = V * -texAniMapDir.y;
+	return u + v;
 }

@@ -74,7 +74,7 @@ private:
 	zCPolyStrip *trail = nullptr;
 	int unknown = 0;
 	float trailTime;
-	int __ignoreArmor = true;
+	int hasHit = true;
 };
 
 void oCAIArrowBase::CreateTrail(zCVob* parent)
@@ -150,7 +150,7 @@ void oCAIArrowBase::ReportCollisionToAI(zCCollisionReport const& colReport)
 		if ( col2 ) {
 			if (auto npc = zDYNAMIC_CAST<oCNpc>(col2->parent)) {
 				auto armor = npc->GetEquippedArmor();
-				if (!armor || armor->GetEquippedArmor() != SND_MAT_METAL || __ignoreArmor) {
+				if (!armor || armor->GetEquippedArmor() != SND_MAT_METAL || hasHit) {
 					vob->SetPhysicsEnabled(0);
 					if (timeLeft > 0.1)
 						timeLeft = 0.05;

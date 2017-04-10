@@ -1328,20 +1328,7 @@ private:
 	zCArray<oCNpcTalent*>     talents;
 	int    spellMana = 0;
 
-	struct oCMagFrontier {
-		SetNPC(oCNpc *npc)
-		{
-			this->npc = npc;
-		}
-		oCVisualFX*     warningFX;
-		oCVisualFX*     shootFX;
-		oCNpc*          npc;
-
-		struct {
-			unsigned isWarning  : 1;
-			unsigned isShooting : 1;
-		} flags;
-	} magFrontier;
+	oCMagFrontier magFrontier;
 
 	oCNpc_States states; // ok
 

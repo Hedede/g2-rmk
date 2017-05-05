@@ -143,17 +143,37 @@ public:
 	
 	int      m_bIsAmbientPFX;
 
-	int unk;
+	int unk1;
 
-	char unk13[8];
 	zSTRING pfxName;
+
 	zCArray<float> arr1;
-	int unk14[15];
+
+	zCParticleEmitter* __next;
+	int __someEnum;
+	int __sphereRadius;
+	zVEC3 __sphereCenter;
+
+	int unk14;
+	
+	// something-something PFXMesh
+	zCMesh *__mesh;
+	zCObject *__morphMesh;
+	zCProgMesh *__progMesh;
+
+	int unk14_3[5];
+
 	zCArray<float> arr2;
 	int unk15[6];
 	zTBBox3D bbox;
-	int unk16[10];
+	zVEC3 __outputDir;
+	int unk16[5];
+	zVEC2 bs;
 	zVEC3 vec1;
 	zVEC3 vec2;
-	int unk17[10];
+	int unk17;
+	zCTexture *__texture;
+	int unk18;
+	int __someBool;
+	int unk19[6];
 };

@@ -40,6 +40,9 @@ struct oCEmitterKey {
 
 	char unk1[72];
 	zSTRING instanceName;
-	char unk2[24];
-};
+	oCVisualFX *vfx;
+	zVEC3 targetPos;
 
+	zCSoundFX *sfx;
+	int sfxHandle;
+};

@@ -62,6 +62,18 @@ public:
 	}
 
 private:
+	static double PartRand()
+	{
+		return (rand() - 16383.5) / 16383.5;
+	}
+
+	struct zCStaticPfxList {
+		// head and tail?
+		zCParticleFX *pfx1;
+		zCParticleFX *pfx2;
+		int count;
+	};
+
 	void InitEmitterVars()
 	{
 		memset(emitter_vars, 0, sizeof(emitter_vars));
@@ -69,7 +81,9 @@ private:
 
 private:
 	zSParticle *particles;
-	char emitter_vars[28];
+
+	int emitter_num_arr1;
+	char emitter_vars[24];
 	zCParticleEmitter *emitter;
 
 	zTBBox3D bbox;
@@ -78,7 +92,15 @@ private:
 
 	char flags;
 
-	char unk3[60];
+	zCParticleFX *__next; // maybe other way around?
+	zCParticleFX *__prev;
+
+	int unk3;
+	float __timeStamp;
+	char unk4[8];
+	zCQuadMark* __quadMark;
+
+	char unk5[29];
 };
 
 void zCParticleFX::InitParticleFX()

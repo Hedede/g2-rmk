@@ -7,8 +7,8 @@ public:
 	void GetResSizeBytes() override;
 	void GetCacheConfig(ulong &,ulong &) override;
 
-	virtual void GetChromaKeyingEnabled();
-	virtual void SetChromaKeyingEnabled(int);
+	virtual bool GetChromaKeyingEnabled() { return false; }
+	virtual void SetChromaKeyingEnabled(int) {}
 
 	virtual void HasAlpha()
 	{
@@ -21,10 +21,12 @@ private:
 	int         actAniFrame [3];
 	int         numAniFrames[3];
 
-	bool hasAlpha;
-	bool isAnimated;
-	bool changingRealTime;
-	bool isTextureTile;
+	struct {
+		unsigned hasAlpha         : 1;
+		unsigned isAnimated       : 2;
+		unsigned changingRealTime : 4;
+		unsigned isTextureTile    : 8;
+	} flags;
 };
 
 
@@ -101,11 +103,31 @@ int zCTextureFileFormatInternal::ReadHeader(zFILE& file)
 	return 1;
 }
 
+//--------------------------------------------------------------------------------
+void zCTexture::InitValues()
+{
+	flags.hasAlpha = 0;
+	flags.isAnimated = 0;
+	
+	for (int i : range(3)) {
+		nextAni      = 0;
+		prevAni      = 0;
+		actAniFrame  = 0;
+		numAniFrames = 0;
+	}
+}
+
+// static
+zCTexture* zCTexture::SearchName(zSTRING& name)
+{
+	name.Upper();
+	return zCTexture::classDef.SearchHashTable(name);
+}
+
 zCTexture* zCTexture::GetAniTexture()
 {
 	zCTexture* result = this;
-	if ( hasAlpha & 2 ) // probably should be "isAnimated"
-	{
+	if ( flags.isAnimated ) {
 #if 0
 		// I hate funtions like this, it looked like this:
 		auto frame = actAniFrame;
@@ -134,4 +156,19 @@ zCTexture* zCTexture::GetAniTexture()
 		}
 	}
 	return result;
+}
+
+bool zCTexture::IsTextureTileBaseSlice()
+{
+	if ( flags.isTextureTile & 8 ) {
+		int    i = 0;
+		auto** p = prevAni;
+		while (!*p) {
+			++i;
+			++p;
+			if (i >= 3)
+				return 1;
+		}
+	}
+	return 0;
 }

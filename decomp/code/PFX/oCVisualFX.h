@@ -43,15 +43,19 @@ public:
 	virtual void Init(zCVob const *,zCVob const *,zCVob const *);
 	virtual void Init(zCVob const *,zVEC3 const &);
 	virtual void InvestNext();
+
 	virtual void SetLevel(int,int);
-	virtual void GetLevel();
+	virtual int GetLevel() { return bitfield.level; }
+
 	virtual void Cast(int);
 	virtual void Stop(int);
 	virtual void Kill();
 	virtual void Play(float keyCycleTime,zMAT4 const* orgTrafo, zMAT4 const* targetTrafo) {}
-	virtual void CanBeDeleted();
-	virtual void IsFinished();
-	virtual void IsLooping();
+
+	virtual bool CanBeDeleted();
+	virtual bool IsFinished();
+	virtual bool IsLooping();
+
 	virtual void SetByScript(zSTRING const &);
 	virtual void SetDuration(float dur)
 	{
@@ -64,69 +68,42 @@ public:
 	virtual void SetCollisionEnabled(int);
 	virtual void SetCollisionCandidates(zCArray<zCVob *>);
 	virtual void GetCollisionCandidates(zCArray<zCVob *> &);
-	virtual void GetNumCollisionCandidates();
+	virtual int  GetNumCollisionCandidates()
+	{
+		return __collisionCandidates.GetNum();
+	}
+
 	virtual void GetCollidedCandidates(zCArray<zCVob *> &);
-	virtual void SetDamage(float damage)
-	{
-		this->damage = damage;
-	}
 
-	virtual void SetDamageType(int damType)
-	{
-		this->damageType = damType;
-	}
+	virtual void SetDamage(float damage) { this->damage = damage; }
+	virtual void SetDamageType(int damType) { this->damageType = damType; }
 
-	virtual float GetDamage() const
-	{
-		return damage;
-	}
-	virtual int GetDamageType() const
-	{
-		return damageType;
-	}
-	virtual void IsASpell();
+	virtual float GetDamage()     const { return damage; }
+	virtual int   GetDamageType() const { return damageType; }
 
-	virtual void SetSpellType(int type)
-	{
-		spellType = type;
-	}
+	virtual void IsASpell() const { return scripted.sendAssessMagic; }
 
-	virtual int GetSpellType() const
-	{
-		return spellType;
-	}
+	virtual void SetSpellType(int type) { spellType = type; }
+	virtual int  GetSpellType() const { return spellType; }
 
-	virtual void SetSpellCat(int cat)
-	{
-		spellCat = cat;
-	}
-	virtual void GetSpellCat() const
-	{
-		return spellCat;
-	}
-	virtual void SetSpellTargetTypes(int types)
-	{
-		targetTypes = types;
-	}
-	virtual void GetSpellTargetTypes() const
-	{
-		return targetTypes;
-	}
+	virtual void SetSpellCat(int cat) { spellCat = cat; }
+	virtual void GetSpellCat() const { return spellCat; }
+
+	virtual void SetSpellTargetTypes(int types) { targetTypes = types; }
+	virtual void GetSpellTargetTypes() const { return targetTypes; }
+
 	virtual void GetSendsAssessMagic();
 	virtual void SetSendsAssessMagic(int);
-	virtual zBOOL GetIsProjectile() const
-	{
-		return isProjectile;
-	}
-	virtual void SetIsProjectile(zBOOL b)
-	{
-		isProjectile = b;
-	}
+
+	virtual zBOOL GetIsProjectile() const { return isProjectile; }
+	virtual void SetIsProjectile(zBOOL b) { isProjectile = b; }
 
 	virtual void SetVisualByString(zSTRING const &);
 	virtual void CalcTrajectory(int const &);
 	virtual void Collide(int);
 	virtual void CollisionResponse(zVEC3 const &,int);
+
+	zSTRING const& GetName() const { return name; }
 
 	void CreateBackup();
 	static void PreSaveGameProcessing(bool destroyAllObjects)
@@ -198,6 +175,114 @@ private:
 		float   secsPerDamage;
 	} scripted;
 
+	int unk0;
+	zVEC3 __visSize0;
+
+	int __trjModeFlags;
+	int colDynFlags;
+	int colStatFlags;
+
+	zVEC3 __rotVel;
+
+	int __easeModeFunc;
+	int __loopModeFlags;
+
+	int __state;
+
+	oCVisualFX *_vfx1;
+	oCVisualFX *_vfx2;
+
+	oCVisualFX* __investFxOrigin;
+	oCVisualFX* __investFxTarget;
+
+	zCAIBase *ai;
+
+	zCArray<oCVisualFX*> __children;
+	zCArray<oCVisualFX*> __children2;
+	zCArray<oCEmitterKey*> __emitterKeys;
+
+	zCArray<zCVob*> __someVobArr;
+	zCArray<zCVob*> __ignoreCollision;
+	zCArray<zCVob*> __collisionCandidates;
+	zCArray<zCVob*> __collidedCandidates;
+	zCArray<> __queuedCollisions;
+
+	zCArray<zCPositionKey*> poskeys;
+
+	int int2[3];
+	zMAT4 __mat;
+	int __ink3;
+	zCVob *__unkvob1;
+	zCVobScreenFX *blendEffect;
+	float __blendTimer;
+
+	zBOOL __aBool;
+
+	zCModelNodeInst *__originNode;
+	zCModelNodeInst *__targetNode;
+	char unk2[4];
+	zCVob *origin;
+	zCVob *inflictor;
+	zCVob *target;
+	zCVobLight* __light;
+	int what[1];
+	zCSoundFX *sfxAmbient;
+	zCSoundFX *sfx;
+	zSTRING name;
+
+	oCEmitterKey *__someKey1;
+	oCEmitterKey *__someKey2;
+	oCEmitterKey *activeKey;
+
+	float __frameTimeSec;
+	char unk3_1[4];
+	float __something;
+	float __damageTimer;
+
+	zVEC3 targetPos;
+
+	char unk4[12];
+	zVEC3 __visSize1;
+	zVEC3 __visSize2;
+	zVEC3 vec4;
+
+	float __investTimer;
+	int unkno;
+	float __delayTrigTimer;
+	float __dynUpdatetimer;
+	char unk4_0[4];
+	float __unkflt;
+	float __totalTime;
+	float __fxTimer;
+	char unk4_1[4];
+	float fovx;
+	float fovy;
+
+	struct {
+		unsigned unknown0     : 3;
+		unsigned __finish     : 1; // 0x8
+		unsigned unknown1     : 1; // 0x10
+		unsigned canBeDeleted : 1; // 0x20
+		unsigned unknown2 : 7;
+		unsigned level    : 5; // bitfield << 14 >> 27
+		unsigned unknown3 : 14;
+	} bitfield;
+
+	float damage;
+	int damageType;
+	int spellType;
+	int spellCat;
+	int targetTypes;
+
+	int __emitter_ppsValue;
+	zVEC2 __someVec2;
+
+	zVEC3 vecs[10];
+	char unk6[8];
+	zBOOL isProjectile;
+	zBOOL __someBool;
+	zBOOL __someBool0;
+	float __timeRelated;
 };
 
 oCVisualFX* oCVisualFX::CreateAndPlay(
@@ -271,3 +356,61 @@ void oCVisualFX::InitParser()
 	zCParser::enableParsing = oldEnable;
 }
 
+
+bool oCVisualFX::CanBeDeleted()
+{
+	if (!bitfield.canBeDeleted)
+		return false;
+	for (auto* vfx : __children) {
+		if (!vfx->bitfield.canBeDeleted)
+			return true;
+	}
+
+	return true;
+}
+
+bool oCVisualFX::IsFinished()
+{
+	if (bitfield.__finish || bitfield.canBeDeleted)
+		return true;
+
+	if (!visual) {
+		if (scripted.visName || __unkvob1 || blendEffect)
+			return false; // I removed redundant if (visual)
+		return true;
+	}
+
+	if (auto visual = zDYNAMIC_CAST<zCParticleFX>(this->visual))
+		return visual->CalcIsDead();
+
+	return visual->GetVisualDied();
+}
+
+bool oCVisualFX::IsLooping()
+{
+	if (IsFinished())
+		return false;
+
+	if (auto visual = zDYNAMIC_CAST<zCParticleFX>(this->visual)) {
+		if (visual->flags.8)
+			return false;
+	}
+
+	return scripted.emFXLifeSpan == -1;
+}
+
+void oCVisualFX::SetupEmitterKeysByVisual()
+{
+	// looks wrong to me, but this is what is written in assembly
+	// also it does xor ecx, ecx before the call, which is bogus
+	// (maybe I am decompiling damaged exe?)
+	if ( !visual && !visual->GetVisualDied() )
+	{
+		for (auto key : __emitterKeys )
+			key->SetDefaultByFX(this);
+		for (auto vfx : __children)
+			vfx->SetupEmitterKeysByVisual();
+		for (auto vfx : __children2)
+			vfx->SetupEmitterKeysByVisual();
+	}
+}

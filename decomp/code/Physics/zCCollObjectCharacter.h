@@ -50,3 +50,13 @@ private:
 	char unk4[52];
 	zVEC3 collNormal;
 };
+
+class oCCollObjectCharacter : zCCollObjectCharacter {
+	virtual void GetCollObjClass();
+	virtual ~oCCollObjectCharacter();
+	virtual void GetPrimitiveCC();
+	virtual void IsDead();
+	virtual void DontLetHimComeNearer(zCVob const *);
+	virtual void TurnSpeed();
+	virtual void PushAround(zVEC3 const &);
+};

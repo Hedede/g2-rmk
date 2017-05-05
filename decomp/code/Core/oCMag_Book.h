@@ -200,6 +200,7 @@ private:
 	int keys;
 };
 
+//_carsten/oMagic.cpp
 void oCMag_Book::Right()
 {
 	if (open && !IsInMovement() && GetNoOfSpells() != 1) {
@@ -275,4 +276,25 @@ int oCMag_Book::DeRegister(oCItem* item)
 {
 	int nr = spell_items.Search(item);
 	return DeRegister(nr);
+}
+
+// private
+int oCMag_Book::Register(oCSpell *spell, int active)
+{
+	if ( !spell )
+		return 0;
+	++spell->refCtr;
+
+	spells.Insert(spells);
+	return 1;
+}
+
+void oCMag_Book::StartInvestEffect(zCVob *tgt, int level, int mana, int energyLeft)
+{
+	zINFO(8,"C: MAG: StartInvestEffect"); // 465,
+}
+
+void oCMag_Book::StartCastEffect(zCVob *tgt, zVEC3 const& tgtPos)
+{
+	 zINFO(8, "C: MAG: StartCastEffect"); // 575
 }

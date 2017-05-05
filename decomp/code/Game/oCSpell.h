@@ -14,17 +14,19 @@ public:
 	oCSpell(int _spellID);
 	virtual ~oCSpell();
 
-	virtual void Archive(zCArchiver& archiver)
-	{
-	}
-
-	virtual void Unarchive(zCArchiver& archiver)
-	{
-	}
+	void Archive(zCArchiver& archiver) override { }
+	void Unarchive(zCArchiver& archiver) override { }
 
 	bool IsInvestSpell()
 	{
 		return false;
+	}
+
+	void SetInvestedMana(int mana)
+	{
+		manaInvested = mana;
+		if ( !mana )
+			__time_invest = 0;
 	}
 
 	zCVob* GetVob()
@@ -77,13 +79,29 @@ public:
 		return canBeDeleted;
 	}
 
+	// my addition
+	bool IsTransformSpell() const
+	{
+		return spellType >= SPL_TrfFirst && spellType <= SPL_TrfLast;
+	}
+
+	bool DeleteCaster() const
+	{
+		return IsTransformSpell();
+	}
+
 
 private:
 	void DoLogicInvestEffect() {} // commented out in G2, used in G1demo
+	void DoTimedEffect();
 
+	void StopTargetEffects(zCVob *vob)
+	{
+		zINFO("C: SPL: StopTargetEffects"); // 806
+	}
 private:
 	int spellSlot = 32656;
-	zCVob* spellVob = 0;
+	oCVisualFX *spellEffect;
 
 	zCVob* __unk1 = 0;
 
@@ -105,9 +123,10 @@ private:
 	int isEnabled = 0;
 
 	int unk01 = 0;
-	int unk02 = 0;
 
+	int __timeLeft;
 	int canBeDeleted = 0; // __timedEffectEnd;
+
 	int unk1 = 0;
 	int unk2 = 0;
 	int unk3 = 0;
@@ -130,9 +149,85 @@ private:
 	//end scripted
 };
 
+//------------------------------------------------------------------------------
+//_carsten/oSpell.cpp
+//------------------------------------------------------------------------------
 oCSpell::oCSpell(int spellID)
 	: spellID(spellID)
 {
 	auto instance = GetSpellInstanceName(spellID);
 	InitByScript(instance);
 }
+
+void oCSpell::DoTimedEffect()
+{
+	if (__timeLeft > 0.0) {
+		__timeLeft -= ztimer.frameTimeFloat;
+		if (__timeLeft <= 0) {
+			canBeDeleted = 1;
+			EndTimedEffect();
+		}
+	}
+
+	if (!in(spellType, SPL_Light, SPL_PalLight) && spellType->CanBeDeleted) {
+		Release(spellEffect);
+		canBeDeleted = 1;
+	}
+}
+
+void oCSpell::EndTimedEffect()
+{
+	zINFO(8, "C: SPL: EndTimedEffect"); // 1237
+
+	canBeDeleted = 1;
+	if (IsTransformSpell()) {
+		if (__npcTransform && __npcTarget) {
+			zVEC3 pos = __npcTarget->GetPositionWorld(); // [3]
+			__npcTransform->SetTrafoObjToWorld(__npcTarget->trafoObjToWorld);
+			ogame->GetGameWorld()->AddVob(__npcTransform);
+			__npcTransform->SetCollDetStat(0);
+			__npcTransform->SetCollDetStat(0);
+
+			if ( __npcTransform->SearchNpcPosition(pos) ) {
+				__npcTransform->Enable(pos);
+				__npcTransform->ResetRotationsWorld();
+
+				zVEC3 dir = __npcTransform->GetHeadingAtWorld(); // [2]
+				zCVob::ResetRotationsWorld(&this->__npcTransform->vtbl);
+				__npcTransform->SetHeadingAtWorld(dir);
+				__npcTransform->ResetXZRotationsWorld();
+				__npcTransform->SetCollDetStat(1);
+				__npcTransform->SetCollDetDyn(1);
+
+				if (!__npcTarget->isInMovementMode)
+					ogame->GetGameWorld()->RemoveVob(__npcTarget);
+
+				__npcCaster->CopyTransformSpellInvariantValuesTo(__npcCaster, __npcTransform);
+				__npcTransform->GetAnictrl()->SearchStandAni(0);
+				__npcTransform->SetAsPlayer();
+
+				spellEffect = CreateEffect();
+				spellEffect->Init(__npcTransform, 0, 0);
+				spellEffect->SearchStandAni(targetCollectType);
+				spellEffect->Cast(1);
+				Release(spellEffect);
+
+				auto msg = new oCMsgConversation(EV_PLAYANI_NOOVERLAY, "T_TRFSHOOT_2_STAND");
+				msg->SetHighPriority(1);
+				__npcTransform->GetEM()->OnMessage(msg, __npcTransform);
+				__npcTransform->CreatePassivePerception(PERC_ASSESSSURPRISE, __npcTransform, 0);
+			} else {
+				auto pos = __npcTarget->GetPositionWorld();
+				auto fx = oCVisualFX::CreateAndPlay("TRANSFORM_NOPLACEFX", pos, 0, 1, 0.0, 0, 0);
+				Release(fx);
+				__npcTransform->SetCollDetStat(1);
+				__npcTransform->SetCollDetDyn(1);
+				__npcTransform->Disable();
+
+				canBeDeleted = 0;
+				__timeLeft = 0;
+			}
+		}
+	}
+}
+

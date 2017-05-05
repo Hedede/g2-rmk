@@ -194,3 +194,43 @@ void  oCMagFrontier::DoShootFX(zVEC3 const& startPoint)
 		StartLightningAtPos(lpos, npcPos);
 	}
 }
+
+double oCMagFrontier::GetDistance(zVEC3 const& pos, float& dist, zVEC3& nearestPoint)
+{
+	// don't understand this, so probably incorrect
+	dist = 1.0e7;
+	float min = 20000000.0;
+	zVEC2 point1;
+	zVEC2 point2;
+	if ( pos.x != 0.0 || pos.z != 0.0 )
+	{
+		if ( sqrt(pos.x * pos.x + pos.z * pos.z) >= 20000.0 ) {
+			for (auto p : newPointList) {
+				float ydiff = pos.z - p[1];
+				float xdiff = pos.x - p[0];
+				float d = sqrt(xdiff * xdiff + ydiff * ydiff);
+				if ( d >= dist ) {
+					if ( d < min ) {
+						min = d;
+						point2 = p;
+					}
+				} else {
+					min = dist;
+					dist = d;
+					point2 = point1;
+					point1 = p;
+				}
+			}
+			auto p = point1 - point2;
+			p.Normalize();
+			dist = fabs((point1.y - pos.z) * -p.x + (point1.x - pos.x) * p.y);
+			return dist;
+		}
+
+		dist = 35000.0;
+		return 100000.0;
+	}
+
+	dist = 60000.0;
+	return 100000.0;
+}

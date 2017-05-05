@@ -1773,3 +1773,23 @@ zCOLOR zCVob::GetLightColorAtCenter()
 
 	return zCVobLight::SumLightsAtPositionWS(lightList, GetPositionWorld(), 0);
 }
+
+zCVisual* zCVob::GetClassHelperVisual()
+{
+	const struct zSTRING *v6; // eax@3
+	auto it = s_helperVisualMap.find( _GetClassDef() );
+	if ( it == s_helperVisualMap.end() ) {
+		auto classDef = _GetClassDef();
+		auto visual = LoadVisual("INVISIBLE_" + _GetClassDef()->className + ".3DS");
+		if (!visual)
+			visual = LoadVisual("INVISIBLE_DEFAULT.3DS");
+
+		s_helperVisualMap.insert(_GetClassDef, visual).first.second;
+
+		return visual;
+	}
+
+	// WHY?!
+	it = s_helperVisualMap.insert( it ).first;
+	return it.second;
+}

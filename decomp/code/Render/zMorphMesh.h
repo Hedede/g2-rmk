@@ -1,8 +1,35 @@
-class zCMorphMesh : public zCVisualAnimate{
+struct zCMorphMeshProto {
+	int Release()
+	{
+		if (--refCtr <= 0) {
+			++refCtr;
+			delete this;
+		}
+		return refCtr;
+	}
+
+private:
+	zCMorphMeshProto *next;
+	zCMorphMeshProto *prev;
+	int refCtr;
+	zSTRING name;
+	void *__sometingRefcounted;
+	int unk1;
+	zCArraySort<zCMorphMeshAni*> anis;
+	int alphaTestingEnabled;
+};
+
+struct zCMorphMeshAni {
+	zSTRING str1;
+	zSTRING str2;
+	int unko[10];
+};
+
+class zCMorphMesh : public zCVisualAnimate {
 	Z_OBJECT(zCMorphMesh);
 public:
 	virtual ~zCMorphMesh();
-	virtual void Render(zTRenderContext	&);
+	virtual void Render(zTRenderContext&);
 	bool IsBBox3DLocal() override
 	{
 		return true;

@@ -230,3 +230,33 @@ int zCRnd_D3D::XD3D_EnumerateModes()
 	numDevices = dxDeviceNum;
 	return 0;
 }
+
+int zCRnd_D3D::XD3D_SetTexture(uint32_t stage, IDirectDrawSurface7 *texture)
+{
+	if ( GetPolyDrawMode() <= 1 && textures[stage] != texture )
+	{
+		auto result = xd3d_pd3dDevice7->SetTexture(stage, texture);
+		if ( !DXTryWarning(result, "X: [RND3D]SetTexture: Set texture failed!") )
+			return result;
+		textures[stage] = texture;
+	}
+	return 1;
+}
+
+int zCRnd_D3D::SetRenderState(zTRnd_RenderStateType renderStateType, int renderState)
+{
+	switch (renderStateType) {
+	case 1:
+		if (xd3d_state.renderState != renderState) {
+			auto result = xd3d_pd3dDevice7->SetRenderState(D3DRS_TEXTUREFACTOR, renderState);
+			if ( DXTryWarning(result, "X: [RND3D]XD3D_SetRenderState: Set render state failed!") )
+				xd3d_state.renderState = renderState;
+			this->renderState[1] = renderState;
+			return 1;
+		}
+	case 0:
+		this->renderState[0] = renderState;
+	default:
+		return 0;
+	}
+}

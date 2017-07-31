@@ -623,7 +623,7 @@ public:
 
 	bool HasBodyStateFreeHands() const
 	{
-		if (bodyState & bs_mods == 0 )
+		if (bodyState & bs_mods == 0)
 			return bodyState & BS_FLAG_FREEHANDS;
 		return 0;
 	}

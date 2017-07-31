@@ -1,9 +1,6 @@
 int oCNpc::IsInFightMode_S(int fmode)
 {
-	if ( fmode < 0 || fmode >= 8 )
-		fmode = 0;
-
-	switch (fmode) {
+	switch (GetWeaponMode()) {
 	case FMODE_NONE:
 		return fmode == FMODE_NONE;
 	case FMODE_FIST:

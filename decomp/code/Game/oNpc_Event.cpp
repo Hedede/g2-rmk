@@ -101,15 +101,14 @@ int oCNpc::EV_EquipBestArmor(oCMsgWeapon* msg)
 
 int oCNpc::EV_UnequipArmor(oCMsgWeapon*)
 {
-	unsigned num = invSlots.GetNumInList();
-	for (unsigned i = 0; i < num; ++i)
-		if (invSlots[i] == NPC_NODE_TORSO) {
-			auto item = zDYNAMIC_CAST<oCItem>(invSlots[i]->object);
-			if (item) {
-				EquipArmor(item);
-			}
-		}
-	}
+	EquipArmor( GetEquippedArmor() );
+	return 1;
+}
+
+int oCNpc::EV_UnequipWeapons(oCMsgWeapon *msg)
+{
+	UnequipItem(GetEquippedMeleeWeapon());
+	UnequipItem(GetEquippedRangedWeapon());
 	return 1;
 }
 
@@ -203,6 +202,44 @@ int oCNpc::EV_StopProcessInfos(oCMsgConversation *msg)
 	auto infoMan = oCInformationManager::GetInformationManager();
 	infoMan.Exit();
 	StopTalkingWith();
+	return 1;
+}
+
+int oCNpc::EV_PointAt(oCMsgConversation *msg)
+{
+	if ( HasBodyStateFreeHands() ) {
+		if ( !msg->target && !msg->vtbl->IsInUse() ) {
+			auto wp = homeWorld->wayNet->GetWaypoint( msg->name );
+			if ( wp ) {
+				msg->positionWorld = wp->GetPositionWorld();
+			} else {
+				msg->target = homeWorld->SearchVobByName( msg->name );
+			}
+			msg->SetInUse(1);
+		}
+
+		if ( msg->target ) {
+			msg->positionWorld = msg->target->GetPositionWorld();
+		}
+
+		v13 = &msg_->positionWorld;
+
+		lastPointMsg = msg;
+
+		float azi, elev;
+		GetAngles(msg->positionWorld, azi, elev);
+		if ( abs(azi) > 90.0 || abs(elev) > 45.0 ) {
+			anictrl->StopCombineAni(anictrl->s_point);
+			return 0;
+		}
+
+		if (msg->target)
+			anictrl->StartCombineAni(msg->target, anictrl->s_point, 45.0, 90.0);
+		else
+			anictrl->StartCombineAni(msg->positionWorld, anictrl->s_point, 45.0, 90.0);
+
+		return 0;
+	}
 	return 1;
 }
 
@@ -351,6 +388,26 @@ int oCNpc::EV_Turn(oCMsgMovement *msg)
 	}
 
 	return 0;
+}
+
+int oCNpc::EV_TurnAway(oCMsgMovement *msg)
+{
+	if ( msg->targetVob ) {
+		if (GetBodyState())
+			return 1;
+
+		if ( !anictrl->IsStanding() )
+			StandUp(0, 1);
+		auto tpos = msg->targetVob->GetPositionWorld();
+		auto pos  = GetPositionWorld();
+		msg->targetPos = pos + (pos-tpos); // wtf?
+		float elev;
+		GetAngles(msg->targetPos, msg->angle, elev);
+		return EV_Turn(msg);
+	}
+
+	zWARNING("U: NPC: EV_TURNAWAY : No targetVob found.") // 2402, _roman/oNpc_Move.cpp
+	return 1;
 }
 
 int oCNpc::EV_StandUp(oCMsgMovement *msg)

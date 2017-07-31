@@ -313,14 +313,13 @@ int oCGame::TestKeys(int key)
 		return 1;
 	case KEY_F11:
 		// probably return to first
-		if ( dword_AB0B84 ) {
-			int v113 = dword_AB0B84->bitfield2 & 3;
-			dword_AB0B84->SetAsPlayer();
-			dword_AB0B84->SetVobName("ABCD");
-			dword_AB0B84->callback_ai-<SetShowAI(0);
+		if ( watchn ) {
+			watchn->SetAsPlayer();
+			watchn->SetVobName("ABCD");
+			watchn->callback_ai->SetShowAI(0);
 			this->HandleEvent(KEY_F4);
-			dword_AB0B84->SetSleepingMode(v113);
-			dword_AB0B84 = 0;
+			watchn->SetSleepingMode(watchn->bitfield2 & 3);
+			watchn = 0;
 		}
 		return 1;
 	case KEY_HOME:

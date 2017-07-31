@@ -965,3 +965,59 @@ int oCNpc::FreeLineOfSight(zCVob* vob)
 	v3.z = (vob->bbox3D.maxs[2] + vob->bbox3D.mins[2]) * 0.5;
 	return FreeLineOfSight(v3, vob);
 }
+
+void oCNpc::ClearVobList()
+{
+	for ( auto vob : vobList )
+		Release(vob);
+	vobList.DeleteList();
+}
+
+void oCNpc::SetAsPlayer()
+{
+	if ( !oCNpcFocus::focus )
+		oCNpcFocus::InitFocusModes();
+
+	if ( auto player = oCNpc::player ) {
+		player->ClearVobList();
+		player->ClearFocusVob();
+	}
+
+	ClearVobList();
+	ClearFocusVob();
+
+	auto pinfo = zCPlayerInfo::GetActivePlayer();
+	if ( auto active = dynamic_cast<oCPlayerInfo*>(pinfo) )
+		pinfo->SetPlayerVob(this);
+	oCNpc::player = this;
+	zparser.SetInstance( "HERO", oCNpc::player );
+	auto fmode = GetWeaponMode();
+	//pseudocode
+	int focusm = match {
+		(fmode >= 5) => 2,
+		(fmode >  0) => 1,
+		(fmode == 0) => 0
+	};
+	oCNpcFocus::SetFocusMode(focusm);
+	if ( !human_ai )
+		InitHumanAI();
+	if ( human_ai )
+		human_ai->InitCamModes(-1);
+	auto aicam  = ogame->GetCameraAI();
+	auto camvob = ogame->GetCameraVob();
+	if ( aicam && camvob && camvob->homeworld ) {
+		aicam->ClearTargetList();
+		aicam->SetTarget( player );
+		if ( player->variousFlags & NPC_FLAG_GHOST ) {
+			aicam->__ghostAlpha = zoptions->ReadReal( "INTERNAL", "GhostAlpha", 0.3 );
+		}
+
+		zCArray<zCVob*> vobs;
+		aicam->SetMode(&CamModNormal, &vobs);
+		aicam->ReceiveMsg(0x8000);
+		auto atvec = GetHeadingAtWorld() * 200;
+		camvob->SetPositionWorld( GetPositionWorld() - atvec );
+		camvob->SetHeadingAtWorld( GetHeadingAtWorld() );
+	}
+	SetWalkStopChasm(0);
+}

@@ -973,6 +973,18 @@ void oCNpc::ClearVobList()
 	vobList.DeleteList();
 }
 
+void oCNpc::ClearEM()
+{
+	GetEM()->Clear();
+	if (human_ai) {
+		if (human_ai->IsWalking() || in(human_ai->actionMode, 5, 6))
+			human_ai->_Stand();
+		human_ai->StopTurnAnis();
+	}
+	lastLookMsg = 0;
+	lastPointMsg = 0;
+}
+
 void oCNpc::SetAsPlayer()
 {
 	if ( !oCNpcFocus::focus )

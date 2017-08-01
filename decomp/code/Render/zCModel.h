@@ -7,7 +7,10 @@ public:
 	{
 		return true;
 	}
-	virtual void GetBBox3D();
+	zTBBox3D GetBBox3D() override
+	{
+		return bbox3d;
+	}
 	virtual void GetVisualName();
 	virtual void SetVisualUsedBy(zCVob *);
 	virtual void GetRenderSortKey();
@@ -18,11 +21,24 @@ public:
 	}
 	virtual void TraceRay(zVEC3 const &,zVEC3 const &,int,zTTraceRayReport &);
 	virtual void HostVobRemovedFromWorld(zCVob *,zCWorld *);
-	virtual void GetFileExtension(int);
+	zSTRING* GetFileExtension(int id) override
+	{
+		if (id < 0 || id > 1)
+			return nullptr;
+		return &modelFileExt[id]
+	}
 	virtual void LoadVisualVirtual(zSTRING const	&);
-	virtual void StartAnimation(zSTRING	const &);
+	void StartAnimation(zSTRING const& name) override
+	{
+		return StartAni(name, 0);
+	}
 	virtual void StopAnimation(zSTRING const &);
-	virtual void IsAnimationActive(zSTRING const &);
+	int IsAnimationActive(zSTRING const& name) override
+	{
+		if (auto ani = GetAniByName(name))
+			return IsAniActive(ani);
+		return 0;
+	}
 	virtual void GetAnyAnimation();
 
 	zTBBox3D GetBBox3DNodeWorld(zCModelNodeInst* node)
@@ -74,6 +90,19 @@ public:
 	}
 
 private:
+	struct zTMdl_NodeVobAttachment {
+		zCVob *Vob;
+		zCModelNodeInst *NodeInst;
+	};
+
+	struct zTAniAttachment {
+		int a;
+		zCArray unk;
+		float freq;
+		int b;
+	};
+	
+
 	int active_ani_num;
 	zCModelAniActive* active_anis[6];
 
@@ -86,7 +115,7 @@ private:
 	zCArray<zCModelNodeInst*> modelNodeInstArray;
 	zCArray<zCMeshSoftSkin*> _skins;
 	zCArraySort<> aniAttachments;
-	zCArray<> __modelNodes;
+	zCArray<zTMdl_NodeVobAttachment> modelNodeVobAttachments;
 	zCArray<> unknown_ar1;
 	zCArray<> unknown_ar2;
 	zCArray<> meshLib;
@@ -104,7 +133,9 @@ private:
 	zVEC3 __vecZ;
 	zVEC3 __vecA;
 	zVEC3 __vecB;
-	int put[8];
+	int pat;
+	int direction;
+	int put[6];
 	zVEC3 __vecC;
 	int dunno;
 	zVEC3 velocities[8];
@@ -122,16 +153,20 @@ zCModelAniActive* zCModel::GetActiveAni(int aniId)
 	return nullptr;
 }
 
-bool zCModel::IsAniActive(zCModelAni *ani)
+zCModelAniActive* zCModel::GetActiveAni(zCModelAni *ani)
 {
 	if (!ani)
-		return false;
+		return nullptr;
 
 	for (unsigned i = 0; i < active_ani_num; ++i)
-		if (active_anis[i]->ani == ani)
-			return true;
+		if (active_anis[i]->protoAni == ani)
+			return active_anis[i];
+	return nullptr;
+}
 
-	return false;
+bool zCModel::IsAniActive(zCModelAni *ani)
+{
+	return GetActiveAni(ani) != nullptr;
 }
 
 zCModelAni* zCModel::GetAniFromAniID(int aniId)
@@ -144,4 +179,33 @@ zCModelAni* zCModel::GetAniFromAniID(int aniId)
 			return proto->anis[aniId];
 
 	return nullptr;
+}
+
+int zCModel::GetNumMaterials()
+{
+	if (_skins.GetNum() <= 0)
+		return 0;
+	if (_skins.GetNum() == 1)
+		return skins[0]->numSubMeshes;
+	return skins[1]->numSubMeshes;
+}
+
+void zCModel::SetRandAniFreq( int aniID, float freq)
+{
+	GetCreateAniAttachment(aniID)->freq = freq;
+}
+
+zCVob* zCModel::GetAttachedNodeVob(zCModelNodeInst* node)
+{
+	for (auto [v, n] : modelNodeVobAttachments)
+		if (n == node)
+			return v;
+	return nullptr;
+}
+
+void zCModel::RemoveAllChildVobsFromNode()
+{
+	for (auto [v, n] : modelNodeVobAttachments)
+		v->Release();
+	modelNodeVobAttachments.Clear();
 }

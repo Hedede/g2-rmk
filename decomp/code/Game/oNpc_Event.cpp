@@ -148,6 +148,34 @@ int oCNpc::EV_StopFX(oCMsgConversation* msg)
 	return 1;
 }
 
+int oCNpc::EV_SndPlay(oCMsgConversation *msg)
+{
+	if ( msg->IsInUse() )
+		return 1;
+
+	msg->SetInUse(1);
+
+	auto snd = zsound->LoadSoundFX(msg->name);
+	if ( !snd )
+		return 1;
+
+	
+	msg->timeSec = snd->GetPlayingTimeMSEC();
+	msg->posX = 0;
+	if ( msg->posY ) // maybe not posY?
+	{
+		if ( auto target = msg->target ) {
+			msg->voiceHandle = zsound->PlaySound3D(snd, target, 0, 0);
+			msg->posX = snd->GetPlayingTimeMSEC(snd);
+			listOfVoiceHandles.Insert(msg->voiceHandle);
+		}
+	}
+
+	zsound->PlaySound(snd, 0);
+	snd->Release();
+	return 1;
+}
+
 int oCNpc::EV_PlayAniSound(oCMsgConversation *msg)
 {
 	auto model = GetModel();
@@ -175,6 +203,51 @@ int oCNpc::EV_PlayAniFace(oCMsgConversation* msg)
 			head->StartAni(msg->name, 1.0, -2.0);
 	}
 
+	return 1;
+}
+
+int oCNpc::EV_PlayAni(oCMsgConversation *msg)
+{
+	auto model = GetModel();
+	if ( !msg->IsInUse() ) {
+		auto& name = msg->name;
+		if ( model->IsAniActive(anictrl->_s_walk) && name.Search(0, "_2_STAND", 1u) > 0 ) {
+			model->StartAni(anictrl->_s_walk, 0);
+			return 1;
+		}
+
+		if ( name[0] == 'R' && name[1] == '_')
+			model->direction = 0;
+		else
+			model->direction = 1;
+
+		auto ani_id = model->GetAniIDFromAniName(msg->name);
+		auto anim = model->GetAniFromAniID(aniId);
+		msg->talkingWith = anim;
+		if ( msg->talkingWith )
+			msg->aniId = anim->aniId;
+		if ( msg->aniId == -1 )
+			model->StartAni(msg->name, 0);
+		else
+			model->StartAni(msg>aniId, 0);
+		if ( interactMob )
+			interactMob->SetMobBodyState(this);
+		else
+			SetBodyState(msg->number & 0x7F);
+		msg->SetInUse(1);
+	}
+
+	aniMessageRunning = !model->IsAniActive(msg->aniId);
+	return aniMessageRunning;
+}
+
+int oCNpc::EV_WaitForQuestion(oCMsgConversation *msg)
+{
+	msg->timeSec -= ztimer.frameTimeFloat;
+	if ( msg->timeSec > 0.0 )
+		return 0;
+	zparser.SetInstance("SELF", this);
+	zparser.CallFunc("B_NPCBye");
 	return 1;
 }
 
@@ -478,6 +551,29 @@ bool oCNpc::EV_Wait(oCMsgState *msg)
 	return msg->time < 0.0;
 }
 
+int oCNpc::EV_DoState(oCMsgState *msg)
+{
+	if (msg->waypoint)
+		wpname = msg->waypoint;
+
+	zparser.SetInstance("OTHER", msg->other);
+	zparser.SetInstance("VICTIM", msg->victim);
+	ClearEM();
+	if ( auto func = msg->hour_or_func )
+	{
+		// flags << 31 >> 31 - oldRtnState
+		// flags << 30 >> 31 - isRtnState
+		states.StartAIState(func, msg->flags & 1, 0, 0.0, msg.flags & 2)
+	}
+	else
+	{
+		states.curState.valid  = 0;
+		states.nextState.valid = 0;
+		states.StartAIState(0);
+	}
+	return 1;
+}
+
 
 int oCNpc::EV_EquipArmor(oCMsgWeapon* msg)
 {
@@ -548,16 +644,20 @@ int oCNpc::EV_PlaceInteractItem(oCMsgManipulate* msg)
 int oCNpc::EV_ExchangeInteractItem(oCMsgManipulate* msg)
 {
 	if ( interactItem ) {
+		TNpcSlot* slot = GetInvSlot(interactItem);
+#if 0
 		TNpcSlot* interactSlot = nullptr;
-		//TNpcSlot* slot = GetInvSlot(interactItem);
 		for (auto& slot : invSlots) {
 			// ИЩЕТ ЭТОТ ЖЕ СЛОТ ЕЩЁ РАЗ,
 			// видимо разраб не знал что у них
 			// есть функция GetInvSlot(zCVob*)
 			auto item = GetSlotItem(slot->name);
-			if (item == interactItem)
+			if (item == interactItem) {
+				interactSlot = slot;
 				break;
+			}
 		}
+#endif
 
 		RemoveFromSlot(slot, 0, 1);
 		homeWorld->RemoveVob(interactItem);
@@ -573,6 +673,91 @@ int oCNpc::EV_ExchangeInteractItem(oCMsgManipulate* msg)
 		EV_InsertInteractItem(msg);
 		Release(item);
 	}
+	return 1;
+}
+
+int oCNpc::EV_UseMob(oCMsgManipulate *msg)
+{
+	if (!msg->paramVob)
+		msg->paramVob = interactMob;
+
+	if ( msg->paramVob ) {
+		if (auto mob = zDYNAMIC_CAST<oCMobInter>(msg->paramVob)) {
+			if (mob->IsInteractingWith(this) || mob->CanInteractWith(this))
+				return mob->AI_UseMobToState(this, msg->targetState);
+			return 1;
+
+		}
+		return 0;
+	}
+
+	msg->schemeName.Upper();
+	msg->paramVob = FindMobInter(msg->schemeName);
+	if ( auto mob = msg->paramVob ) {
+		zVEC3 pos;
+		mob->GetFreePosition(this, pos);
+		auto msg1 = new oCMsgMovement(1, pos);
+		msg1->SetHighPriority(1);
+		GetEM()->OnMessage(msg1, 0);
+		mob->MarkAsUsed(20000.0, this);
+		return 0;
+	}
+
+	zWARNING("U: NPC: EV_USEMOB : No Mobsi with specified schemeName ("+ msg->schemeName +") found."); // 13267, oCNpc.cpp
+	return 1;
+}
+
+int oCNpc::EV_InsertInteractItem(oCMsgManipulate *msg)
+{
+	if ( !interactItem )
+		return 1;
+
+	if ( msg->itemSlot ) {
+		auto item = GetSlotItem( msg->itemSlot );
+		if ( item != interactItem ) {
+			if (inventory.IsIn(interactItem, 1)) {
+				SetInteractItem(RemoveFromInv(interactItem, 1));
+			}
+
+			auto slot = GetInvSlot(msg->itemSlot);
+			PutInSlot( slot, interactItem);
+		}
+	} else {
+		zWARNING("U: ITEMI: No slot found :"+ msg->itemSlot); // 13300, oNpc.cpp
+		// I think this is wrong, because adding empty string makes no sense
+		// but it is clear that it jumps to here only if msg->itemSlot has length of 0
+	}
+	return 1;
+}
+
+int oCNpc::EV_DestroyInteractItem(oCMsgManipulate *msg)
+{
+	int inst = -1;
+	if ( interactItem )
+		inst = interactItem->GetInstance();
+	SetInteractItem(0);
+	if ( inst >= 0 ) {
+		if ( auto item = RemoveFromInv(inst, 1) ) {
+			if ( item->GetEM()->GetCutsceneMode() ) {
+				zFAULT("U: ITEMI: Item (" + item->GetInstanceName() + ") used in cutscene cannot be destroyed. This is evil, please correct the cutscene using the AI_USEITEM-command !"); // 13413, _ulf/oNpc.cpp
+			}
+
+			ogame->GetWorld()->RemoveVob(item);
+		}
+	}
+	return 1;
+}
+
+int oCNpc::EV_Cutscene(oCMsgConversation *msg)
+{
+	if ( auto& name = msg->name ) {
+		if (name.Search(0, ".", 1) < 0)
+			name += ".CS";
+		states.StartCutscene(name, msg->text);
+		return 1;
+	}
+
+	zWARNING("U: NPC: Tried to play Cutscene (or Output-Unit) with no name. That is evil !"); // 14643, oNpc.cpp
 	return 1;
 }
 

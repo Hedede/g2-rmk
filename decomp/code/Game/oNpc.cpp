@@ -1033,3 +1033,72 @@ void oCNpc::SetAsPlayer()
 	}
 	SetWalkStopChasm(0);
 }
+
+void oCNpc::CreateVobList(zCArray<zCVob*>& vobs, float dist)
+{
+	if ( homeWorld ) {
+		auto pos = GetPositionWorld();
+		zTBBox3D bbox {
+			pos.x - dist, pos.y - dist, pos.z - dist,
+			pos.x + dist, pos.y + dist, pos.z + dist
+		};
+		homeWorld->bspTree.bspRoot->CollectVobsInBBox3D(vobs, bbox);
+	}
+}
+
+zCVobSpot* oCNpc::FindSpot(zSTRING const& fpName, int strict, float dist)
+{
+	zCArray<zCVob*> vobList;
+	auto pos = GetPositionWorld();
+	zTBBox3D bbox {
+		pos.x - dist, pos.y - dist, pos.z - dist,
+		pos.x + dist, pos.y + dist, pos.z + dist
+	};
+
+	auto world = ogame->vtbl->GetGameWorld(ogame);
+	world->bspTree.bspRoot->CollectVobsInBBox3D(vobList, bbox);
+
+	for (int i = vobList.GetNum() - 1; i >= 0; --i) {
+		if (auto spot = zDYNAMIC_CAST<zCVobSpot>(vobList[i]))
+			continue;
+		vobList.RemoveIndex(i);
+	}
+
+	auto num = vobList.GetNum();
+	if ( strict ) {
+		zCArray<float> dists;
+		for (int i = 0; i < num; ++i) {
+			float dist = GetDistanceToVob2( vobList[i] );
+			dists.Insert( dist );
+		}
+
+		// lol, is this bubble sort?
+		for (int i = 0; i < num - 1; ++i) {
+			for (int j = i; j >= 0; --j) {
+				if (dists[j] < dists[j+1]) {
+					j = -1;
+				} else {
+					Swap(dists[j], dists[j + 1])
+					Swap(vobList[j], vobList[j + 1])
+				}
+			}
+		}
+	}
+
+	for (auto vob : vobList) {
+		auto spot = zDYNAMIC_CAST<zCVobSpot>(vob);
+		auto name = spot->GetObjectName();
+		if ( name.Search(0, fpName, 1) > 0 ) {
+			if (spot->IsAvailable(this)) {
+				zVEC3 pos = spot->bbox3D->GetCenter();
+				if ( FreeLineOfSight(pos, spot) ) {
+					if (strict)
+						return spot;
+					if (spot->npc != this)
+						return spot;
+				}
+			}
+		}
+	}
+	return nullptr;
+}

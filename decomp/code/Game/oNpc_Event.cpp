@@ -436,6 +436,39 @@ int oCNpc::EV_Jump(oCMsgMovement* msg)
 	return 1;
 }
 
+int oCNpc::EV_Dodge(oCMsgMovement *msg)
+{
+	auto model = GetModel();
+	if ( msg->IsInUse() ) {
+		if ( msg->aniId != -1 ) {
+			auto ani = model->GetAniFromID( msg->aniId );
+			if (!ani)
+				return 1;
+			return !model->IsAniActive( ani );
+		}
+	} else {
+		StandUp(1,1);
+		msg->SetInUse(1);
+		if ( anictrl->CheckEnoughSpaceMoveBackward(0) ) {
+			msg->aniId = model->GetAniIDFromAniName("T_JUMPB");
+			if ( msg->aniId != -1 )
+				anictrl->StartAni(msg->aniId, anictrl->_s_walk);
+			return 0;
+		}
+		if ( anictrl->CheckEnoughSpaceMoveLeft(0) ) {
+			msg->aniId = anictrl->_t_strafel;
+			model->StartAni(msg->aniId, 0);
+			return 0;
+		}
+		if ( anictrl->CheckEnoughSpaceMoveRight(0) ) {
+			msg->aniId = anictrl->_t_strafer;
+			model->StartAni(msg->aniId, 0);
+			return 0;
+		}
+	}
+	return 1;
+}
+
 int oCNpc::EV_Turn(oCMsgMovement *msg)
 {
 	float turnSpeed = IsAPlayer() ? 0.1 : speedTurn;
@@ -537,6 +570,35 @@ int oCNpc::EV_GotoVob(oCMsgMovement* msg)
 
 	zWARNING("U: NPC: EV_GOTOVOB : targetVob not found.") // 2146, oNpc_Move.cpp
 	return 1;
+}
+
+int oCNpc::EV_AlignToFP(oCMsgMovement *msg)
+{
+	if ( !msg->IsInUse() ) {
+		zCArray<zCVob*> vobList;
+		CreateVobList(vobList, 100);
+		for (int i = vobList.GetNum(); i >= 0; --i) {
+			if (auto spot = zDYNAMIC_CAST<zCVobSpot>(vobList[i]))
+				continue;
+			vobList.RemoveIndex(i);
+		}
+
+		while (auto vob : vobList) {
+			auto spot = zDYNAMIC_CAST<zCVobSpot>(vobList[i]);
+			if (spot->npc == this) {
+				msg->SetInUse(1);
+				msg->targetVob = spot;
+				goto fuckIt;
+			}
+		}
+		return 1;
+	}
+
+fuckIt:
+	auto dir = msg->targetVob->GetHeadingAtWorld();
+	auto pos = GetPositionWorld();
+	pos += dir * 200.0;
+	return Turn(pos) < 1.0;
 }
 
 bool oCNpc::EV_Wait(oCMsgState *msg)

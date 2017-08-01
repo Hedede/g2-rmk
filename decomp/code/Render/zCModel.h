@@ -81,6 +81,12 @@ public:
 	zCModelAniActive* GetAniActive(int aniId);
 
 
+	void StartAni(zCModelAni* ani, int startMode);
+	void StartAni(int aniId, int startMode)
+	{
+		StartAni(GetAniFromAniID(aniId), startMode);
+	}
+
 	zVEC3 GetVelocityRing()
 	{
 		zVEC3 ret;
@@ -209,3 +215,4 @@ void zCModel::RemoveAllChildVobsFromNode()
 		v->Release();
 	modelNodeVobAttachments.Clear();
 }
+

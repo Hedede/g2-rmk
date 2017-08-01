@@ -636,6 +636,23 @@ int oCNpc::EV_DoState(oCMsgState *msg)
 	return 1;
 }
 
+int oCNpc::EV_Unconscious(oCMsgState *msg)
+{
+	auto model = GetModel();
+
+	if ( model->IsAniActive("S_KNOCKEDOUT") ) {
+		msg->time -= ztimer.frameTimeFloat;
+		if ( msg->time <= 0.0 ) {
+			model->StartAni("T_KNOCKEDOUT_2_STAND", 0);
+			return 1;
+		}
+	} else if (!model->IsAniActive("T_KNOCKEDOUT")) {
+		model->StartAni("T_KNOCKEDOUT");
+		attribute[0] = 1;
+		CheckModelOverlays();
+	}
+	return 0;
+}
 
 int oCNpc::EV_EquipArmor(oCMsgWeapon* msg)
 {

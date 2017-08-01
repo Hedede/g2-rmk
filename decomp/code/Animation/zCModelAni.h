@@ -26,20 +26,71 @@ private:
 	int layer; // maybe?
 	int unk1[9];
 	zCModelAni *__ani;
-	int yob[13];
-	zTMdl_AniSample **eee;
-	int uu;
-	int UU;
-	short heh[2];
+	int yob[6];
+	float flr;
+	int oyb[6];
+
+	zTMdl_AniSample *__aniSamples;
+	int __samplePosRangeMin;
+	int __samplePosScaler;
+
+	int16_t numFrames;
+
+	int16_t __numSamples;
+
 	int bitfield;
-	unsigned __int8 flags;
+	uint8_t flags;
 };
 
+
+
 struct zCModelAniActive {
+	void SetDirection(zTMdl_AniDir dir)
+	{
+		switch (dir) {
+		case 2:
+			if ( (protoAni->numFrames / 2) > __curFrame )
+			{
+		case 0:
+				__aniDir = -1;
+				return;
+			}
+		case 1:
+		default:
+			__aniDir = 1;
+		}
+	}
+
+	void SetProgressPercent(float perc)
+	{
+		double fnum = protoAni->numFrames - 1;
+		if ( __aniDir < 0 )
+			__curFrame = fnum * (1.0 - perc);
+		else
+			__curFrame = fnum * perc;
+	}
+
+	zREAL GetProgressPercent()
+	{
+		double fnum = protoAni->numFrames;
+		if ( __aniDir < 0 )
+			return 1.0 - __curFrame / fnum;
+		else
+			return       __curFrame / fnum;
+	}
+
+	void SetActFrame(float frame)
+	{
+		__curFrame = frame;
+		double fnum = protoAni->numFrames - 1;
+		zClamp(__curFrame, 0.0, fnum);
+	}
+
 	zCModelAni *protoAni;
 	zCModelAni *nextAni;
-	int someflag;
-	int unk0[2];
+	int __aniDir;
+	float __curFrame;
+	int unk0[1];
 	float flt1;
 	float flt2;
 	int unk1[5];

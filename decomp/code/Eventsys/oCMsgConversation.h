@@ -239,7 +239,8 @@ float oCMsgConversation::MD_GetMinTime()
 	case EV_PLAYANI:
 		auto ani = talkingWith; // probably its union?
 		if ( ani )
-			return ani->heh[0] / ani->flr * 1000.0 * 0.001;
+			return ani->numFrames / ani->flr * 1000.0 * 0.001;
+		// looks like (something inlined)/1000
 		return 3.0;
 	case EV_PLAYANISOUND:
 	case EV_PLAYSOUND:
@@ -247,7 +248,8 @@ float oCMsgConversation::MD_GetMinTime()
 		auto sndTime = zsound->GetPlayingTimeMSEC(name);
 		sndTime *= 0.001;
 		if ( sndTime <= 0.0 )
-			sndTime = text.Length() * 0.16666667 + 1.0;
+			sndTime = text.Length() / 6.0 + 1.0;
+		// looks unreasonsable
 		return sndTime;
 	case EV_OUTPUT:
 	case EV_OUTPUTSVM:

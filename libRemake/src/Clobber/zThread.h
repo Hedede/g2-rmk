@@ -11,9 +11,11 @@ zCThread::~zCThread()
 
 void zCThread::BeginThread()
 {
+	g2::Log("zThread", "Started thread:", uintptr_t(this));
 	if (threadHandle)
 		EndThread();
-	threadHandle = (void*)_beginthreadex(0, 0, zThreadProc, this, 0, &threadId);
+	Cdecl<void*(void*, size_t, unsigned (__stdcall*)(void*), void*, unsigned, unsigned*)> g_beginthreadex{0x7D409B};
+	threadHandle = (void*)g_beginthreadex(0, 0, zThreadProc, this, 0, &threadId);
 	if (threadHandle <= 0) {
 		exit(1);
 	}
@@ -75,9 +77,10 @@ void zCThread::SleepThread(unsigned msec)
 	Sleep(msec);
 }
 
-unsigned __stdcall zThreadProc(void* thread)
+unsigned __stdcall zThreadProc(void* _thread)
 {
-	return reinterpret_cast<zCThread*>(thread)->ThreadProc();
+	auto* thread = reinterpret_cast<zCThread*>(_thread);
+	return thread->vtab->ThreadProc(thread);
 }
 
 void* __thiscall zCThread_vt::dtor_thunk(zCThread* self, size_t d)

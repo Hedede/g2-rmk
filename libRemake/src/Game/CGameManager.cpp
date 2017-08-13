@@ -452,11 +452,11 @@ void g2::InitRenderer(void* hwnd)
 		auto val = zoptions->ParmValue("ZRES");
 		auto vals = aw::string::split(val, ",");
 		if (vals.size() > 0)
-			resX = ToUnsigned( vals[0] );
+			resX = ToUnsigned( (std::string)vals[0] );
 		if (vals.size() > 1)
-			resY = ToUnsigned( vals[1] );
+			resY = ToUnsigned( (std::string)vals[1] );
 		if (vals.size() > 2)
-			bpp  = ToUnsigned( vals[2] );
+			bpp  = ToUnsigned( (std::string)vals[2] );
 	}
 
 	if ( deviceOverride >= 0 )

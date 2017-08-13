@@ -210,7 +210,10 @@ public:
 		return new zCTex_D3D();
 	}
 
-	virtual void CreateTextureConvert();
+	zCTextureConvert* CreateTextureConvert() override
+	{
+		return new zCTexConGeneric();
+	}
 	int GetTotalTextureMem() override
 	{
 		return hwinfo.totalTextureMem;
@@ -285,13 +288,7 @@ public:
 	virtual void SetTexture(ulong,zCTexture *);
 	virtual void SetTextureStageState(ulong,zTRnd_TextureStageState,ulong);
 	virtual void SetAlphaBlendFuncImmed(zTRnd_AlphaBlendFunc);
-	void SetRenderState(zTRnd_RenderStateType type, unsigned val) override
-	{
-		if (type == 0)
-			renderState[0] = val;
-		else if (type == 1)
-			renderState[1] = val;
-	}
+	void SetRenderState(zTRnd_RenderStateType type, unsigned val) override;
 	void GetRenderState(zTRnd_RenderStateType type) override
 	{
 		if (type == 0)
@@ -304,14 +301,147 @@ public:
 	virtual void AddAlphaSortObject(zCRndAlphaSortObject *);
 	virtual void RenderAlphaSortList();
 	virtual void DrawVertexBuffer(zCVertexBuffer *,int,int,ushort *,ulong);
-	virtual void CreateVertexBuffer();
+	zCVertexBuffer* CreateVertexBuffer() override
+	{
+		return new zCVertexBuffer_D3D();
+	}
 
 
 	int XD3D_InitPerDX(zTRnd_ScreenMode mode, unsigned x, unsigned y, int bpp, int id);
 	int XD3D_EnumerateModes();
+
 private:
 	int view_xdim;
 	int view_ydim;
+	int view_bpp;
+
+	// complete mess
+	int somepars[7];
+	int __fogMode;
+	struct {
+		int unk0;
+		int unk00;
+		int unk1[2];
+		int texturePerspective;
+		int unk01[2];
+		int polySortMode;
+		int fillMode;
+		int shadeMode;
+		int unk02[4];
+		int zWriteEnable;
+		int unk3[4];
+		int srcBlend;
+		int destBlend;
+		int unk4[1];
+		int cullMode;
+		int zFunc;
+		int unk5[2];
+		int ditherEnable;
+		int alphaBlendEnable;
+		int fogEnable;
+		int specularEnable;
+		int unk6[4];
+		int fogColor;
+		int fogTableMode;
+		float fogTableStart;
+		float fogTableEnd;
+		int unk7[9];
+		int zBias;
+		int rangeFog;
+		int unk8[11];
+		int renderState;
+		int unk9[75];
+		int clipping;
+		int lighting;
+		int unk10[1];
+		int ambient;
+		int fogVertexMode;
+		int unk11[6];
+		int ambientMaterialSource;
+		int unk12[12];
+	} xd3d_state;
+
+	int set32_2[96];
+	int modeNr;
+	int deviceNr;
+	int numDevices;
+	int textureWrapEnabled;
+	int bilerpFilterEnabled;
+	int ditherEnabled;
+	int fogEnabled;
+	float fogNearZ;
+	float fogFarZ;
+	zCOLOR fogColor;
+	int fogMode;
+
+	int   alphaBlendFunc;
+	int   alphaBlendSource;
+	float alphaBlendFactor;
+
+	int asdasdasdasad;
+	int pixelWriteEnabled;
+	int zBufferCompare;
+	int zBufferWriteEnabled;
+	int zBias;
+	int zFunc;
+	int wargh[8];
+	float gammaCorrection;
+	int paletteSupported;
+	int wat[1];
+	tmpRndInfo hwinfo;
+	tagDDDEVICEIDENTIFIER dd_deviceId;
+	int yob[2];
+	int wBufferSupported;
+	int wBufferMode;
+	int alphaTestingSupported;
+	int waizit;
+	int vid_isLocked;
+
+	IDirectDrawSurface7* xd3d_primaryBuffer;
+	IDirectDrawSurface7* xd3d_backBuffer;
+	IDirectDrawSurface7* xd3d_zBuffer;
+
+	int what[1];
+	IDirectDrawGammaControl *dd_gammaControl;
+	DDPIXELFORMAT dd_pixelFormat;
+	int vertexBuffersDirty;
+	zTRnd_ScreenMode screenMode;
+	int arghaa;
+	int screenX;
+	int screenY;
+	int verywet[1];
+	int deviceNum;
+	int __unsupported;
+	int deviceX;
+	int deviceY;
+	int deviceBPP;
+	float xd3d_zMAX;
+	float xd3d_zMIN;
+	int whet[12]; // 0-3 are frustum scaling
+	zTRnd_Stats stats;
+	int unk1;
+	HWND winHandle;
+	zTRnd_RenderMode renderMode;
+	int unk2[1];
+	int startedScene;
+	int fogDisabled;
+	int fogRadial;
+	zD3D_alphaPoly alphaPolys[2048];
+	int unkink;
+	char OBJECT1[1024];
+	int ripinpieces[1];
+	int alphaReference;
+	int renderState[2];
+	int alphaLimitReached;
+	int surfaceLost;
+	int roast[4];
+	IDirectDrawSurface7 *textures[4];
+	int __numUsed;
+	zCTex_D3D *__texList;
+	int cacheAlphaPolys;
+	int anisotropicFiltering;
+	int syncAmbientCol;
+	int unkn;
 };
 
 void zCRnd_D3D::SetFogColor(zCOLOR const& color)
@@ -320,7 +450,7 @@ void zCRnd_D3D::SetFogColor(zCOLOR const& color)
 
 	int d3d_fogColor = color[0] | (color[1] << 8) | (color[2] << 16);
 	if ( xd3d_state.fogColor != d3d_fogColor ) {
-		auto res = zCRnd_D3D::xd3d_pd3dDevice7->SetRenderState(D3DRENDERSTATE_FOGCOLOR, d3d_fogColor);
+		auto res = xd3d_pd3dDevice7->SetRenderState(D3DRENDERSTATE_FOGCOLOR, d3d_fogColor);
 		if ( DXTryWarning(res, "X: [RND3D]XD3D_SetRenderState: Set render state failed!") )
 			xd3d_state.fogColor = d3d_fogColor;
 	}
@@ -332,7 +462,7 @@ void zCRnd_D3D::SetZBias(int bias)
 		return;
 
 	if ( xd3d_state.zBias != bias ) {
-		auto res = zCRnd_D3D::xd3d_pd3dDevice7->SetRenderState(D3DRENDERSTATE_ZBIAS, bias);
+		auto res = xd3d_pd3dDevice7->SetRenderState(D3DRENDERSTATE_ZBIAS, bias);
 		if ( DXTryWarning(res, "X: [RND3D]XD3D_SetRenderState: Set render state failed!") )
 			xd3d_state.zBias = bias;
 	}
@@ -343,7 +473,7 @@ void zCRnd_D3D::SetZBufferWriteEnabled(int enable)
 {
 	zBufferWriteEnabled = enable;
 	if ( xd3d_state.zWriteEnable != enable ) {
-		auto res = zCRnd_D3D::xd3d_pd3dDevice7->SetRenderState(D3DRENDERSTATE_ZWRITEENABLE, enable);
+		auto res = xd3d_pd3dDevice7->SetRenderState(D3DRENDERSTATE_ZWRITEENABLE, enable);
 		if ( DXTryWarning(res, "X: [RND3D]XD3D_SetRenderState: Set render state failed!") )
 			xd3d_state.zWriteEnable = enable;
 	}
@@ -387,5 +517,41 @@ void zCRnd_D3D::Vid_Clear(zCOLOR& color, int clearTarget)
 		DXTryWarning(res, "X: [RND3D]Vid_Clear: Can't set clear color !");
 		res = zCRnd_D3D::xd3d_pd3dx->Clear(clearTarget);
 		DXTryWarning(res, "X: [RND3D]Vid_Clear: Can't clear render target !");
+	}
+}
+
+void zCRnd_D3D::DrawLightmapList(zCPolygon **polyList, int polyNum)
+{
+	if ( xd3d_state.clipping ) {
+		auto r = xd3d_pd3dDevice7->SetRenderState(D3DRS_CLIPPING, 0);
+		if ( DXTryWarning(r, "X: [RND3D]XD3D_SetRenderState: Set render state failed!") )
+			xd3d_state.clipping = 0;
+	}
+	if ( xd3d_state.cullMode != 1 ) {
+		auto r = xd3d_pd3dDevice7->vt->SetRenderState(D3DRENDERSTATE_CULLMODE, 1);
+		if ( DXTryWarning(r, "X: [RND3D]XD3D_SetRenderState: Set render state failed!") )
+			xd3d_state.cullMode = 1;
+	}
+
+	for (int i = 0; i < polyNum; ++i) {
+		stats.numClipVerts += polyList[i]->numClipVert - 2;
+		XD3D_PolyDrawTwoPassLightMap(polyList[i]);
+	}
+}
+
+
+void zCRnd_D3D::SetRenderState(zTRnd_RenderStateType type, unsigned val) override
+{
+	if (type == 0)
+		renderState[0] = val;
+	else if (type == 1) {
+		renderState[1] = val;
+
+		// dunno, very bullshity in disasm
+		if ( xd3d_state.renderState != val ) {
+			auto r = xd3d_pd3dDevice7->SetRenderState(D3DRS_TEXTUREFACTOR, val);
+			if (DXTryWarning(r, "X: [RND3D]XD3D_SetRenderState: Set render state failed!"))
+				xd3d_state.renderState = val;
+		}
 	}
 }

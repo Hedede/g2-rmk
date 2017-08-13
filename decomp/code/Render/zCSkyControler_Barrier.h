@@ -17,6 +17,7 @@ struct myThunder {
  * hier heran kommt man über MEM_SkyController.barrier */
 struct oCBarrier {
 	void AddTremor(zTRenderContext& ctx) {}
+	void RenderThunderList(zTRenderContext& renderContext)
 private:
 	zCMesh*     skySphereMesh;
 
@@ -68,3 +69,10 @@ private:
 
 	zVEC2*                 originalTexUVList;
 };
+
+//------------------------------------------------------------------------------
+void oCBarrier::RenderThunderList(zTRenderContext& renderContext)
+{
+	for (int i = 0; i < numMaxThunders; ++i)
+		RenderThunder(myThunderList[i], renderContext);
+}

@@ -37,6 +37,7 @@ struct zSKeyMapping {
 
 class zCInput {
 public:
+	zCInput();
 	virtual void ~zCInput();
 	virtual float GetState(ushort)
 	{
@@ -135,8 +136,16 @@ public:
 	void BindKeys(bool alternate_keys);
 
 private:
-	zCArraySort mappings;
+	zCArraySort<zSKeyMapping*> mappings;
 };
+
+
+//------------------------------------------------------------------------------
+zCInput::zCInput()
+{
+	mappings.Compare = zCInput::CompareKeyMaps;
+	zCInput::InitializeControlValues();
+}
 
 void zCInput::BindOption(zSTRING name, uint16_t value, zCArray<uint16_t> keyList)
 {

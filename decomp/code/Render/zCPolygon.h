@@ -20,7 +20,17 @@ struct zCVertFeature {
 class zCPolygon {
 	static void* morphedPolysSavedValuesList;
 public:
+	static void S_InitMorph();
+	static void S_EmptyMorphedVerts();
+	static void PrepareRendering()
+
+	void AddVertex(zCVertex *vert);
+
+	void SetMapping(int vertNr, const zVEC2& texuv);
 	void SetMaterial(zCMaterial* newMat);
+
+
+	void Unclip_Occluder();
 
 private:
 	zCVertex** vertex;
@@ -51,6 +61,36 @@ private:
 	uint16_t sectorIndex;
 };
 
+//------------------------------------------------------------------------------
+void zCPolygon::S_InitMorph()
+{
+	zCPolygon::morphedVerticesList_Height = Compare_Verts;
+	zCPolygon::morphedVerticesList_Wall = Compare_Verts;
+	zCPolygon::morphedFeatureList = Compare_Features;
+}
+
+void zCPolygon::S_EmptyMorphedVerts()
+{
+	zCPolygon::morphedVerticesList_Height.Clear();
+	zCPolygon::morphedVerticesList_Wall.Clear();
+	zCPolygon::morphedFeatureList.Clear();
+	zCPolygon::morphedPolysSavedValuesList.Clear();
+}
+
+void zCPolygon::PrepareRendering()
+{
+	zCPolygon::s_numClipVertScene = 0;
+	zCPolygon::s_numVertListScene = 0;
+	zCPolygon::s_numClipFeatScene = 0;
+	zCPolygon::s_numFeatListScene = 0;
+}
+
+void zCPolygon::AddVertex(zCVertex *vert)
+{
+	AllocVerts(1);
+	vertex[numVerts - 1] = vert;
+}
+
 void zCPolygon::SetMaterial(zCMaterial *newMat)
 {
 	if ( newMat != material ) {
@@ -58,4 +98,16 @@ void zCPolygon::SetMaterial(zCMaterial *newMat)
 		AddRef(newMat);
 		material = newMat;
 	}
+}
+
+void zCPolygon::SetMapping(int vertNr, const zVEC2& texuv)
+{
+	feature[vertNr]->texuv = texuv;
+}
+
+void zCPolygon::Unclip_Occluder()
+{
+  clipVert = vertex;
+  numClipVert = numVerts;
+  clipFeat = feature;
 }

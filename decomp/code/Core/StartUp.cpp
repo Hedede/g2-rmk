@@ -138,11 +138,11 @@ void oCarsten_StartUp()
 
 void zCarsten_StartUp(HWND* wnd)
 {
-	zoptions.InsertChangeHandler(zOPT_SEC_SOUND, ZOPT_SND_SFX_VOL, zOpt_Sound_ChangeFXVol);
-	zoptions.InsertChangeHandler(zOPT_SEC_SOUND, ZOPT_SND_SFX_VOL, zOpt_Sound_ChangeMusicVol);
-	zoptions.InsertChangeHandler(zOPT_SEC_VIDEO, "zVidBrightness", zOpt_Video_ChangeVidOptions);
-	zoptions.InsertChangeHandler(zOPT_SEC_VIDEO, "zVidContrast", zOpt_Video_ChangeVidOptions);
-	zoptions.InsertChangeHandler(zOPT_SEC_VIDEO, "zVidGamma", zOpt_Video_ChangeVidOptions);
+	zoptions.InsertChangeHandler(zOPT_SEC_SOUND, ZOPT_SND_SFX_VOL,   zOpt_Sound_ChangeFXVol);
+	zoptions.InsertChangeHandler(zOPT_SEC_SOUND, ZOPT_MUSIC_SFX_VOL, zOpt_Sound_ChangeMusicVol);
+	zoptions.InsertChangeHandler(zOPT_SEC_VIDEO, "zVidBrightness",   zOpt_Video_ChangeVidOptions);
+	zoptions.InsertChangeHandler(zOPT_SEC_VIDEO, "zVidContrast",     zOpt_Video_ChangeVidOptions);
+	zoptions.InsertChangeHandler(zOPT_SEC_VIDEO, "zVidGamma",        zOpt_Video_ChangeVidOptions);
 
 	auto sfxVol = zoptions.ReadReal(zOPT_SEC_SOUND, ZOPT_SND_SFX_VOL, 1.0);
 	zoptions.WriteReal(zOPT_SEC_SOUND, ZOPT_SND_SFX_VOL, sfxVol, 0);

@@ -39,6 +39,9 @@ extern "C" void __attribute__((dllexport)) aw_main(void* hinst, char const* args
 
 	InitWin32Stuff(cmdLine.data());
 
+	auto& sysCommandLine = Value<char*>(0x8D3D2C);
+	sysCommandLine = cmdLine.data();
+
 	InitFunctions();
 
 	GameLoop();
@@ -50,6 +53,7 @@ extern "C" void __attribute__((dllexport)) aw_main(void* hinst, char const* args
 void GameLoop()
 {
 	using namespace g2;
+	Log("GameLoop", "Constructing CGameManager");
 	CGameManager game;
 
 	sysEvent();

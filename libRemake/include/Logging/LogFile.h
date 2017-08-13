@@ -10,7 +10,7 @@ struct LogFile : aw::log {
 
 	LogFile();
 	~LogFile() override;
-	void message(level lvl, std::string const& src, std::string const& msg) override;
+	void message(level lvl, aw::string_view src, aw::string_view msg) override;
 
 private:
 	void* logfile;

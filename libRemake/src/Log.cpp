@@ -16,7 +16,7 @@ LogFile::~LogFile()
 		std::fclose((FILE*)logfile);
 }
 
-void LogFile::message(level lvl, std::string const& src, std::string const& msg)
+void LogFile::message(level lvl, aw::string_view src, aw::string_view msg)
 {
 	if (logfile) {
 		constexpr size_t nsrc = 32;
@@ -46,6 +46,7 @@ void LogFile::message(level lvl, std::string const& src, std::string const& msg)
 		str += msg;
 		str += "\n";
 		std::fwrite(str.data(), str.size(), 1, (FILE*)logfile);
+		std::fflush( (FILE*)logfile );
 	}
 }
 } // namespace g2

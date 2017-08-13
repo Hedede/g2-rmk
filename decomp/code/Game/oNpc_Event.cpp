@@ -87,6 +87,53 @@ int oCNpc::EV_ShootAt(oCMsgAttack* msg)
 	return 1;
 }
 
+int oCNpc::EV_AttackBow(oCMsgAttack *msg)
+{
+	oCMsgAttack* msgAim = nullptr;;
+	for (int i = 0; i < GetEM()->GetNumMessages(); ++i) {
+		if (auto msg = zDYNAMIC_CAST<oCMsgAttack>( GetEM()->GetEventMessage(i) )) {
+			if (msg->subType == EV_AIMAT) {
+				msgAim = msg;
+				break;
+			}
+		}
+	}
+
+	if (msgAim && msgAim->paramVob != enemy) {
+		msgAim->Delete();
+		msgAim = nullptr;
+	}
+
+	if (!msgAim) {
+		msga = new oCMsgAttack(EV_AIMAT, enemy, 0.0);
+		msga->SetHighPriority(1);
+		GetEM()->OnMessage(msga, enemy);
+	}
+
+	float azi, elev;
+	GetAngles(enemy, &azi, &elev);
+	if ( abs(azi) < 5 && FreeLineOfSight(enemy) ) {
+		if ( auto anictrl = GetAnictrl() )
+			anictrl->StopTurnAnis();
+
+		auto msgAtt = new oCMsgAttack(EV_SHOOTAT);
+		msgAtt->SetHighPriority(1);
+		GetEM()->OnMessage(msgAtt enemy);
+		return 1;
+	}
+
+	Turn(enemy->GetPositionWorld());
+	msg->startFrame -= ztimer.frameTimeFloat;
+	if ( msg->startFrame <= 0.0 ) {
+		auto msgAtt = new oCMsgAttack(EV_SHOOTAT);
+		msgAtt->SetHighPriority(1);
+		GetEM()->OnMessage(msgAtt enemy);
+		return 1;
+	}
+
+	return 0;
+}
+
 int oCNpc::EV_EquipBestWeapon(oCMsgWeapon* msg)
 {
 	EquipBestWeapon(msg->targetMode);

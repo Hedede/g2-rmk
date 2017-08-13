@@ -29,7 +29,6 @@ struct zCInputCallback {
 protected:
 	void* _vtab;
 private:
-	// TODO:
-	static constexpr auto& callbacksList = Value<zCList<zCInputCallback>>(0);
+	static zCList<zCInputCallback>& callbacksList;
 };
 #endif//ZCINPUTCALLBACK_H

@@ -62,7 +62,7 @@ int __thiscall zERROR_Report(void*, int type, int id, zSTRING& message, char lev
 	src.erase(0, last);
 	if (src.empty())
 		src = "Gothic";
-	src += " [" + aw::to_string(levelPrio) + "]";
+	src += " [" + aw::to_string((int)levelPrio) + "]";
 
 	switch(type) {
 	default:
@@ -99,19 +99,19 @@ zCFont* __thiscall FontMan_GetFont(g2::FontMan* fm, size_t idx)
 void InitFontMan()
 {
 	using namespace g2;
-	as::jump_m((char*)0x7882D0, (uintptr_t)FontMan_Load);
-	as::jump_m((char*)0x7884B0, (uintptr_t)FontMan_GetFont);
+	as::jump_rel((char*)0x7882D0, (uintptr_t)FontMan_Load);
+	as::jump_rel((char*)0x7884B0, (uintptr_t)FontMan_GetFont);
 }
 
 void InitThread()
 {
-	as::jump_m((char*)0x5F9370, (uintptr_t)zCThread_vt::SuspendThread_thunk);
-	as::jump_m((char*)0x5F93A0, (uintptr_t)zCThread_vt::ResumeThread_thunk);
-	as::jump_m((char*)0x5F93D0, (uintptr_t)zCThread_vt::SleepThread_thunk);
-	as::jump_m((char*)0x5F9230, (uintptr_t)zCThread_vt::BeginThread_thunk);
-	as::jump_m((char*)0x5F9330, (uintptr_t)zCThread_vt::EndThread_thunk);
-	as::jump_m((char*)0x5F9180, (uintptr_t)zCThread_vt::dtor_thunk);
-	as::jump_m((char*)0x44C8D0, (uintptr_t)zERROR_Report);
+	as::jump_rel((char*)0x5F9370, (uintptr_t)zCThread_vt::SuspendThread_thunk);
+	as::jump_rel((char*)0x5F93A0, (uintptr_t)zCThread_vt::ResumeThread_thunk);
+	as::jump_rel((char*)0x5F93D0, (uintptr_t)zCThread_vt::SleepThread_thunk);
+	as::jump_rel((char*)0x5F9230, (uintptr_t)zCThread_vt::BeginThread_thunk);
+	as::jump_rel((char*)0x5F9330, (uintptr_t)zCThread_vt::EndThread_thunk);
+	as::jump_rel((char*)0x5F9180, (uintptr_t)zCThread_vt::dtor_thunk);
+	as::jump_rel((char*)0x44C8D0, (uintptr_t)zERROR_Report);
 	// stubify ~zCThread(),
 	// so that resorcemanager won't call dtor twice
 	as::retn((char*)0x5F91E0);

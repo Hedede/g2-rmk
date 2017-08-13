@@ -13,6 +13,8 @@ enum Opcode {
 	mov_i8 = 0xB0,
 	mov_i  = 0xB8,
 	retn   = 0xC3,
+	jmpr   = 0xE9,
+	jmpf   = 0xEA,
 	jmp    = 0xFF,
 };
 
@@ -37,6 +39,12 @@ uint8_t modrm(uint8_t mod, uint8_t reg, uint8_t rm)
 	return (mod << 6) | (reg << 3) | (rm);
 }
 
+void u16(char*& out, uint16_t value)
+{
+	*out++ = (value >> 0)  & 0xFF;
+	*out++ = (value >> 8)  & 0xFF;
+}
+
 void u32(char*& out, uint32_t value)
 {
 	*out++ = (value >> 0)  & 0xFF;
@@ -49,6 +57,13 @@ void mov_u32(char* out, x86::Register reg, uint32_t value)
 {
 	*out++ = x86::mov_i + reg;
 	u32(out, value);
+}
+
+void jump_rel(char* out, intptr_t addr)
+{
+	*out++ = x86::jmpr;
+	intptr_t diff = addr - (intptr_t(out) + 4);
+	u32(out, diff);
 }
 
 void jump_m(char* out, uintptr_t addr)

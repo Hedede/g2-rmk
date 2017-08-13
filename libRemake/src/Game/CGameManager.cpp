@@ -25,6 +25,7 @@ void InitGameOptions();
 void InitConsole();
 void InitRenderer(void* hwnd);
 void InitGraphics();
+void InitInput(void* hwnd);
 } // namespace g2
 
 
@@ -134,11 +135,7 @@ void CGameManager::PreGraphicsInit()
 	g2::InitGraphics();
 	g2::InitSound();
 	g2::InitMusic();
-
-
-
-	Cdecl<void(void*&)> zCarsten_StartUp{0x509580};
-	zCarsten_StartUp(sysContextHandle);
+	g2::InitInput(sysContextHandle);
 
 	bool texConvert = zoptions->Parm("ZTEXCONVERT");
 	if ( texConvert ) {
@@ -193,6 +190,9 @@ void CGameManager::PreGraphicsInit()
 #include <Gothic/Game/zSession.h>
 void CGameManager::PreRun()
 {
+	using namespace g2;
+	Log("Game", "PreRun");
+
 	if ( dontStartGame )
 		return;
 
@@ -215,6 +215,7 @@ void CGameManager::PreRun()
 
 	zoptions->Save(ini);
 
+	Log("Game", "PreRun Menu");
 	while (!exitGame) {
 		if (gameSession && gameSession->GetCamera())
 			break;
@@ -399,15 +400,25 @@ void g2::InitConsole()
 	zcon.Register("ZTIMER MULTIPLIER", "sets factor for slow/quick-motion timing");
 	zcon.Register("ZTIMER REALTIME", "resets factor for slow/quick-motion timing to realtime");
 	zcon.Register("ZFOGZONE", "inserts test fog-zones");
-
+	zcon.Register("ZTOGGLE SHOWSPLINES", "Toggles camera splines ");
+	zcon.Register("ZTOGGLE TIMEDEMO", "Toggles a time demo with avg FPS Rate");
+	zcon.Register("ZTOGGLE RENDERORDER", "Renders Sky last (possible better z buffer performance)");
+	zcon.Register("ZTOGGLE ENVMAP", "Toggled rendering of environmental fx");
+	zcon.Register("ZTOGGLE AMBIENTVOBS", "Toggles rendering of ambient vobs");
+	zcon.Register("ZTOGGLE AMBIENTPFX", "Toggles rendering of ambient pfx");
+	zcon.Register("ZTOGGLE RENDERPORTALS", "Toggles rendering of all portals (spacer only)");
+	zcon.Register("ZSET NEARCLIPZ", "sets the value for the near clipping plane");
+	zcon.Register("ZTOGGLE FLUSHONAMBIENTCOL", "toggles flushing the renderer on a ambientcol change");
 
 	auto zBert_EvalFunc = reinterpret_cast<zCConsole::EvalFunc*>(0x471520);
 	auto oBert_EvalFunc = reinterpret_cast<zCConsole::EvalFunc*>(0x430A70);
 	zcon.AddEvalFunc( zBert_EvalFunc );
 	zcon.AddEvalFunc( oBert_EvalFunc );
 
-	auto zDieter_EvalFunc = reinterpret_cast<zCConsole::EvalFunc*>(0x632E00);
+	auto zDieter_EvalFunc  = reinterpret_cast<zCConsole::EvalFunc*>(0x632E00);
+	auto zCarsten_EvalFunc = reinterpret_cast<zCConsole::EvalFunc*>(0x509D00);
 	zcon.AddEvalFunc( zDieter_EvalFunc );
+	zcon.AddEvalFunc( zCarsten_EvalFunc );
 }
 
 //#include <aw/utility/filesystem.h>
@@ -485,11 +496,14 @@ void g2::InitRenderer(void* hwnd)
 #include <Gothic/Bsp/zRayTurbo.h>
 #include <Gothic/Game/zVob.h>
 #include <Gothic/Game/zVobLight.h>
+#include <Gothic/Game/zWorld.h>
 #include <Gothic/Graphics/zVisual.h>
 #include <Gothic/Graphics/zMapDetailTexture.h>
 #include <Gothic/Graphics/zProgMeshProto.h>
 #include <Gothic/Graphics/zLensFlareFX.h>
 #include <Gothic/Graphics/zDecal.h>
+#include <Gothic/Graphics/zFFT.h>
+#include <Gothic/Graphics/zPolygon.h>
 #include <Gothic/PFX/zParticleFX.h>
 void g2::InitGraphics()
 {
@@ -507,6 +521,26 @@ void g2::InitGraphics()
 	auto polyTreshold = zCRayTurboAdmin::GetPolyTreshold();
 	polyTreshold = zoptions->ReadInt("ENGINE", "zRayTurboPolyTreshold", polyTreshold);
 	zCRayTurboAdmin::SetPolyTreshold(polyTreshold);
+
+	zCFFT::S_Init();
+	zCPolygon::S_InitMorph();
+
+	auto maxFps = zCTimer::S_GetMaxFPS();
+	maxFps = zoptions->ReadDWord("ENGINE", "zMaxFPS", maxFps);
+	zCTimer::S_SetMaxFPS(maxFps);
+
+	int& zCParticleFX_s_bAmbientPFXEnabled   = Value<int>(0x8A4E48);
+	int& zCAIPlayer_s_bShowWeaponTrails   = Value<int>(0x89EC90);
+	int& zCWorld_s_bAmbientVobsEnabled   = Value<int>(0x8A8AC0);
+	int& zCWorld_s_bEnvMappingEnabled    = Value<int>(0x8A8AC4);
+	int& zCWorld_s_bAlternateRenderOrder = Value<int>(0x9A4424);
+	zCParticleFX_s_bAmbientPFXEnabled = zoptions->ReadBool("ENGINE", "zAmbientPFXEnabled", 1);
+	zCWorld_s_bAmbientVobsEnabled = zoptions->ReadBool("ENGINE", "zAmbientVobsEnabled", 1);
+	zCWorld_s_bEnvMappingEnabled = zoptions->ReadBool("ENGINE", "zEnvMappingEnabled", 1);
+	zCWorld_s_bAlternateRenderOrder = !zoptions->ReadBool("ENGINE", "zSkyRenderFirst", 1);
+	zCAIPlayer_s_bShowWeaponTrails = zoptions->ReadBool("GAME", "zShowWeaponTrails", 1);
+
+	ztimer.SetMaxFPS(zCTimer::S_GetMaxFPS());
 }
 
 #include <Gothic/Audio/zSoundSystemDummy.h>
@@ -539,6 +573,10 @@ void g2::InitSound()
 #include <Gothic/Audio/zMusicSys_Dummy.h>
 #include <Gothic/Audio/zMusicSys_DM.h>
 auto ChangeMusicEnabled = func<zCOptions::ChangeHandler>(0x42D240);
+auto ChangeVidOptions = func<zCOptions::ChangeHandler>(0x509450);
+auto ChangeFxVol = func<zCOptions::ChangeHandler>(0x509370);
+auto ChangeMusicVol = func<zCOptions::ChangeHandler>(0x5093E0);
+
 void g2::InitMusic()
 {
 	Log("Startup", "Initializing Music");
@@ -571,9 +609,22 @@ void g2::InitOptions()
 	zoptions->ReadReal("INTERNAL", "texDetailIndex" , 0.6);
 	zoptions->ReadInt("GAME", "skyEffects" , 1);
 	zoptions->ReadInt("GAME", "bloodDetail" , 2);
+
 	zoptions->ReadReal("VIDEO", "zVidBrightness" , 0.5);
 	zoptions->ReadReal("VIDEO", "zVidContrast"   , 0.5);
 	zoptions->ReadReal("VIDEO", "zVidGamma"      , 0.5);
+	zoptions->InsertChangeHandler("VIDEO", "zVidBrightness", ChangeVidOptions);
+	zoptions->InsertChangeHandler("VIDEO", "zVidContrast",   ChangeVidOptions);
+	zoptions->InsertChangeHandler("VIDEO", "zVidGamma",      ChangeVidOptions);
+
+	zoptions->InsertChangeHandler("SOUND", "soundVolume",   ChangeFxVol);
+	zoptions->InsertChangeHandler("SOUND", "musicVolume",   ChangeMusicVol);
+
+	auto sfxVol = zoptions->ReadReal("SOUND", "soundVolume", 1.0);
+	zoptions->WriteReal("SOUND", "soundVolume", sfxVol, 0);
+
+	auto musVol = zoptions->ReadReal("SOUND", "musicVolume", 0.8);
+	zoptions->WriteReal("SOUND", "musicVolume", musVol, 0);
 }
 
 void g2::InitGameOptions()
@@ -624,4 +675,12 @@ void g2::InitGameOptions()
 
 	static int& gLogStatistics = Value<int>(0x8C2B50);
 	gLogStatistics = zoptions->ReadBool("INTERNAL", "logStatistics", 0);
+}
+
+#include <Gothic/Input/zInput.h>
+void g2::InitInput(void* hwnd)
+{
+	if ( zinput )
+		delete zinput;
+	zinput = (zCInput*)new zCInput_Win32(hwnd);
 }

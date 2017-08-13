@@ -8,11 +8,13 @@ Clobber.cpp \
 Game/CGameManager.cpp \
 Graphics/SplashWindow.cpp \
 Graphics/FontMan.cpp \
-Menu/zMenu.cpp
+Menu/zMenu.cpp \
+Input/InputCallback.cpp
 
 objects=$(patsubst %.cpp, %.o, $(sources))
 
 libraries=\
+-Wl,-rpath,$(sdl_path)/lib\
 -L$(sdl_path)/lib
 includes=\
 -I../../libGothic/include \
@@ -35,7 +37,7 @@ libs= -lgdi32 -lSDL2_image -lSDL2main -lSDL2
 
 hook: $(objects)
 	@ echo [Build] Linking:
-	$(CXX) $(includes) $(cxx_flags) $(linker_flags) $(static_gcc) $(objects) $(libs) -shared -o testlib.dll
+	$(CXX) $(includes) $(cxx_flags) $(static_gcc) $(objects) $(linker_flags) $(libs) -shared -o testlib.dll
 
 rebuild:
 	touch $(sources)

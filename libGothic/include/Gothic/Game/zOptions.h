@@ -77,6 +77,12 @@ struct zCOptions {
 		return call(this, zSTRING{sec}, opt.data(), defval);
 	}
 
+	unsigned ReadDWord(std::string const& sec, std::string const& opt, unsigned defval)
+	{
+		Thiscall<int(zCOptions*, zSTRING const&, const char*, unsigned)> call{0x4624F0};
+		return call(this, zSTRING{sec}, opt.data(), defval);
+	}
+
 	float ReadReal(std::string const& sec, std::string const& opt, float defval)
 	{
 		Thiscall<int(zCOptions*, zSTRING const&, const char*, float)> call{0x462650};
@@ -95,6 +101,11 @@ struct zCOptions {
 		return call(this, zSTRING{sec}, opt.data(), zSTRING{value}, temp);
 	}
 
+	bool WriteReal(std::string const& sec, std::string const& opt, float value, bool temp)
+	{
+		Thiscall<int(zCOptions*, zSTRING const&, const char*, float, int)> call{0x461F90};
+		return call(this, zSTRING{sec}, opt.data(), value, temp);
+	}
 
 	bool WriteBool(std::string const& sec, std::string const& opt, bool value, bool temp)
 	{

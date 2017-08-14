@@ -744,7 +744,7 @@ void zInitOptions()
 	zoptions->WriteBool(zOPT_SEC_INTERNAL, "gameStartFailed", 1, 0);
 
 	int gameStarts = zoptions->ReadInt(zOPT_SEC_INTERNAL, "gameStarts", 0);
-	zoptions->WriteInt(zOPT_SEC_INTERNAL, "gameStarts", v8 + 1, 0);
+	zoptions->WriteInt(zOPT_SEC_INTERNAL, "gameStarts", gameStarts + 1, 0);
 
 	zoptions->RemoveEntry(zOPT_SEC_INTERNAL, "testmode");
 	zoptions->RemoveEntry(zOPT_SEC_GAME, "weatherEffects");
@@ -769,7 +769,7 @@ void zInitOptions()
 			zgameoptions->Load(game);
 			zSTRING forceparams = zgameoptions->ReadString(zOPT_SEC_OPTIONS, "force_Parameters", 0);
 			if (forceparams.Length() > 0)
-				AddParameters(forceparams);
+				zoptions->AddParameters(forceparams);
 
 			file->Close();
 			delete file;
@@ -801,4 +801,25 @@ void zDeinitOptions()
 		Delete(zoptions);
 		Delete(zgameoptions);
 	}
+}
+
+int zOpt_Sound_ChangeFXVol(zCOptionEntry& entry)
+{
+	float val = entry.varValueTemp.ToFloat();
+	zClamp(val, 0.0, 1.0);
+	zsound->SetMasterVolume( val );
+	return 1;
+}
+
+int zOpt_Sound_ChangeMusicVol(zCOptionEntry& entry)
+{
+	float val = entry.varValueTemp.ToFloat();
+	zClamp(val, 0.0, 1.0);
+	zmusic->SetVolume( val );
+	return 1;
+}
+
+int zOpt_ToggleJoy(zCOptionEntry& entry)
+{
+	return 1;
 }

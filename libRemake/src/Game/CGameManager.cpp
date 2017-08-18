@@ -21,6 +21,7 @@ void InitMenu()
 
 void InitOptions();
 void InitGameOptions();
+void VideoOptions();
 
 void InitConsole();
 void InitRenderer(void* hwnd);
@@ -54,7 +55,7 @@ void CGameManager::Init(void* hwnd)
 	sysEvent();
 
 	g2::InitMenu();
-	g2::InitOptions();
+	g2::VideoOptions();
 
 	if ( zoptions->Parm("PLAYER") ) {
 		std::string playerInst = zoptions->ParmValue("PLAYER");
@@ -103,8 +104,7 @@ void CGameManager::PreGraphicsInit()
 
 	zfactory = new oCObjectFactory;
 
-	Cdecl<void()> zInitOptions{0x4701F0};
-	zInitOptions();
+	g2::InitOptions();
 
 	bool memProfiler = zoptions->Parm("ZMEMPROFILER");
 	//stub in .exe
@@ -547,6 +547,7 @@ void g2::InitGraphics()
 #include <Gothic/Audio/zSoundSys_MSS.h>
 #include <Sound/SoundOpenAL.h>
 #include <Gothic/Audio/zSoundManager.h>
+auto ChangeFxVol = func<zCOptions::ChangeHandler>(0x509370);
 void g2::InitSound()
 {
 	Log("Startup", "Initializing Sound");
@@ -565,16 +566,15 @@ void g2::InitSound()
 
 	zsndMan = new zCSoundManager;
 
-	float masterVol = zoptions->ReadReal("SOUND", "soundVolume", 1.0);
-	if ( zsound )
-		zsound->SetMasterVolume(masterVol);
+	Log("Startup", "Adding sound options");
+	zoptions->InsertChangeHandler("SOUND", "soundVolume",   ChangeFxVol);
+	auto sfxVol = zoptions->ReadReal("SOUND", "soundVolume", 1.0);
+	zoptions->WriteReal("SOUND", "soundVolume", sfxVol, 0);
 }
 
 #include <Gothic/Audio/zMusicSys_Dummy.h>
 #include <Gothic/Audio/zMusicSys_DM.h>
 auto ChangeMusicEnabled = func<zCOptions::ChangeHandler>(0x42D240);
-auto ChangeVidOptions = func<zCOptions::ChangeHandler>(0x509450);
-auto ChangeFxVol = func<zCOptions::ChangeHandler>(0x509370);
 auto ChangeMusicVol = func<zCOptions::ChangeHandler>(0x5093E0);
 
 void g2::InitMusic()
@@ -593,16 +593,109 @@ void g2::InitMusic()
 		zmusic = new zCMusicSys_Dummy;
 	}
 
-	zoptions->InsertChangeHandler("SOUND", "musicEnabled", ChangeMusicEnabled);
-	float musicVol = zoptions->ReadReal("SOUND", "musicVolume", 0.8);
-	if ( zmusic )
-		zmusic->SetVolume(musicVol);
+	Log("Startup", "Adding music options");
+	zoptions->InsertChangeHandler("SOUND", "musicEnabled",  ChangeMusicEnabled);
+	zoptions->InsertChangeHandler("SOUND", "musicVolume",   ChangeMusicVol);
+
+	auto musVol = zoptions->ReadReal("SOUND", "musicVolume", 0.8);
+	zoptions->WriteReal("SOUND", "musicVolume", musVol, 0);
 }
 
 #include <aw/utility/string/case.h>
+#include <filesystem>
+namespace fs = awstd::filesystem;
 void g2::InitOptions()
 {
 	Log("Startup", "Initializing options");
+	auto& sysCommandLine = Value<char*>(0x8D3D2C);
+	zoptions = new zCOptions{};
+	zoptions->Init(sysCommandLine);
+	zoptions->ChangeDir(DIR_SYSTEM);
+
+	std::string ini = zoptions->ParmValue("ini");
+	if ( ini.empty() )
+		ini = "Gothic.ini";
+
+	zoptions->Load(ini);
+
+	int version = zoptions->ReadInt("GAME", "PATCHVERSION", 0);
+	if (version < 0)
+		version = 0;
+
+	switch (version) {
+	case 0:
+		zoptions->WriteBool("GAME", "enableJoystick", 0, 0);
+		++version;
+	case 1:
+		zoptions->WriteReal("GAME", "SHORTKEY1FARPLANEDIST", 0.8, 0);
+		zoptions->WriteReal("GAME", "SHORTKEY2FARPLANEDIST", 1.2, 0);
+		zoptions->WriteReal("GAME", "SHORTKEY3FARPLANEDIST", 2.0, 0);
+		zoptions->WriteReal("GAME", "SHORTKEY4FARPLANEDIST", 3.0, 0);
+		zoptions->WriteBool("RENDERER_D3D", "zSyncAmbientCol", 0, 0);
+
+		zoptions->WriteBool("INTERNAL", "logStatistics", 0, 0);
+		zoptions->WriteBool("INTERNAL", "extendedMenu", 0, 0);
+		zoptions->WriteBool("INTERNAL", "gameAbnormalExit", 0, 0);
+
+		zoptions->WriteReal("ENGINE", "zInventoryItemsDistanceScale", 1.3, 0);
+		++version;
+	case 2:
+		zoptions->WriteBool("RENDERER_D3D", "radeonHackAmbientColBug", 0, 0);
+		++version;
+	case 3:
+		zoptions->WriteString("INTERNAL", "gameScript", "", 0);
+		zoptions->WriteString("INTERNAL", "playerInstanceName", "", 0);
+		++version;
+	case 4:
+		zoptions->WriteBool("RENDERER_D3D", "geforce3HackWBufferBug", 1, 0);
+		zoptions->WriteBool("ENGINE", "zSkyRenderFirst", 1, 0);
+		++version;
+	default:
+		break;
+	}
+
+	zoptions->WriteInt("GAME", "PATCHVERSION", version, 0);
+
+	if (zoptions->ReadBool("INTERNAL", "gameStartFailed", 0))
+		Warning("Previous startup has failed");
+
+	if (zoptions->ReadBool("INTERNAL", "gameAbnormalExit", 0))
+		Warning("Previous game has exited uncleanly");
+
+	zoptions->WriteBool("INTERNAL", "gameAbnormalExit", 1, 0);
+	zoptions->WriteBool("INTERNAL", "gameStartFailed", 1, 0);
+
+	int gameStarts = zoptions->ReadInt("INTERNAL", "gameStarts", 0);
+	zoptions->WriteInt("INTERNAL", "gameStarts", gameStarts + 1, 0);
+
+	zoptions->RemoveEntry("INTERNAL", "testmode");
+	zoptions->RemoveEntry("GAME", "weatherEffects");
+	zoptions->RemoveEntry("INTERNAL", "zFastUnsafeSaveGames");
+
+	zoptions->Save(ini);
+
+	std::string game = zoptions->ParmValue("GAME");
+	if ( !game.empty() ) {
+		zoptions->ChangeDir(DIR_SYSTEM);
+		if ( !fs::exists(game) ) {
+			game += ".ini";
+		}
+
+		if ( fs::exists(game) ) {
+			zgameoptions = new zCOptions{};
+			// no init because it's no-op anyway
+			zgameoptions->Load(game);
+			auto forceparams = zgameoptions->ReadString("OPTIONS", "force_Parameters", 0);
+			if ( !forceparams.empty() )
+				zoptions->AddParameters(forceparams);
+		}
+	}
+}
+
+auto ChangeVidOptions = func<zCOptions::ChangeHandler>(0x509450);
+void g2::VideoOptions()
+{
+	Log("Startup", "Adding video options");
 
 	zoptions->ReadInt("PERFORMANCE", "sightValue" , 4);
 	zoptions->ReadReal("PERFORMANCE", "modelDetail" , 0.5);
@@ -616,15 +709,6 @@ void g2::InitOptions()
 	zoptions->InsertChangeHandler("VIDEO", "zVidBrightness", ChangeVidOptions);
 	zoptions->InsertChangeHandler("VIDEO", "zVidContrast",   ChangeVidOptions);
 	zoptions->InsertChangeHandler("VIDEO", "zVidGamma",      ChangeVidOptions);
-
-	zoptions->InsertChangeHandler("SOUND", "soundVolume",   ChangeFxVol);
-	zoptions->InsertChangeHandler("SOUND", "musicVolume",   ChangeMusicVol);
-
-	auto sfxVol = zoptions->ReadReal("SOUND", "soundVolume", 1.0);
-	zoptions->WriteReal("SOUND", "soundVolume", sfxVol, 0);
-
-	auto musVol = zoptions->ReadReal("SOUND", "musicVolume", 0.8);
-	zoptions->WriteReal("SOUND", "musicVolume", musVol, 0);
 }
 
 void g2::InitGameOptions()

@@ -27,17 +27,37 @@ enum zTOptionPath {
 	DIR_COMPILED_TEXTURES,
 	DIR_TOOLS_CONFIG,
 	SUBDIR_INTERN,
-	DIR_UNKNOWN_,
+	DIR_NUM_ENTRIES,
 	DIR_ROOT,
 	DIR_EXECUTABLE,
-	DIR_NUM_ENTRIES
+	DIR_TOTAL_ENTRIES
 };
 
 struct zCOptionEntry {
 
 };
 
+struct zFILE;
 struct zCOptions {
+	zCOptions()
+	{
+		Thiscall<void(zCOptions*)> ctor{0x460350};
+		ctor(this);
+
+	}
+
+	void Init(std::string const& cmdLine)
+	{
+		Thiscall<void(zCOptions*, zSTRING, int)> Init{0x463C20};
+		Init(this, cmdLine, 1);
+	}
+
+	bool RemoveEntry(std::string const& sec, std::string const& ent)
+	{
+		Thiscall<int(zCOptions*, const zSTRING&, const char*)> call{0x462A70};
+		return call(this, zSTRING{sec}, ent.data());
+	}
+
 	void ChangeDir(zTOptionPath dirId)
 	{
 		Thiscall<void(zCOptions*, zTOptionPath)> call{0x465160};
@@ -50,6 +70,12 @@ struct zCOptions {
 		Thiscall<void(zCOptions*,zSTRING const&,char const*,ChangeHandler)> call{0x0463310};
 
 		call(this, zSTRING{sec}, name.data(), ccb);
+	}
+
+	void AddParameters(std::string const& params)
+	{
+		Thiscall<void(zCOptions*, zSTRING)> call{0x463B00};
+		call( this, zSTRING{params} );
 	}
 
 	bool Parm(std::string const& name)
@@ -69,6 +95,14 @@ struct zCOptions {
 		zSTRING* ptr = call(this, &ret, tmp);
 
 		return std::string(ret);
+	}
+
+	auto ReadString(std::string const& sec, std::string const& opt, const char* defval) -> std::string
+	{
+		zSTRING tmp;
+		Thiscall<zSTRING*(zCOptions*, zSTRING*, zSTRING const&, const char*, const char*)> call{0x4627E0};
+		zSTRING* ptr = call(this, &tmp, zSTRING{sec}, opt.data(), defval);
+		return std::string(tmp);;
 	}
 
 	int ReadInt(std::string const& sec, std::string const& opt, int defval)
@@ -101,6 +135,11 @@ struct zCOptions {
 		return call(this, zSTRING{sec}, opt.data(), zSTRING{value}, temp);
 	}
 
+	bool WriteInt(std::string const& sec, std::string const& opt, int value, bool temp)
+	{
+		WriteString(sec, opt, std::to_string(value), temp);
+	}
+
 	bool WriteReal(std::string const& sec, std::string const& opt, float value, bool temp)
 	{
 		Thiscall<int(zCOptions*, zSTRING const&, const char*, float, int)> call{0x461F90};
@@ -109,8 +148,13 @@ struct zCOptions {
 
 	bool WriteBool(std::string const& sec, std::string const& opt, bool value, bool temp)
 	{
-		Thiscall<int(zCOptions*, zSTRING const&, const char*, int, int)> call{0x461DE0};
-		return call(this, zSTRING{sec}, opt.data(), value, temp);
+		WriteString(sec, opt, value ? "1" : "0", temp);
+	}
+
+	bool Load(std::string const& filename)
+	{
+		Thiscall<int(zCOptions*, zSTRING filename)> call{0x4607B0};
+		return call(this, zSTRING{filename});
 	}
 
 	bool Save(std::string const& filename)
@@ -118,7 +162,21 @@ struct zCOptions {
 		Thiscall<int(zCOptions*, zSTRING)> func{0x4616C0};
 		return func(this, filename);
 	}
+
+private:
+	void* vtable;
+	zBOOL readTemp;
+
+	zCOptionEntry **array;
+	int numAlloc;
+	int numInArray;
+	
+	zFILE*  directory[DIR_TOTAL_ENTRIES];
+	zSTRING dir_string[DIR_TOTAL_ENTRIES];
+	zSTRING commandline;
 };
+
+CHECK_SIZE(zCOptions, 0x298);
 
 static auto& zoptions     = Value<zCOptions*>(0x8CD988);
 // TODO: rename to modoptions?

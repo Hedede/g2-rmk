@@ -39,10 +39,11 @@ enum zTOptionPaths {
 	DIR_COMPILED_TEXTURES,
 	DIR_TOOLS_CONFIG,
 	SUBDIR_INTERN,
-	_UNKNOWN_,
+	DIR_NUM_ENTRIES,
+	// These two appear to be special ones
 	DIR_ROOT,
 	DIR_EXECUTABLE,
-	DIR_NUM_ENTRIES
+	DIR_SIZE_TOTAL
 };
 
 using EntryChangeHanlder = int (*)(struct zCOptionEntry *);
@@ -225,8 +226,8 @@ private:
 	//an ini files consists of sections
 	zCArray<zCOptionSection*> sectionList;
 
-	zFILE* directory[DIR_NUM_ENTRIES];
-	zSTRING dir_string[DIR_NUM_ENTRIES];
+	zFILE* directory[DIR_SIZE_TOTAL];
+	zSTRING dir_string[DIR_SIZE_TOTAL];
 
 	//zCOptions is responsible for the command line as well.
 	zSTRING commandline;

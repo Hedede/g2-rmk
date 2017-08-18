@@ -527,12 +527,13 @@ int zCOption::WriteRaw(zSTRING const& secName, zSTRING const& entry, void* buffe
 	return WriteRaw(secName, entry.Data(), buffer, size, temp);
 }
 
+const char* DIR_STRUCTURE_FILE = "paths.d";
 int zCOption::Init(zSTRING parmlist, bool do_init)
 {
 	if ( !do_init )
 		return 0;
 
-	zINFO(3,  "B: zOPT: Initialize configurations "); // 758
+	zINFO_SCOPE(3, "B: zOPT: Initialize configurations "); // 758
 
 	commandline += parmlist;
 	commandline.Upper();
@@ -547,25 +548,25 @@ int zCOption::Init(zSTRING parmlist, bool do_init)
 	filename.Delete(pos, -1);
 
 	_getcwd(Filename, 254);
-	if ( _access(pathsd, 0) == -1 ) {
-		zFATAL("B: zOPT: Could not find file " + pathsd); //781
+	if ( _access(DIR_STRUCTURE_FILE, 0) == -1 ) {
+		zFATAL("B: zOPT: Could not find file " + DIR_STRUCTURE_FILE); //781
 		return 0;
 	}
 
-	zINFO(3,"B: zOPT: Found file " + pathsd); //785
+	zINFO(3,"B: zOPT: Found file " + DIR_STRUCTURE_FILE); //785
 
 	zINFO(5,"B: zOPT: Initialising Parser"); // 789
 
 	zparser.Reset();
 
-	zINFO(5, "B: zOPT: Parsing " + pathsd + " ..."); // 792
-	zparser.ParseFile(pathsd);
+	zINFO(5, "B: zOPT: Parsing " + DIR_STRUCTURE_FILE + " ..."); // 792
+	zparser.ParseFile(DIR_STRUCTURE_FILE);
 
-	zINFO(5,  "B: zOPT: Analysing " + pathsd + " ..."); // 795
+	zINFO(5,  "B: zOPT: Analysing " + DIR_STRUCTURE_FILE + " ..."); // 795
 
-	int idx = zparser.GetIndex(zOPTION_PATHNAMES[24]);
+	int idx = zparser.GetIndex(zOPTION_PATHNAMES[DIR_ROOT]);
 	if (idx < 0)
-		zFATAL("B: zOPT: Entry missed in " + pathsd + ": " + zOPTION_PATHNAMES[24]); // 799
+		zFATAL("B: zOPT: Entry missed in " + DIR_STRUCTURE_FILE + ": " + zOPTION_PATHNAMES[24]); // 799
 
 	auto text = zparser.GetText(idx, 0);
 
@@ -574,75 +575,76 @@ int zCOption::Init(zSTRING parmlist, bool do_init)
 
 	auto root = zFILE::SetRootDirectory(Filename);
 
-	dir_string[24] = root;
+	dir_string[DIR_ROOT] = root;
 
-	zINFO(6,"B: zOPT: Set root-directory to \"" + dir_string[24] + "\""); //806
+	zINFO(6,"B: zOPT: Set root-directory to \"" + dir_string[DIR_ROOT] + "\""); //806
 
 	zFILE_FILE file;
 
-	for (int i = 0; i < 24; ++i) {
-		if (zOPTION_PATHNAMES[i] == DIR_ROOT) // what the fuck?
-			break;
+	for (int i = 0; i < DIR_NUM_ENTRIES; ++i) {
+		// looks like a mistake, they compare string with integer,
+		// converting the latter to string
+		if (zOPTION_PATHNAMES[i] == DIR_ROOT)
+			continue;
 
 		int idx = zparser.GetIndex(zOPTION_PATHNAMES[i]);
 		if (idx < 0) {
-			zFATAL("B: zOPT: Entry missed in " + pathd + ": " + zOPTION_PATHNAMES[i]); // 851
-		} else {
-			auto text = zparser.GetText(idx, 0);
-			auto game = zoptions->ParmValue("game");
-			if (!game.IsEmpty()) {
-				auto file = zfactory->CreateZFile(game);
-				if (file) {
-					zSTRING filename;
-					file->GetFilename(filename);
-					filename.Lower();
-					if (filename == "gothicgame") {
-						while (text[filename.Length()] == '\\')
-							text.DeleteRight(1);
-						text += "_" + filename + '\\';
-						text.Lower();
-					}
-					file->Close();
-					delete file;
-				}
-			}
-
-			text.Upper();
-			if (text.Search(0, "$DATA$", 1) > 0) {
-				int pos = text.Search(0, "$DATA$", 1);
-				text.Delete(pos, 0);
-				text.Insert(pos, dir_string[3]);
-				pos = text.Search(0, "\\\\", 1);
-				if (pos >= 0)
-					text.Delete(pos, 1);
-			}
-
-			directory[i]->SetPath(text);
-
-			zINFO(6,"B: zOPT: " + zOPTION_PATHNAMES[i] " = " + text); // 867
+			zFATAL("B: zOPT: Entry missed in " + DIR_STRUCTURE_FILE + ": " + zOPTION_PATHNAMES[i]); // 851
+			continue;
 		}
+
+		auto text = zparser.GetText(idx, 0);
+		auto game = zoptions->ParmValue("game");
+		if (!game.IsEmpty()) {
+			auto file = zfactory->CreateZFile(game);
+			if (file) {
+				zSTRING filename;
+				file->GetFilename(filename);
+				filename.Lower();
+				if (filename == "gothicgame") {
+					while (text[filename.Length()] == '\\')
+						text.DeleteRight(1);
+					text += "_" + filename + '\\';
+					text.Lower();
+				}
+				file->Close();
+				delete file;
+			}
+		}
+
+		text.Upper();
+		if (text.Search(0, "$DATA$", 1) > 0) {
+			int pos = text.Search(0, "$DATA$", 1);
+			text.Delete(pos, 0);
+			text.Insert(pos, dir_string[DIR_DATA]);
+			pos = text.Search(0, "\\\\", 1);
+			if (pos >= 0)
+				text.Delete(pos, 1);
+		}
+
+		directory[i]->SetPath(text);
+
+		zINFO(6,"B: zOPT: " + zOPTION_PATHNAMES[i] " = " + text); // 867
 
 		if ( !text.Search(0, "DIR_", 1u) ) {
 			file.SetPath(text);
-			auto path = file.GetFullPath();
-
-			if ( _access(path.Data(), 0) ) {
-				zFAULT("B: zOPT: The value of <" tetx "> in file \"" + pathsd + "\" is wrong:\r\n Directory \"" path "\" does not exist."); // 877
+			if ( !file.Exists() ) {
+				zFAULT("B: zOPT: The value of <" + text + "> in file \"" + DIR_STRUCTURE_FILE + "\" is wrong:\r\n Directory \"" + path + "\" does not exist."); // 877
 			}
 		}
 	}
 
 
-	root.Delete(dir_string[24], 0);
+	root.Delete(dir_string[DIR_ROOT], 0);
 	root += '\\';
-	root += dir_string[25];
+	root += dir_string[DIR_EXECUTABLE];
 	directory[DIR_EXECUTABLE]->SetPath(root);
 
 	zINFO(3,"B: zOPT: DIR_EXECUTABLE = " + root); // 887
 
 	zparser->Reset();
 
-	zINFO(3,""); // 891
+	zINFO_END(3,""); // 891
 
 	return 0;
 }

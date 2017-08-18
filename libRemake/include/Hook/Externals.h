@@ -4,6 +4,7 @@
 
 #if defined(__WINE__)
 #define __thiscall __attribute__((__thiscall__))
+#define __stdcall __attribute__((__stdcall__))
 #endif
 
 /*!

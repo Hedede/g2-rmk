@@ -111,10 +111,14 @@ void InitThread()
 	as::jump_rel((char*)0x5F9230, (uintptr_t)zCThread_vt::BeginThread_thunk);
 	as::jump_rel((char*)0x5F9330, (uintptr_t)zCThread_vt::EndThread_thunk);
 	as::jump_rel((char*)0x5F9180, (uintptr_t)zCThread_vt::dtor_thunk);
-	as::jump_rel((char*)0x44C8D0, (uintptr_t)zERROR_Report);
 	// stubify ~zCThread(),
 	// so that resorcemanager won't call dtor twice
 	as::retn((char*)0x5F91E0);
+}
+
+void InitMisc()
+{
+	as::jump_rel((char*)0x44C8D0, (uintptr_t)zERROR_Report);
 }
 
 void InitFunctions()
@@ -125,7 +129,7 @@ void InitFunctions()
 	constexpr auto text_length = text_end - text_start;
 
 	Log("Clobber", "Making .text segment writeable");
-	unsigned long prot = PAGE_EXECUTE_READWRITE;
+	DWORD prot = PAGE_EXECUTE_READWRITE;
 	bool ret;
 	ret = VirtualProtect((void*)text_start, text_length, prot, &prot);
 	if (!ret)
@@ -139,6 +143,7 @@ void InitFunctions()
 
 	InitFontMan();
 	InitThread();
+	InitMisc();
 
 	Log("Clobber", "Restoring memory protection");
 	ret = VirtualProtect((void*)text_start, text_length, prot, &prot);

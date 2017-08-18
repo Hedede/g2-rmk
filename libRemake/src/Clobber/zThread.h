@@ -1,5 +1,7 @@
 #include <Gothic/System/zThread.h>
+#if !defined(__WINE__)
 #include <process.h>
+#endif
 
 zCThread_vt mythread_vt;
 

@@ -35,6 +35,12 @@ struct zSTRING {
 		return std::string(ptr, len);
 	}
 
+	size_t  Length() const { return len; }
+	bool     Empty() const { return Length() == 0; }
+	operator  bool() const { return Length() > 0; }
+	bool operator!() const { return Empty(); }
+
+
 	zSTRING& Upper()
 	{
 		Thiscall<void(zSTRING*)> func{0x46AB00};

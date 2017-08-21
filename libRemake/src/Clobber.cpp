@@ -116,6 +116,16 @@ void InitThread()
 	as::retn((char*)0x5F91E0);
 }
 
+#include <stdlib.h>
+void InitStdc()
+{
+	as::jump_rel((char*)0x7B4460, (uintptr_t)malloc);
+	as::jump_rel((char*)0x7B4465, (uintptr_t)calloc);
+	as::jump_rel((char*)0x7B446A, (uintptr_t)realloc);
+	as::jump_rel((char*)0x7B446F, (uintptr_t)free);
+	as::jump_rel((char*)0x7CFF47, (uintptr_t)atexit);
+}
+
 void InitMisc()
 {
 	as::jump_rel((char*)0x44C8D0, (uintptr_t)zERROR_Report);
@@ -144,6 +154,7 @@ void InitFunctions()
 	InitFontMan();
 	InitThread();
 	InitMisc();
+	InitStdc();
 
 	Log("Clobber", "Restoring memory protection");
 	ret = VirtualProtect((void*)text_start, text_length, prot, &prot);

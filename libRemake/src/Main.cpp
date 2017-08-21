@@ -15,16 +15,45 @@ extern void InitFunctions();
 #include <Gothic/Debug/zExceptionHandler.h>
 
 void GameLoop();
+void aw_main(char const* args);
+extern "C" __attribute__((dllimport)) char* __stdcall GetCommandLineA();
 
-extern "C" void __attribute__((dllexport)) aw_main(void* hinst, char const* args)
+extern "C" void __attribute__((dllexport)) aw_main_crt_startup(void* hinst)
 {
 	using namespace g2;
+
 	LogFile file_log;
 	logger.set_logger(&file_log);
 
-	Log("Main", "Successfully hooked.");
-
+	Log("Main", "aw_main_crt_startup");
 	hInstApp = hinst;
+
+	InitFunctions();
+
+	Cdecl<void()> mtinit{0x7D622C};
+	Cdecl<void()> ioinit{0x7D4D6B};
+	Cdecl<void()> cinit{0x7D128D};
+	Cdecl<char*()> wincmdln{0x7DB491};
+
+	mtinit();
+	ioinit();
+	cinit();
+
+	auto& acmdln = Value<char*>(0xABB8A4);
+	acmdln = GetCommandLineA();
+	auto cline = wincmdln();
+	Log("Main", "GetCommandLineA:");
+	Log("Main", acmdln);
+	Log("Main", "wincmdln:");
+	Log("Main", cline);
+	aw_main(cline);
+}
+
+void aw_main(char const* args)
+{
+	using namespace g2;
+
+	Log("Main", "Successfully hooked.");
 
 	std::string cmdLine{args};
 	Log("Main", "Command line: ", cmdLine);
@@ -41,8 +70,6 @@ extern "C" void __attribute__((dllexport)) aw_main(void* hinst, char const* args
 
 	auto& sysCommandLine = Value<char*>(0x8D3D2C);
 	sysCommandLine = cmdLine.data();
-
-	InitFunctions();
 
 	GameLoop();
 

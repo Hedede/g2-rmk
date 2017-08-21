@@ -12,12 +12,12 @@ public:
 	enum TMobInterDirection {
 	};
 
-	static int SetAllMobsToState(zSTRING const& name, int state)
-	{
-		int result = 0;
-		TraverseMobs(&world->globalVobTree, name, state, &result);
-		return result;
-	}
+
+	static void TraverseTriggerMobs( zCTree<zCVob*>* tree );
+	static void TraverseTriggerMobs(zCTree<zCVob*>* tree);
+	static void TraverseMobs(zCTree<zCVob*>* tree, STRING const& name, int state, int *count);
+	static void TriggerAllMobsToTmpState(zCWorld* world);
+	static int SetAllMobsToState(oCWorld *world, zSTRING const& name, int state);
 
 	void Archive(zCArchiver& arc) override;
 	void Unarchive(zCArchiver& arc) override;
@@ -27,7 +27,7 @@ public:
 	virtual void OnTrigger(zCVob *,zCVob *);
 	virtual void OnUntrigger(zCVob *,zCVob *);
 	void OnDamage(zCVob *,zCVob *,float,int,zVEC3 const &) override {}
-	virtual void OnMessage(zCEventMessage *,zCVob *);
+	void OnMessage(zCEventMessage* message, zCVob* sourceVob) override;
 	void OnTick() override
 	{
 		if (rewind && npcsCurrent <= 0) {
@@ -47,10 +47,8 @@ public:
 			return nullptr;
 		return &triggerTarget;
 	}
-	zSTRING GetScemeName() override
-	{
-		return sceme
-	}
+
+	zSTRING GetScemeName() override { return sceme; }
 
 	virtual int GetState()
 	{
@@ -117,13 +115,13 @@ public:
 		return false;
 	}
 
-	bool IsAvailable(OCNpc* npc)
+	bool IsAvailable(oCNpc* npc)
 	{
-		if (!npc->IsSelfPlayer()) {
-			if (inUseVob && inUseVob != npc, && ztimer.totalTimeFloat < timerEnd)
-				return false;
-			inUseVob = nullptr;
-		}
+		if (npc->IsSelfPlayer() || !inUseVob)
+			return true;
+		if (inUseVob != npc && ztimer.totalTimeFloat < timerEnd)
+			return false;
+		inUseVob = nullptr;
 		return true;
 	}
 
@@ -243,6 +241,48 @@ private:
 	zREAL timerEnd;
 };
 
+//------------------------------------------------------------------------------
+void oCMobInter::TraverseTriggerMobs(zCTree<zCVob*> *node)
+{
+	// actually it was optimized by compiler into a loop
+	// (it was recursive like TraverseMobs
+	for (; node; node = node->next) {
+		if (auto mob = zDYNAMIC_CAST<oCMobInter*>(node->Data())) {
+			mob->SetStateToTempState(); // was inlined
+		}
+		TraverseTriggerMobs(node->firstChild);
+	}
+}
+
+void oCMobInter::TraverseMobs(zCTree<zCVob*> *node, STRING const& name, int state, int *count)
+{
+	if (!tree)
+		return;
+
+	if (auto mob = zDYNAMIC_CAST<oCMobInter*>(node->Data())) {
+		if ( mob->GetScemeName() == name ) {
+			mob->SetTempState( state );
+			if (mob->SetStateToTempState())
+				++*count;
+		}
+	}
+
+	TraverseMobs(tree->firstChild, name, state, count);
+	TraverseMobs(tree->next, name, state, count);
+}
+
+void oCMobInter::TriggerAllMobsToTmpState(zCWorld* world)
+{
+	TraverseTriggerMobs(&world->globalVobTree);
+}
+
+int oCMobInter::SetAllMobsToState(oCWorld *world, zSTRING const& name, int state)
+{
+	int result = 0;
+	TraverseMobs(&world->globalVobTree, name, state, &result);
+	return result;
+}
+
 void oCMobInter::Archive(zCArchiver& arc)
 {
 	oCMob::Archive(arc);
@@ -275,33 +315,148 @@ void oCMobInter::Unarchive(zCArchiver& arc)
 
 void oCMobInter::SetTempState(int state)
 {
-	if ( state != this->tmpState || state != this->state ) {
-		this->tmpStateChanged = 1;
-		this->tmpState = state;
+	if ( state != tmpState || state != GetState() ) {
+		tmpStateChanged = 1;
+		tmpState = state;
 	} else {
-		this->tmpStateChanged = 0;
-		this->tmpState = state;
+		tmpStateChanged = 0;
+		tmpState = state;
 	}
 }
 
 bool oCMobInter::SetStateToTempState()
 {
-	ret = tmpStateChanged;
-	if ( ret ) {
-		if ( tmpState != 1 || GetState() )
-		{
-			ret = tmpState;
-			if ( !ret ) {
-				ret = GetState();
-				if ( ret > 0 ) {
-					ret = GetEM()->OnUntrigger(this, this);
-				}
-			}
-			tmpStateChanged = 0;
-		} else {
-			ret = GetEM()->OnTrigger(this, this);
-			tmpStateChanged = 0;
+	if ( !IsTempStateChanged() )
+		return false;
+
+	bool ret = false;
+	if (GetTempState() == 1 ) {
+		if (GetState() == 0) {
+			GetEM()->OnTrigger(this, this);
+			ret = true;
+		}
+	} else if ( GetTempState() == 0 ) {
+		if ( GetState() == 1 ) {
+			GetEM()->OnUntrigger(this, this);
+			ret = true;
 		}
 	}
+
+	tmpStateChanged = 0;
 	return ret;
+}
+
+void oCMobInter::SendEndInteraction(oCNpc *npc, int from, int to)
+{
+	auto msg = new oCMobMsg(EV_ENDINTERACTION, npc);
+
+	msg->state = from;
+	msg->flags = to | 0x80000000;
+
+	GetEM()->OnMessage(msg, npc);
+}
+
+void oCMobInter::OnMessage(zCEventMessage* message, zCVob* srcVob)
+{
+	if (auto msg = dynamic_cast<oCMobMsg*>(message)) {
+		switch ( msg->subType ) {
+		case EV_STARTINTERACTION:
+			StartInteraction(msg->npc);
+			break;
+		case EV_STARTSTATECHANGE:
+			StartStateChange(msg->npc, msg->state, msg->flags.32);
+			break;
+		case EV_ENDINTERACTION:
+			StopInteraction(msg->npc);
+			break;
+		case EV_CALLSCRIPT:
+			CallOnStateFunc(msg->npc, msg->flags.32);
+			break;
+		}
+	}
+}
+
+int oCMobInter::IsInState(oCNpc *npc, int snr)
+{
+	zCModel* model = GetModel();
+	zCModel* npcModel = nullptr;
+	if (npc)
+		npcModel = npc->GetModel();
+	else
+		npcStateAni = -1;
+
+	if ( state != snr || state_target != snr )
+		return false;
+
+	if ( mobStateAni != -1 ) {
+		// all was inlined:
+		auto ani = model->GetAniFromAniID(mobStateAni);
+		if ( !ani )
+			return false;
+		if (!model->IsAniActive(ani))
+			return false;
+	}
+	if ( npcStateAni != -1 ) {
+		// all was inlined:
+		/auto ani = npcModel->GetAniFromAniID(mobStateAni);
+		if ( !ani )
+			return false;
+		if (!npcModel->IsAniActive(ani))
+			return false;
+	}
+	return true;
+}
+
+void oCMobInter::StartStateChange(oCNpc* npc, int from, int to)
+{
+	auto model = GetModel();
+	npcModel = npc ? npc->GetModel() : nullptr;
+
+	zSTRING nameFrom, nameTo;
+	GetTransitionNames(from, to, mobAni, npcAni);
+	mobStateAni = -1;
+	if ( model )
+	{
+		if ( npc && npc->IsAPlayer() )
+			model->__aniSpeed = 1.0 / ztimer.factorMotion;
+
+		// prototypes[0]->SearchAni(mobAni);
+		if ( auto ani = model->SearchAni( mobAni ) ) {
+			aniId = ani->aniId;
+			if ( aniId != -1 ) {
+				// zachem? (loops over anis again)
+				auto ani1 = model->GetAniFromAniID( aniId);
+				if ( !model->IsAniActive(ani1) ) {
+					auto ani2 = model->GetAniFromAniID(aniId);
+					auto stateAni = aniFrom->__transitionAni;
+					if (!stateAni) {
+						if ( ani2->aniName ) {
+							stateAni = model->prototypes[ani2->aniId]->__transitionAni;
+							stateAni = model->GetAniFromAniID(__transitionAni->aniId);
+						}
+					}
+
+					mobStateAni = stateAni ? stateAni->aniId : -1;
+					model->StartAni(aniId, 0);
+				}
+			}
+		}
+	}
+
+	if ( npcModel)
+		StartTransitionAniNpc(npc, npcAni);
+
+	state_target = to;
+	SetDirection(0);
+	if ( from >= 0 ) {
+		auto cur = state_num;
+		if ( from <= cur && to >= 0 && to <= cur && from != to ) {
+			if ( from >= to )
+				SetDirection(2);
+			else
+				SetDirection(1);
+		}
+	}
+
+	OnBeginStateChange(npc, from, to);
 }

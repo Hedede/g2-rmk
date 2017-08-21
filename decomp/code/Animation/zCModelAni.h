@@ -25,7 +25,7 @@ private:
 	int unk0[7];
 	int layer; // maybe?
 	int unk1[9];
-	zCModelAni *__ani;
+	zCModelAni *__stateAni;
 	int yob[6];
 	float flr;
 	int oyb[6];

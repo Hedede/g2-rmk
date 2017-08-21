@@ -12,7 +12,7 @@ struct zCModelTexAniState {
 	int numTextures = 0;
 	zCTexture **textures = 0;
 	int varNr[2][4];
-	int alphaTestingEnabled = 0;
+	// int alphaTestingEnabled = 0;
 };
 
 int zCModelTexAniState::FinishTexList(zCArray<zCTexture*>& texList)

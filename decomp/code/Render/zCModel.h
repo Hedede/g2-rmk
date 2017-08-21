@@ -114,6 +114,10 @@ private:
 		int b;
 	};
 	
+	struct zTMeshLibEntry {
+		zCModelTexAniState TexAniState;
+		zCModelMeshLib *MeshLibPtr;
+	};
 
 	int active_ani_num;
 	zCModelAniActive* active_anis[6];
@@ -130,7 +134,7 @@ private:
 	zCArray<zTMdl_NodeVobAttachment> modelNodeVobAttachments;
 	zCArray<zTMdl_StartedVobFX> vobFxList;
 	zCArray<> unknown_ar2;
-	zCArray<> meshLib;
+	zCArray<zTMeshLibEntry*> meshLib;
 
 	void *ukptr;
 	zCArray unkarra;
@@ -249,4 +253,10 @@ void zCModel::RemoveAllVobFX()
 		vobFxList.RemoveIndex( i );
 		Release(vob);
 	}
+}
+
+void zCModel::RemoveMeshLibAll()
+{
+	for ( zTMeshLibEntry* entry : reverse(meshLib) )
+		RemoveMeshLib( entry->MeshLibPtr->GetObjectName() );
 }

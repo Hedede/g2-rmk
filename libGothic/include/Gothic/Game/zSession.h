@@ -15,6 +15,7 @@ struct zCView;
 struct zCSession;
 struct oCGame;
 struct oCGameInfo;
+struct oCSavegameManager;
 
 struct zCSession_vt : zCInputCallback_vt {
 	// zCSession:
@@ -104,13 +105,35 @@ struct zCSession : zCInputCallback {
 	zCView*       viewport = 0;
 };
 
-struct oCGame  : zCSession {
+constexpr int GAME_VIEW_MAX = 6;
+struct oCGame : zCSession {
 	oCGame() : zCSession()
 	{
 		Thiscall<void(oCGame*)> ctor{0x6BF810};
 		ctor(this);
 	}
-	char data[0x170];
+
+	void Init()
+	{
+		reinterpret_cast<zCSession_vt*>(_vtab)->Init(this);
+	}
+
+	void SetGameInfo(oCGameInfo* info)
+	{
+		reinterpret_cast<zCSession_vt*>(_vtab)->SetGameInfo(this, info);
+	}
+
+	float cliprange;
+	float fogrange;
+	int inScriptStartup;
+	int inLoadSaveGame;
+	int inLevelChange;
+	zCView *array_view[GAME_VIEW_MAX];
+	int array_view_visible[GAME_VIEW_MAX];
+	int array_view_enabled[GAME_VIEW_MAX];
+	oCSavegameManager *savegameManager;
+
+	char data[0x146];
 };
 
 // 0x18C

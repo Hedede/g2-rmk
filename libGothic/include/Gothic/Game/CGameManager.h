@@ -54,12 +54,6 @@ struct CGameManager : zCInputCallback {
 
 	}
 
-	void GameSessionInit()
-	{
-		Thiscall<void(CGameManager*)> func{0x426E10};
-		func(this);
-	}
-
 	void Done();
 
 	void InitScreen_Open()

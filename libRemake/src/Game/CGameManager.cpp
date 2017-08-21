@@ -32,6 +32,7 @@ void InitInput(void* hwnd);
 
 
 #include <SDL2/SDL.h>
+#include <Gothic/Game/zSession.h>
 void CGameManager::Init(void* hwnd)
 {
 	using namespace g2;
@@ -68,7 +69,14 @@ void CGameManager::Init(void* hwnd)
 	sysEvent();
 	SetEnableHandleEvent(true);
 
-	GameSessionInit();
+	auto& ogame = Value<oCGame*>(0xAB0884);
+
+	gameSession = new oCGame();
+	ogame = gameSession;
+
+	gameSession->Init();
+	gameSession->savegameManager = savegameManager;
+	gameSession->SetGameInfo(nullptr);
 
 	sysEvent();
 
@@ -529,16 +537,16 @@ void g2::InitGraphics()
 	maxFps = zoptions->ReadDWord("ENGINE", "zMaxFPS", maxFps);
 	zCTimer::S_SetMaxFPS(maxFps);
 
-	int& zCParticleFX_s_bAmbientPFXEnabled   = Value<int>(0x8A4E48);
-	int& zCAIPlayer_s_bShowWeaponTrails   = Value<int>(0x89EC90);
-	int& zCWorld_s_bAmbientVobsEnabled   = Value<int>(0x8A8AC0);
-	int& zCWorld_s_bEnvMappingEnabled    = Value<int>(0x8A8AC4);
-	int& zCWorld_s_bAlternateRenderOrder = Value<int>(0x9A4424);
+	int& zCParticleFX_s_bAmbientPFXEnabled  = Value<int>(0x8A4E48);
+	int& zCAIPlayer_s_bShowWeaponTrails     = Value<int>(0x89EC90);
+	int& zCWorld_s_bAmbientVobsEnabled      = Value<int>(0x8A8AC0);
+	int& zCWorld_s_bEnvMappingEnabled       = Value<int>(0x8A8AC4);
+	int& zCWorld_s_bAlternateRenderOrder    = Value<int>(0x9A4424);
 	zCParticleFX_s_bAmbientPFXEnabled = zoptions->ReadBool("ENGINE", "zAmbientPFXEnabled", 1);
-	zCWorld_s_bAmbientVobsEnabled = zoptions->ReadBool("ENGINE", "zAmbientVobsEnabled", 1);
-	zCWorld_s_bEnvMappingEnabled = zoptions->ReadBool("ENGINE", "zEnvMappingEnabled", 1);
-	zCWorld_s_bAlternateRenderOrder = !zoptions->ReadBool("ENGINE", "zSkyRenderFirst", 1);
-	zCAIPlayer_s_bShowWeaponTrails = zoptions->ReadBool("GAME", "zShowWeaponTrails", 1);
+	zCWorld_s_bAmbientVobsEnabled     = zoptions->ReadBool("ENGINE", "zAmbientVobsEnabled", 1);
+	zCWorld_s_bEnvMappingEnabled      = zoptions->ReadBool("ENGINE", "zEnvMappingEnabled", 1);
+	zCWorld_s_bAlternateRenderOrder   = !zoptions->ReadBool("ENGINE", "zSkyRenderFirst", 1);
+	zCAIPlayer_s_bShowWeaponTrails    = zoptions->ReadBool("GAME", "zShowWeaponTrails", 1);
 
 	ztimer.SetMaxFPS(zCTimer::S_GetMaxFPS());
 }

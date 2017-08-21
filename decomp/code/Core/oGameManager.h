@@ -61,8 +61,8 @@ private:
 	zBOOL              lastWorldWasGame = false;
 	oCSavegameManager* savegameManager = nullptr;
 
-	zCArray<zSTRING>	lastDatFileList;
-	zCArray<zSTRING>	lastWorldList;
+	zCArray<zSTRING> lastDatFileList;
+	zCArray<zSTRING> lastWorldList;
 
 	zSTRING backWorldRunning;
 	zSTRING backDatFileRunning;
@@ -695,7 +695,7 @@ void CGameManager::GameSessionInit()
 
 	gameSession->Init();
 	gameSession->savegameManager = savegameManager;
-	gameSession->SetGameInfo(gameSession, 0);
+	gameSession->SetGameInfo(nullptr);
 }
 
 void CGameManager::GameSessionDone()

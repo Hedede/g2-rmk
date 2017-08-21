@@ -7,3 +7,6 @@ public:
 	virtual void CreateCutscenePlayer(zCWorld *);
 	virtual void CreateProperties();
 };
+
+//------------------------------------------------------------------------------
+// _Andre/oCSManager.cpp

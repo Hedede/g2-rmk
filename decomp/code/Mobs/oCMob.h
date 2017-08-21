@@ -150,8 +150,8 @@ private:
 
 	uint32_t hitpoints      : 12;
 	uint32_t damage         : 12;
-	uint32_t isDestroyed    : 1;
-	uint32_t moveable       : 1;
+	uint32_t isDestroyed    : 1;  // 0x1000000
+	uint32_t moveable       : 1;  // 0x2000000
 	uint32_t takeable       : 1;
 	uint32_t focusOverride  : 1;
 	//oTSndMaterial

@@ -96,6 +96,13 @@ struct zSTRING {
 		return PickWord(nr, delim, " ");
 	}
 
+	zSTRING Copied(zSTRING const& xStr, zTSTR_KIND const& kind)
+	{
+		zSTRING temp = *this;
+		temp.Copy(xStr, kind);
+		return temp;
+	}
+
 	uint32_t ToUint() const;
 	int32_t ToInt() const;
 	float ToFloat() const;

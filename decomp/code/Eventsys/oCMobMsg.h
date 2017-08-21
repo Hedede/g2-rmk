@@ -35,7 +35,8 @@ public:
 private:
 	oCNpc *npc = nullptr;
 	int state = 0;
-	int flags = 0;
+	int state_to : 31 = 0;
+	int flag     : 1  = 0;
 };
 
 zSTRING oCMobMsg::MD_GetSubTypeString(int type);

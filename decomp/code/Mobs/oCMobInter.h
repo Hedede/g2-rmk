@@ -12,6 +12,7 @@ public:
 	enum TMobInterDirection {
 	};
 
+	void oCMobInter() = default;
 
 	static void TraverseTriggerMobs( zCTree<zCVob*>* tree );
 	static void TraverseTriggerMobs(zCTree<zCVob*>* tree);
@@ -71,10 +72,13 @@ public:
 		direction = dir;
 	}
 
-	virtual void SetUseWithItem(zSTRING const &);
+	virtual void SetUseWithItem(zSTRING const& name)
+	{
+		useWithItem = name;
+	}
 	virtual int GetUseWithItem()
 	{
-		if (!useWithItem.IsEmpty())
+		if (useWithItem)
 			return zparser.GetIndex(useWithItem);
 		return -1;
 	}
@@ -202,8 +206,9 @@ public:
 
 
 private:
-	//Optimale Positionen sind wohl die, zu denen der Held bei der Benutzung hinploppt. Ich bin aber kein Animierer, hab wenig Ahnung davon.
-	zCList<TMobOptPos>    optimalPosList; // List of all Optimal Positions
+	//Optimale Positionen sind wohl die, zu denen der Held bei der Benutzung hinploppt.
+	//Ich bin aber kein Animierer, hab wenig Ahnung davon.
+	zCList<TMobOptPos> optimalPosList;
 
 	//wohlbekannte Eigenschaften:
 	zSTRING triggerTarget;
@@ -213,35 +218,36 @@ private:
 	zSTRING onStateFuncName;
 
 	//Zustand des Mobs
-	int state;
-	int state_num;
+	int state = 0;
+	int state_num = 1;
 	// Zustand auf den gerade "hingearbeitet wird" ?
-	int state_target;
+	int state_target = 0;
 
-	zBOOL rewind;
+	zBOOL rewind = false;
 
-	zTModelAniID  mobStateAni;
-	zTModelAniID  npcStateAni;
+	zTModelAniID mobStateAni = -1;
+	zTModelAniID npcStateAni = -1;
 
-	uint8_t npcsMax;
-	uint8_t npcsNeeded;
-	uint8_t npcsCurrent;
+	uint8_t npcsMax     = 0;
+	uint8_t npcsNeeded  = 0;
+	uint8_t npcsCurrent = 0;
 
-	uint8_t tmpState;
-	zBOOL tmpStateChanged;
+	uint8_t tmpState = 0;
+	zBOOL tmpStateChanged = 0;
 
 	//"Richtung in die das Mob benutzt wird????", (0 = none, 1 = up, 2 = down)
-	TMobInterDirection direction;
+	TMobInterDirection direction = 0;
 
-	zBOOL onInterruptReturnToSlotPos;
+	zBOOL onInterruptReturnToSlotPos = 1;
 
-	zVEC3 startPos;
-	zREAL aniCombHeight;
-	zCVob* inUseVob;
-	zREAL timerEnd;
+	zVEC3 startPos{0,0,0};
+	zREAL aniCombHeight = 0.0;
+	zCVob* inUseVob = nullptr;
+	zREAL timerEnd = 0.0;
 };
 
 //------------------------------------------------------------------------------
+// _Ulf/oMobInter.cpp
 void oCMobInter::TraverseTriggerMobs(zCTree<zCVob*> *node)
 {
 	// actually it was optimized by compiler into a loop
@@ -313,6 +319,18 @@ void oCMobInter::Unarchive(zCArchiver& arc)
 	Reset();
 }
 
+void oCMobInter::SetVisual(zCVisual *v)
+{
+	zCVob::SetVisual(v);
+	SetCollisionClass(&zCCollObjectComplex::s_oCollObjClass);
+	if ( v ) {
+		auto vname = v->GetVisualName();
+		sceme = vname.Copied("_", 1);
+		SetCollisionClass(&zCCollObjectComplex::s_oCollObjClass);
+		flags1.6 = 0;  // 100000
+	}
+}
+
 void oCMobInter::SetTempState(int state)
 {
 	if ( state != tmpState || state != GetState() ) {
@@ -364,13 +382,13 @@ void oCMobInter::OnMessage(zCEventMessage* message, zCVob* srcVob)
 			StartInteraction(msg->npc);
 			break;
 		case EV_STARTSTATECHANGE:
-			StartStateChange(msg->npc, msg->state, msg->flags.32);
+			StartStateChange(msg->npc, msg->state, msg->flag);
 			break;
 		case EV_ENDINTERACTION:
 			StopInteraction(msg->npc);
 			break;
 		case EV_CALLSCRIPT:
-			CallOnStateFunc(msg->npc, msg->flags.32);
+			CallOnStateFunc(msg->npc, msg->flag);
 			break;
 		}
 	}
@@ -459,4 +477,98 @@ void oCMobInter::StartStateChange(oCNpc* npc, int from, int to)
 	}
 
 	OnBeginStateChange(npc, from, to);
+}
+
+void oCMobInter::SendCallOnStateFunc(oCNpc* npc, int state) {
+	if (onStateFuncName) {
+		auto msg = new oCMobMsg(oCMobMsg::EV_CALLSCRIPT,npc); // 1301
+		msg->state_to = state;
+		GetEm()->OnMessage(msg,this);
+	}
+}
+
+bool oCMobInter::CanInteractWith(oCNpc* npc)
+{
+	if ( isDestroyed )
+		return false;
+	if ( IsOccupied() ) {
+		if (npc->IsSelfPlayer()) {
+			auto msg = new oCMsgManipulate(EV_CALLSCRIPT, "PLAYER_MOB_ANOTHER_IS_USING", -1);
+			npc->GetEM()->OnMessage(msg, npc);
+		}
+		return false;
+	}
+
+	if (flags1.3)
+		return false;
+
+	if (!npc->IsSelfPlayer() && inUseVob != npc && ztimer.totalTimeFloat < timerEnd)
+		return false;
+	else
+		inUseVob = nullptr;
+
+	ScanIdealPositions();
+	TMobOptPos* pos = SearchFreePosition(npc, 150.0);
+	if ( !pos ) {
+		if ( npc->IsSelfPlayer() ) {
+			if (!npc->GetModel()->IsAniActive("T_DONTKNOW")) {
+#ifdef GOTHIC1 // Found this code in G1demo, but it's missing in G2
+
+				if (zinput->GetToggled(GAMEKEY_ACTION)) {
+					auto msg = new oCMsgConversation(oCMsgConversation::EV_PLAYANI,"T_DONTKNOW"); // 1463
+					npc->GetEM()->OnMessage(msg, npc);
+				}
+			}
+#endif
+		}
+		return false;
+	}
+
+	zVEC3 vec = pos->trafo.GetTranslation();
+
+	bool hasItem = HasUseWithItem( npc ); // was inlined
+	if ( !hasItem && !npc->IsSelfPlayer() ) {
+		auto useItem = GetUseWithItem();
+		bool mov = npc->isInMovementMode;
+		if ( mov )
+			npc->EndMovement(1);
+
+		auto item = npc->RemoveFromInv( useItem );
+		if (item) {
+			item->AddRef();
+		} else {
+			item = ogame->GetGameWorld()->CreateVob(VOB_TYPE_ITEM, useItem);
+		}
+		npc->SetInteractItem(item);
+		Release(item);
+		hasItem = true;
+	}
+
+	if ( hasItem ) {
+		if (conditionFunc) {
+			auto sym = zparser.GetSymbol( "SELF" );
+			auto slf = zDYNAMIC_CAST<oCNpc>(sym);
+
+			zparser.SetInstance( "SELF", npc );
+			int ret = *zparser.CallFunc( conditionFunc );
+			zparser.SetInstance( "SELF", slf );
+
+			if (!ret)
+				return false;
+		}
+
+		return true;
+	}
+
+	if ( npc->IsSelfPlayer() ) {
+		if (!npc->GetModel()->IsAniActive("T_DONTKNOW")) {
+
+			if (zinput->GetToggled(GAMEKEY_ACTION)) {
+				auto msg = new oCMsgConversation(oCMsgConversation::EV_PLAYANI,"T_DONTKNOW"); // 1456
+				npc->GetEM()->OnMessage(msg, npc);
+			}
+		}
+	}
+
+	return false;
 }

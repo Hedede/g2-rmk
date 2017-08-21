@@ -1,3 +1,9 @@
+struct zTMdl_StartedVobFX {
+	zCVob *vob;
+	int unk;
+};
+
+
 class zCModel : public zCVisualAnimate {
 	Z_OBEJCT(zCModel);
 public:
@@ -122,7 +128,7 @@ private:
 	zCArray<zCMeshSoftSkin*> _skins;
 	zCArraySort<> aniAttachments;
 	zCArray<zTMdl_NodeVobAttachment> modelNodeVobAttachments;
-	zCArray<> unknown_ar1;
+	zCArray<zTMdl_StartedVobFX> vobFxList;
 	zCArray<> unknown_ar2;
 	zCArray<> meshLib;
 
@@ -216,3 +222,31 @@ void zCModel::RemoveAllChildVobsFromNode()
 	modelNodeVobAttachments.Clear();
 }
 
+void zCModel::StopAnisLayerRange(int layerLow, int layerHi)
+{
+	i = 0;
+	for (int i = 0; i < active_ani_num; ++i) {
+		auto* ani = active_anis[i];
+		if ( within(ani->protoAni->layer, layerLow, layerHi) ) {
+			StopAni( ani );
+			if (ani != active_anis[i])
+				--i;
+		}
+	}
+}
+
+void zCModel::RemoveAllVobFX()
+{
+	for (int i = vobFxList.GetNum() - 1; i >= 0; --i ) {
+		auto* vob = vobFxList.array[i].vob;
+		if ( vob ) {
+			auto visual = vob->visual;
+			// pesudocode, it checks classdef and makes static cast
+			if ( auto pfx = zCAST<zCParticleFX*>(visual) )
+				pfx->StopEmitterOutput();
+		}
+
+		vobFxList.RemoveIndex( i );
+		Release(vob);
+	}
+}

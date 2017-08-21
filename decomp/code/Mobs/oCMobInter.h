@@ -1,7 +1,7 @@
 struct TMobOptPos {
 	~TMobOptPos() = default;
 	zMAT4 trafo;
-	int unk[1];
+	zBOOL isDistNode;
 	oCNpc *npc;
 	zSTRING name;
 };
@@ -23,7 +23,7 @@ public:
 	void Archive(zCArchiver& arc) override;
 	void Unarchive(zCArchiver& arc) override;
 
-	virtual ~oCMobInter();
+	virtual ~oCMobInter() = default;
 
 	virtual void OnTrigger(zCVob *,zCVob *);
 	virtual void OnUntrigger(zCVob *,zCVob *);
@@ -485,6 +485,49 @@ void oCMobInter::SendCallOnStateFunc(oCNpc* npc, int state) {
 		msg->state_to = state;
 		GetEm()->OnMessage(msg,this);
 	}
+}
+
+void oCMobInter::InterruptInteraction(oCNpc *npc)
+{
+	zVEC3 pos{1.0, 0, 0};
+	for (auto* node : optimalPosList) {
+		if (node->npc == npc) {
+			pos = node->pos;
+			node->npc = nullptr;
+		}
+	}
+
+	if ( npc->GetModel() && npc->GetModel()->active_ani_num > 1 )
+		npc->GetModel()->StopAnisLayerRange(2, 256);
+
+	if ( npc->interactItem ) {
+		npc->PutInInv(npc->interactItem);
+		npc->SetInteractItem(nullptr);
+	}
+	npc->SetInteractMob(nullptr);
+
+	Reset();
+	inUseVob = nullptr;
+
+	npc->ResetXZRotationsWorld();
+
+	if ( npc->GetModel() )
+		npc->GetModel()->RemoveAllVobFX();
+
+	if ( onInterruptReturnToSlotPos & 1 && npc->FreeLineOfSight(pos, this) ) {
+		if ( npc->SearchNpcPosition(npc, pos) )
+			npc->SetPositionWorld(npc, pos);
+		npc->SetCollDetStat(1);
+		npc->SetCollDetDyn(1);
+	}
+
+	if ( --npcsCurrent <= 0 ) {
+		flags1.6 = 0; // 100000
+		if ( !rewing )
+			SetSleeping(1);
+	}
+
+	ignoreVobList.Remove(npc);
 }
 
 bool oCMobInter::CanInteractWith(oCNpc* npc)

@@ -27,8 +27,8 @@ struct zCSndSys_MSS : zCSoundSystem {
 	}
 	void PlaySound(zCSoundFX *,int,int,float,float) override;
 	void PlaySound(zCSoundFX *,int) override;
-	void PlaySound3D(zSTRING const &,zCVob *,int,zCSoundSystem::zTSound3DParams *) override;
-	void PlaySound3D(zCSoundFX *,zCVob *,int,zCSoundSystem::zTSound3DParams *) override;
+	int PlaySound3D(zSTRING const &,zCVob *,int,zCSoundSystem::zTSound3DParams *) override;
+	int PlaySound3D(zCSoundFX *,zCVob *,int,zCSoundSystem::zTSound3DParams *) override;
 	void StopSound(int const &) override;
 	void StopAllSounds() override
 	{
@@ -341,4 +341,92 @@ zTSndHandle zCSndSys_MSS::PlaySound(zCSoundFX* sfx, int slot)
 	actSnd->sndFx = sfx;
 	sfx->AddRef();
 	return actSnd->handle;
+}
+
+void zCSndSys_MSS::DisposeAllSampleHandles()
+{
+	for ( auto* snd : zCActiveSnd::activeSndList ) {
+		if ( snd->bitfield.is3d ) {
+			auto handle = snd->sampleHandle3d;
+			// SMP_FREE == 1, not sure about that
+			if ( !hanlde || AIL_3D_sample_status(handle) == SMP_FREE )
+				continue;
+			AIL_end_3D_sample(handle);
+			AIL_release_3D_sample_handle(handle);
+			snd->sampleHandle3d = 0;
+		} else {
+			auto handle = snd->sampleHandle;
+			if ( !handle || AIL_sample_status(handle) == SMP_FREE )
+				continue;
+			AIL_stop_sample(handle);
+			AIL_release_sample_handle(handle);
+			while ( AIL_sample_status(handle) != SMP_FREE );
+			snd->sampleHandle = 0;
+		}
+		snd->bitfield.playing = false;
+	}
+}
+
+int zCSndSys_MSS::PlaySound3D(zSTRING  const& fileName, zCVob *sourceVob, int slot, zCSoundSystem::zTSound3DParams& params)
+{
+	if ( !fileName )
+		return 0;
+
+	auto sndFx = LoadSoundFX(fileName);
+	if (auto snd = zDYNAMIC_CAST<zCSoundFX*>(sndFx)) {
+		snd->timeStart = ztimer.totalTimeFloat;
+		auto handle = PlaySound3D(snd, sourceVob, slot, params);
+		Release(snd);
+		return handle;
+	}
+	return 0;
+}
+
+void zCSndSys_MSS::StopSound(const int& sfxHandle)
+{
+	auto idx = zCActiveSnd::GetHandleIndex(sfxHandle);
+	if ( idx != -1 ) {
+		auto asnd = zCActiveSnd::activeSndList.GetSafe(idx);
+		if (asnd)
+			asnd->RemoveSound();
+	}
+}
+
+float zCSndSys_MSS::GetActiveVolume(int const& sfxHandle)
+{
+	auto idx = zCActiveSnd::GetHandleIndex(sfxHandle);
+	if ( idx != -1 ) {
+		auto asnd = zCActiveSnd::activeSndList.GetSafe(idx);
+		if (asnd)
+			return asnd->GetVolume() * asnd;
+	}
+	return -1.0;
+}
+
+bool zCSndSys_MSS::IsSoundActive(int const& sfxHandle)
+{
+	auto idx = zCActiveSnd::GetHandleIndex(sfxHandle);
+	if ( idx != -1 ) {
+		auto asnd = zCActiveSnd::activeSndList.GetSafe(idx);
+		if (!asnd)
+			return false;
+		if (asnd->bitfield.playing)
+			return true;
+		if (asnd->sampleHandle)
+			return true;
+		if (asnd->sampleHandle3d)
+			return true;
+	}
+	return false;
+}
+
+// private
+void zCSndSys_MSS::CloseProvider()
+{
+	if ( act3dProvider ) {
+		AIL_close_3D_provider(act3dProvider);
+		act3dProvider = 0;
+		actProviderIdx = -1;
+		_snd_provider_name.Clear();
+	}
 }

@@ -26,13 +26,13 @@ public:
 	virtual int GetIsFixed() { return 0; }
 
 private:
-	float volume;
-	float pan;
-	int frequency;
+	float volume  = 1.0;
+	float pan     = -2.0;
+	int frequency = 44100;
 
-	int unk;
+	int unk = 0;
 
-	float timeStart;
+	float timeStart = -1.0;
 };
 
 void zCSoundFX::GetCacheConfig(unsigned& timeout, unsigned& size)

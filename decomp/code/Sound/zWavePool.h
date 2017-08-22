@@ -79,13 +79,13 @@ private:
 	zCCriticalSection critSect;
 
 	// used by NewFrame(), i.e. unused
-	zCArray<zCWaveData*> wtf;
+	zCArray<zCWaveData*> waveList2;
 };
 
 
 int zCWavePool::NewFrame()
 {
-	wtf.DeleteList();
+	waveList2.DeleteList();
 	auto num = zCActiveSnd::activeSndList.GetNum();
 	for (auto i = 0; i < num; ++i) {
 		auto* frame = zCActiveSnd::activeSndList[i]->frame;
@@ -94,8 +94,8 @@ int zCWavePool::NewFrame()
 		auto* wave = frame->waveData;
 		if (!wave || !wave->soundData)
 			continue;
-		if (wtf.Search(wave) == -1)
-			wtf.Insert(wave);
+		if (waveList2.Search(wave) == -1)
+			waveList2.Insert(wave);
 	}
 	return num;
 }

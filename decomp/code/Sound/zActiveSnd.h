@@ -144,13 +144,18 @@ private:
 	int handle;
 	int sampleHandle;
 	int sampleHandle3d;
+
 	int __updateCtr;
 	int unk1[1];
 	float radius;
 	int reverbLevel;
-	int unk2[2];
-	float unk3_;
-	int unk4[3];
+	int pitchOff;
+	float __master_volume;
+	float __outer_volume;
+
+	float unk4[2];
+	int __timer;
+
 	struct {
 		uint8_t playing : 1; // 1
 		uint8_t loop    : 1; // 2
@@ -159,7 +164,7 @@ private:
 		uint8_t in_use  : 1; // 16
 		uint8_t slot    : 3;
 	} bitfield;
-	char unko;
+	char pan;
 	char volume;
 	int frequency; // pitch?
 	int __lastUpdate;
@@ -287,4 +292,14 @@ zCActiveSnd* zCActiveSnd::AllocNextFreeSnd()
 	preAllocedSndList.InsertEnd(result);
 	result->bitfield.in_use = true;
 	return result;
+}
+
+void zCActiveSnd::CalcListenerVolume(zCActiveSnd *this)
+{
+	if ( bitfield & 4 )
+		volume = GetVolume() * 127.0;
+	else
+		volume = frame->volume;
+
+	volume *= __master_volume;
 }

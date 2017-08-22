@@ -364,6 +364,132 @@ bool oCMobInter::SetStateToTempState()
 	return ret;
 }
 
+TMobOptPos* oCMobInter::SearchFreePosition(oCNpc *npc, float maxDist)
+{
+	if ( npcsCurrent >= npcsMax )
+		return nullptr;
+
+	float optDist = FLT_MAX;
+	TMobOptPos* optPos = nullptr;
+
+	bool notFound = false;
+	bool wrongSide = false;
+
+	const float maxDistSq = maxDist * maxDist;
+
+	for (auto node : optimalPosList) {
+		if (node->npc == npc)
+			return pos;
+		if (!node->npc) {
+			auto nodePos =  pos->trafo->GetTranslation();
+			auto vec = npc->GetPositionWorld() - nodePos;
+			auto dist = vec.LengthSq()
+			if ( dist < optDist ) {
+				if ( node->isDistNode || npc->FreeLineOfSight(nodePos, 0) ) {
+					if (!npc->IsSelfPlayer() || iter->isDistNode || dist < maxDistSq) {
+						optDist = dist;
+						optPos = node;
+					} else {
+						notFound = 1;
+					}
+				} else {
+					wrongSide = 1;
+				}
+			}
+		}
+	}
+
+	if ( !optPos && npc->IsSelfPlayer() ) {
+		if ( notFound ) {
+			auto msg = new oCMsgManipulate(EV_CALLSCRIPT, "PLAYER_MOB_TOO_FAR_AWAY", -1);
+			npc->GetEM()->OnMessage(msg, npc);
+		}
+		if ( wrongSide ) {
+			auto msg = new oCMsgManipulate(EV_CALLSCRIPT, "PLAYER_MOB_WRONG_SIDE", -1);
+			npc->GetEM()->OnMessage(msg, npc);
+		}
+	}
+
+	return optPos;
+}
+
+void oCMobInter::SetIdealPosition(oCNpc *npc)
+{
+	auto optPos = SearchFreePosition(npc, 150.0);
+	if ( optPos ) {
+		auto mov = npc->isInMovementMode;
+		if (mov)
+			npc->EndMovement(1);
+
+		auto opos = opos->GetPositionWorld();
+
+		if ( optPos->isDistNode ) {
+			auto ppos = npc->GetPositionWorld();
+			auto mpos = this->GetPositionWorld();
+
+			ppos.y = 0;
+			mpos.y = 0;
+			opos.y = 0;
+
+			auto optDist = (opos - mpos).Length();
+			auto pdir = ppos - mpos;
+			pdir.SetLength( optDist );
+
+			npc->SetCollDetStat(0);
+			npc->SetCollDetDyn(0);
+
+			auto pos = GetPositionWorld();
+			pos.y = ppos.y;
+			pos += pdor;
+
+			npc->SetPositionWorld( pos );
+			npc->SetHeadingYWorld( this );
+
+			npc->SetCollDetStat(1);
+			npc->SetCollDetDyn(1);
+		} else {
+			npc->SetTrafoObjToWorld(optPos->trafo);
+			npc->SetPositionWorld(opos);
+		}
+
+		optPos->npc = npc;
+
+		if ( mov )
+			npc->BeginMovement();
+	}
+}
+
+void oCMobInter::Reset()
+{
+	if ( !rewind ) {
+		int s = 0;
+		if ( auto npc = dynamic_cast<oCNpc*>(inUseVob) ) {
+			if ( state > 0 ) {
+				if ( auto model = npc->GetModel() ) {
+					auto name = "T_STAND_2_S" + state;
+					// probably also GetAniIDFromAniName
+					auto ani = model->SearchAni(name);
+					if ( ani && ani->aniId != -1 )
+						s = state;
+				}
+			}
+		}
+
+		if ( auto model = GetModel() ) {
+			auto name = "S_S" + s;
+			auto aniId = model->GetAniIDFromAniName( name );
+			model->StartAni( aniId, 0 );
+		}
+
+		state_target = s;
+		state = s;
+	}
+	if ( state <= 0 )
+		SetDirection(0);
+	else
+		SetDirection(2);
+}
+
 void oCMobInter::SendEndInteraction(oCNpc *npc, int from, int to)
 {
 	auto msg = new oCMobMsg(EV_ENDINTERACTION, npc);
@@ -425,6 +551,37 @@ int oCMobInter::IsInState(oCNpc *npc, int snr)
 	return true;
 }
 
+int oCMobInter::CanChangeState(oCNpc *npc, int from, int to)
+{
+	if ( !this->IsInState(npc, from) )
+		return 0;
+	if ( npc && npc->IsSelfPlayer() ) {
+		if ( from == 0 && to > 0 ) {
+			if (!HasUseWithItem(npc)) // was inlined
+				return 0;
+		}
+	}
+
+	zSTRING mobAni, npcAni;
+	GetTransitionNames(from, to, mobAni, npcAni);
+
+	auto model = GetModel();
+	auto aniId = model->GetAniIDFromAniName(mobAni);
+	auto ani   = model->GetAniFromAniID(aniId);
+	if (ani && (ani->bitfield & 0x3F) != 6) // TODO
+		return 1;
+
+	if (npc) {
+		auto model = npc->GetModel();
+		auto aniId = model->GetAniIDFromAniName(npcAni);
+		auto ani   = model->GetAniFromAniID(aniId);
+		if (ani && (ani->bitfield & 0x3F) != 6)
+			return 1;
+	}
+
+	return 0;
+}
+
 void oCMobInter::StartStateChange(oCNpc* npc, int from, int to)
 {
 	auto model = GetModel();
@@ -477,6 +634,16 @@ void oCMobInter::StartStateChange(oCNpc* npc, int from, int to)
 	}
 
 	OnBeginStateChange(npc, from, to);
+}
+
+void oCMobInter::CallOnStateFunc(oCNpc *npc, int state)
+{
+	auto funcIdx = zparser.GetIndex( onStateFuncName + "_S" + state );
+	if ( funcIdx >= 0 ) {
+		zparser.SetInstance("SELF", npc);
+		zparser.SetInstance("ITEM", npc->interactItem);
+		zparser.CallFunc(funcIdx);
+	}
 }
 
 void oCMobInter::SendCallOnStateFunc(oCNpc* npc, int state) {

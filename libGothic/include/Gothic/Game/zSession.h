@@ -10,12 +10,13 @@ struct zCCamera;
 struct zCAICamera;
 struct zCVob;
 struct oCNpc;
+
 struct zCView;
 
 struct zCSession;
 struct oCGame;
 struct oCGameInfo;
-struct oCSavegameManager;
+
 
 struct zCSession_vt : zCInputCallback_vt {
 	// zCSession:
@@ -53,7 +54,7 @@ struct zCSession_vt : zCInputCallback_vt {
 	void (__thiscall *SetRangesByCommandLine)(oCGame *);
 	void (__thiscall *GetStartPos)(oCGame *);
 	void (__thiscall *SetGameInfo)(oCGame *, oCGameInfo *);
-	void (__thiscall *LoadParserFile)(oCGame *, const zSTRING *);
+	void (__thiscall *LoadParserFile)(oCGame *, const zSTRING&);
 	void (__thiscall *TriggerChangeLevel)(oCGame *, const zSTRING *, const zSTRING *);
 	oCWorld *(__thiscall *GetGameWorld)(oCGame *);
 	void (__thiscall *GetGameInfo)(oCGame *);
@@ -105,6 +106,31 @@ struct zCSession : zCInputCallback {
 	zCView*       viewport = 0;
 };
 
+
+#include <Gothic/Types/zVEC3.h>
+#include <Gothic/Types/zArray.h>
+
+struct TObjectRoutine;
+struct TObjectRoutineList {
+	void *compareFunc;
+	TObjectRoutine *data;
+	TObjectRoutineList *next;
+};
+
+struct oCSavegameManager;
+struct zCViewProgressBar;
+struct oCViewStatusBar;
+struct oCNewsManager;
+struct oCGuilds;
+struct oCSVMManager;
+struct oCTradeManager;
+struct oCInfoManager;
+struct oCPortalRoomManager;
+struct oCSpawnManager;
+struct zCVisual;
+struct zCVobLight;
+struct oCWorldTimer;
+
 constexpr int GAME_VIEW_MAX = 6;
 struct oCGame : zCSession {
 	oCGame() : zCSession()
@@ -113,10 +139,7 @@ struct oCGame : zCSession {
 		ctor(this);
 	}
 
-	void Init()
-	{
-		reinterpret_cast<zCSession_vt*>(_vtab)->Init(this);
-	}
+	void Init();
 
 	void SetGameInfo(oCGameInfo* info)
 	{
@@ -125,17 +148,79 @@ struct oCGame : zCSession {
 
 	float cliprange;
 	float fogrange;
+
 	int inScriptStartup;
 	int inLoadSaveGame;
 	int inLevelChange;
+
 	zCView *array_view[GAME_VIEW_MAX];
 	int array_view_visible[GAME_VIEW_MAX];
 	int array_view_enabled[GAME_VIEW_MAX];
+
 	oCSavegameManager *savegameManager;
 
-	char data[0x146];
+	zCView *game_text;
+	zCView *load_screen;
+	zCView *save_screen;
+	zCView *pause_screen;
+	oCViewStatusBar *hpBar;
+	oCViewStatusBar *swimBar;
+	oCViewStatusBar *manaBar;
+	oCViewStatusBar *focusBar;
+
+	int showPlayerStatus;
+	int game_drawall;
+	int game_frameinfo;
+	int game_showaniinfo;
+	int game_showwaynet;
+	int game_testmode;
+	int game_editwaynet;
+	int game_showtime;
+	int game_showranges;
+	int drawWayBoxes;
+	int scriptStartup;
+	int showFreePoints;
+	int showRoutineNpc;
+	int loadNextLevel;
+
+	zSTRING loadNextLevelName;
+	zSTRING loadNextLevelStart;
+
+	zVEC3 startpos;
+
+	oCGameInfo *gameInfo;
+	zCVobLight *pl_light;
+
+	int pl_lightval;
+	oCWorldTimer *wldTimer;
+	float timeStep;
+	int singleStep;
+	oCGuilds *guilds;
+	oCInfoManager *infoman;
+	oCNewsManager *newsman;
+	oCSVMManager *svmman;
+	oCTradeManager *trademan;
+	oCPortalRoomManager *portalman;
+	oCSpawnManager *spawnman;
+	int music_delay;
+	oCNpc *watchnpc;
+	int worldEntered;
+	int enterWorldTimer;
+	int initial_hour;
+	int initial_minute;
+
+	zCArray<zCVob*> debugInstances;
+	int debugChannels;
+	int debugAllInstances;
+	int oldRoutineDay;
+	TObjectRoutineList objRoutineList;
+	TObjectRoutineList *currentObjectRoutine;
+	zCViewProgressBar *progressBar;
+
+	zCArray<zCVisual*> visualList;
 };
 
-// 0x18C
+#include <Hook/size_checker.h>
+CHECK_SIZE(oCGame, 0x18C);
 
 #endif//Gothic_zSession_H

@@ -176,6 +176,7 @@ private:
 	zSTRING commandline;
 };
 
+#include <Hook/size_checker.h>
 CHECK_SIZE(zCOptions, 0x298);
 
 static auto& zoptions     = Value<zCOptions*>(0x8CD988);

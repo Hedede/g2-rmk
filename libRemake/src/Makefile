@@ -6,6 +6,7 @@ Main.cpp \
 Win32.cpp \
 Clobber.cpp \
 Game/CGameManager.cpp \
+Game/GameSession.cpp \
 Graphics/SplashWindow.cpp \
 Graphics/FontMan.cpp \
 Menu/zMenu.cpp \

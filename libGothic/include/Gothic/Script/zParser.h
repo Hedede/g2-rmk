@@ -8,7 +8,47 @@
 
 
 struct zCPar_File;
-struct zCPar_Symbol;
+struct zCPar_Symbol {
+	template<typename T>
+	T GetValue(int index);
+	
+	zSTRING name;
+
+	zCPar_Symbol *next;
+
+	union {
+		void*    data_ptr;
+		int*     data_pint;
+		float*   data_pfloat;
+		zSTRING* data_pstring;
+		int      data_int;
+		float    data_float;
+	};
+
+	int offset;
+
+	uint16_t ele  : 12;
+	uint16_t type : 4;
+
+	uint16_t flags;
+
+	int filenr;
+	int line;
+	int line_anz;
+	int pos_beg;
+	int pos_anz;
+
+	zCPar_Symbol *parent;
+};
+
+template<>
+inline float zCPar_Symbol::GetValue(int index)
+{
+	if (ele <= 1)
+		return data_float;
+	return data_pfloat[index];
+}
+
 struct zCPar_TreeNode;
 
 struct zCPar_Stack {
@@ -50,6 +90,12 @@ struct zCParser {
 	{
 		Thiscall<void(zCParser*,int)> call{0x78DED0};
 		call(this, symtab_size);
+	}
+
+	zCPar_Symbol* GetSymbol(std::string const& name)
+	{
+		Thiscall<zCPar_Symbol*(zCParser*, zSTRING const&)> call{0x7938D0};
+		return call(this, name);
 	}
 
 private:
@@ -135,4 +181,5 @@ private:
 #include <Hook/size_checker.h>
 namespace { size_checker<zCParser, 0x21C4>  sc_zparsize; }
 
+inline auto& zparser = Value<zCParser>(0xAB40C0);
 #endif//Gothic_zParser_H

@@ -17,7 +17,7 @@ void oCGame::Init()
 
 	zSTRING script;
 	if ( !zgameoptions ) {
-		script = zgameoptions->ReadString(zOPT_SEC_INTERNAL, "gameScript", 0);
+		script = zoptions->ReadString(zOPT_SEC_INTERNAL, "gameScript", 0);
 	} else {
 		script = zgameoptions->ReadString(zOPT_SEC_FILES, "Game", 0);
 	}
@@ -85,7 +85,7 @@ void oCGame::Init()
 		zinput->SetDeviceEnabled(3, 1);
 
 	auto sym = zparser.GetSymbol("VIEW_TIME_PER_CHAR");
-	if (val) {
+	if (sym) {
 		float val;
 		sym->GetValue(val, 0);
 		zCView::s_fViewTimePerChar = val;

@@ -18,3 +18,11 @@ private:
 	T* last;
 	T* root;
 };
+
+template <class T>
+struct zCListSort {
+	void *(__cdecl *compare)(void *, void *);
+	T *data;
+	zCListSort<T> *next;
+};
+

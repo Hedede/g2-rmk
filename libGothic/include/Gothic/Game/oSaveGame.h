@@ -27,6 +27,12 @@ struct oCSavegameManager {
 		Init();
 	}
 
+	void ClearCurrent()
+	{
+		Thiscall<void(oCSavegameManager*)> call{0x439670};
+		call(this);
+	}
+
 	zCArray<oCSavegameInfo*> saves;
 	oCSavegameInfo*          current;
 	bool initialized;

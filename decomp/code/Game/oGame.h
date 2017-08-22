@@ -9,18 +9,18 @@ public:
 	}
 
 	oCGame();
-	virtual ~oCGame();
+	~oCGame() override;
 
-	virtual bool HandleEvent(int key);
+	bool HandleEvent(int key) override;
 
-	virtual void Init();
-	virtual void Done();
+	void Init() override;
+	void Done() override;
 
-	virtual void Render();
-	virtual void RenderBlit();
+	void Render() override;
+	void RenderBlit() override;
 
-	virtual void SaveWorld(zSTRING const& dwf, zCWorld::zTWorldSaveMode,int,int);
-	virtual void LoadWorld(zSTRING const& dwf, zCWorld::zTWorldLoadMode);
+	void SaveWorld(zSTRING const& dwf, zCWorld::zTWorldSaveMode,int,int) override;
+	void LoadWorld(zSTRING const& dwf, zCWorld::zTWorldLoadMode) override;
 
 	virtual void EnterWorld(oCNpc *,int,zSTRING const &);
 

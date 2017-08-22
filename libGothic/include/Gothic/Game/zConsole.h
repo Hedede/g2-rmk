@@ -81,7 +81,7 @@ struct zCConsole {
 
 	void (*changedfunc)(const zSTRING& s);
 	zCWorld *world;
-	zCParser *cparser;
+	zCParser* parser;
 	int edit_index;
 	void *edit_adr;
 };

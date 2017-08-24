@@ -7,6 +7,7 @@
 #include <Gothic/Game/oInfo.h>
 #include <Gothic/Game/oNews.h>
 #include <Gothic/Game/oSVM.h>
+#include <Gothic/Game/zTimer.h>
 #include <Gothic/Input/zInput.h>
 #include <Gothic/Menu/oViewStatusBar.h>
 
@@ -21,6 +22,9 @@ Cdecl<oCWorld*()> CreateWorld{0x76FCA0}; // 0x77ED20
 
 constexpr float SPAWN_INSERTTIME_MAX = 1000.0;
 struct oCSpawnManager {
+	static float GetSpawnTime();
+	void CheckInsertNpcs();
+
 	struct oSSpawnNode {
 		oCNpc *npc;
 		zVEC3 pos;
@@ -33,6 +37,26 @@ struct oCSpawnManager {
 	float insertTime = SPAWN_INSERTTIME_MAX;
 	int spawnFlags = 0;
 };
+
+float oCSpawnManager::GetSpawnTime()
+{
+	//SPAWN_INSERTTIME_MAX
+	return Value<float>(0x8BACCC);
+}
+
+void oCSpawnManager::CheckInsertNpcs()
+{
+	if ( spawningEnabled ) {
+		insertTime += ztimer.FrameTime();
+		if ( insertTime >= GetSpawnTime() ) {
+			insertTime -= GetSpawnTime();
+			Thiscall<void(oCSpawnManager*)> InitCameraPos{0x7788C0};
+			Thiscall<void(oCSpawnManager*)> CheckInsertNpc{0x7780B0};
+			InitCameraPos(this);
+			CheckInsertNpc(this);
+		}
+	}
+}
 
 struct oCTradeManager {
 	oCTradeManager(zCParser& par)
@@ -57,6 +81,26 @@ struct oCPortalRoomManager {
 	zCArraySort<oCPortalRoom*> portals;
 };
 
+
+static void __thiscall Render_thunk(zCSession* ptr) { static_cast<oCGame*>(ptr)->Render(); }
+
+static zCSession_vt oGameVt;
+static zCSession_vt* init_vt(zCSession_vt* from)
+{
+	if (zoptions->ReadBool("REMAKE", "use_default_ogame", false))
+		return from;
+	oGameVt = *from;
+	oGameVt.Render = Render_thunk;
+	return &oGameVt;
+}
+
+oCGame::oCGame() : zCSession()
+{
+	Thiscall<void(oCGame*)> ctor{0x6BF810};
+	ctor(this);
+	static zCSession_vt* cvt = init_vt((zCSession_vt*)_vtab);
+	_vtab = cvt;
+}
 
 void oCGame::Init()
 {
@@ -160,4 +204,140 @@ void oCGame::Init()
 		zCView__viewTimePerChar = val;
 	}
 	Log("Game", "Initializing done");
+}
+
+#include <Gothic/Game/oWorldTimer.h>
+#include <Gothic/Graphics/zRenderer.h>
+#include <Gothic/Graphics/zSkyControler.h>
+
+
+struct zCCamera {
+	void Activate()
+	{
+		Thiscall<void(zCCamera*)> call{0x54A700};
+		call(this);
+	}
+};
+
+struct zCResourceManager {
+	void DoFrameActivity()
+	{
+		Thiscall<void(zCResourceManager*)> call{0x5DD4F0};
+		call(this);
+	}
+};
+
+struct zCViewDraw {
+	void Render()
+	{
+		Thiscall<void(zCViewDraw *)> call{0x6900E0};
+		call(this);
+	}
+};
+
+inline auto& zresMan = Value<zCResourceManager*>(0x99AB30);
+void oCGame::Render()
+{
+	using namespace g2;
+	auto AdvanceClock = [] (float step) {
+		if ( step >= 0.0 ) {
+			ztimer.SetFrameTime(step * 1000.0);
+		} else {
+			ztimer.ResetTimer();
+		}
+	};
+
+	if ( game_testmode || !worldEntered ) {
+		zrenderer->BeginFrame();
+
+		auto game_holdtime = Value<int>(0xAB0888);
+		if ( !game_holdtime )
+			wldTimer->Timer();
+
+		auto skyCtl = world->GetActiveSkyControler();
+
+		skyCtl->SetTime(wldTimer->GetSkyTime());
+
+		Cdecl<void()> oCVisualFX__SetupAIForAllFXInWorld{0x4898B0};
+		oCVisualFX__SetupAIForAllFXInWorld();
+
+		world->Render(camera);
+
+		zCTimer::FrameUpdate();
+
+		spawnman->CheckInsertNpcs();
+
+
+		Cdecl<void()> oCNpc__ProcessAITimer{0x75F360};
+		oCNpc__ProcessAITimer();
+
+		if ( loadNextLevel ) {
+			Log("Game::Render", "Loading level" + loadNextLevelName);
+
+			Thiscall<void(oCGame*, zSTRING const&, zSTRING const&)> ChangeLevel{0x6C7290};
+			ChangeLevel(this, loadNextLevelName, loadNextLevelStart);
+
+			Log("Game::Render", "Level loaded");
+		}
+
+		if ( game_drawall ) {
+			//RenderWaynet();
+			//ShowDebugInfos();
+			Thiscall<void(oCGame*)> UpdatePlayerStatus{0x6C3140};
+			UpdatePlayerStatus(this);
+
+			screen->DrawItems();
+			Cdecl<void()> oCItemContainer__Container_Draw{0x704B90};
+			oCItemContainer__Container_Draw();
+
+			/*if ( drawWayBoxes )
+				rtnMan->DrawWayBoxes();
+			if ( showFreePoints )
+				ShowFreePoints();*/
+
+			static auto& infoman = oCInformationManager::GetInformationManager();
+			if ( infoman.WaitingForEnd() )
+				infoman.Update();
+
+			Cdecl<zCViewDraw*()> GetScreen{ 0x6905C0 };
+			GetScreen()->Render();
+		}
+
+		//GetCamera()->ShowVobDebugInfo();
+
+		zrenderer->Vid_Unlock();
+
+		Cdecl<void()> oCarsten_PerFrame{0x4816C0};
+		oCarsten_PerFrame();
+
+		Thiscall<void(oCGame*)> CheckObjectRoutines{0x6CABB0};
+		CheckObjectRoutines(this);
+
+		AdvanceClock(timeStep);
+
+		zrenderer->EndFrame();
+
+		if ( singleStep )
+			timeStep = 0;
+
+	} else {
+		AdvanceClock(timeStep);
+
+		zCTimer::FrameUpdate();
+
+		camera->Activate();
+
+		world->MoveVobs();
+
+		if ( zresMan )
+			zresMan->DoFrameActivity();
+
+		spawnman->CheckInsertNpcs();
+
+		enterWorldTimer += ztimer.FrameTime();
+		if ( enterWorldTimer >= 2500.0 ) {
+			worldEntered = 0;
+			enterWorldTimer = 0;
+		}
+	}
 }

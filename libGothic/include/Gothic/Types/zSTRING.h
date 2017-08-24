@@ -35,6 +35,7 @@ struct zSTRING {
 		return std::string(ptr, len);
 	}
 
+	char const* Data() const { return ptr; }
 	size_t  Length() const { return len; }
 	bool     Empty() const { return Length() == 0; }
 	operator  bool() const { return Length() > 0; }

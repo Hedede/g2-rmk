@@ -99,7 +99,7 @@ struct zCSession : zCInputCallback {
 	}
 
 	zCCSManager*  csMan    = 0;
-	zCWorld*      world    = 0;
+	oCWorld*      world    = 0;
 	zCCamera*     camera   = 0;
 	zCAICamera*   aiCam    = 0;
 	zCVob*        camVob   = 0;
@@ -133,13 +133,11 @@ struct oCWorldTimer;
 
 constexpr int GAME_VIEW_MAX = 6;
 struct oCGame : zCSession {
-	oCGame() : zCSession()
-	{
-		Thiscall<void(oCGame*)> ctor{0x6BF810};
-		ctor(this);
-	}
+	oCGame();
+
 
 	void Init();
+	void Render();
 
 	void SetGameInfo(oCGameInfo* info)
 	{

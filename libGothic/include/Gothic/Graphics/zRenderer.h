@@ -150,9 +150,24 @@ struct zCRenderer {
 		vtab->Vid_SetGammaCorrection(this, g, c, b);
 	}
 
+	void Vid_Unlock()
+	{
+		vtab->Vid_Unlock(this);
+	}
+
+	void BeginFrame()
+	{
+		vtab->BeginFrame(this);
+	}
+
+	void EndFrame()
+	{
+		vtab->EndFrame(this);
+	}
+
 	zCRenderer_vt *vtab;
 	int polySortMode;
 	int polyDrawMode;
 };
 
-zCRenderer*& zrenderer = Value<zCRenderer*>(0x982F08);
+inline zCRenderer*& zrenderer = Value<zCRenderer*>(0x982F08);

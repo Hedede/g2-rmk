@@ -1,4 +1,5 @@
 #pragma once
+#include <chrono>
 class zCTimer {
 	static unsigned& S_ForcedMaxFrameTime()
 	{
@@ -32,6 +33,23 @@ public:
 			minFrameTime = 8000 / fps;
 	}
 
+	static void FrameUpdate()
+	{
+		Cdecl<void()> call{0x5F98A0};
+		call();
+	}
+	float FrameTime() const { return frameTimeFloat; }
+	void SetFrameTime(float timeMsec)
+	{
+		Thiscall<void(zCTimer*,float)> call{0x5F9800};
+		call(this, timeMsec);
+	}
+
+	void ResetTimer()
+	{
+		Thiscall<void(zCTimer*)> call{0x5F96B0};
+		call(this);
+	}
 
 private:
 	float factorMotion = 1.0;
@@ -47,4 +65,4 @@ private:
 	int forcedMaxFrameTime;
 };
 
-auto& ztimer = Value<zCTimer>(0x99B3D4);
+inline auto& ztimer = Value<zCTimer>(0x99B3D4);

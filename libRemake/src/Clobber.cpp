@@ -44,7 +44,7 @@ int sysGetTime()
 
 #include <aw/utility/to_string.h>
 #include <Logging/Log.h>
-int __thiscall zERROR_Report(void*, int type, int id, zSTRING& message, char levelPrio, char flag, int line, char *file, const char *function)
+int __thiscall zERROR_Report(void*, int type, int id, zSTRING const& message, char levelPrio, char flag, int line, char *file, const char *function)
 {
 	enum zERROR_TYPE {
 		zERR_TYPE_OK = 0x0,
@@ -55,7 +55,8 @@ int __thiscall zERROR_Report(void*, int type, int id, zSTRING& message, char lev
 	};
 
 	std::string src{file};
-	std::string msg{message};
+	char const* wtf = message.Data();
+	std::string msg{wtf ? wtf : ""};
 
 	auto last = src.find_last_of("\\/");
 	last = src.find_first_not_of("\\/", last);

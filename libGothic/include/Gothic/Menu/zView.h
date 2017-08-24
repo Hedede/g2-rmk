@@ -66,6 +66,11 @@ struct zCView : zCViewBase, zCInputCallback {
 		return call(this);
 	}
 
+	void DrawItems()
+	{
+		vtab->DrawItems(this);
+	}
+
 	char data[0x100-8];
 };
 

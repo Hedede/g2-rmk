@@ -145,6 +145,8 @@ void oCGame::Init()
 
 	Log("Game", "Initializing misc");
 	sysEvent();
+	Cdecl<void()> oCNpc__InitStatics{0x75E4D0};
+	oCNpc__InitStatics();
 
 	guilds    = new oCGuilds();
 	infoman   = new oCInfoManager(zparser);

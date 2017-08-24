@@ -490,6 +490,87 @@ void oCMobInter::Reset()
 		SetDirection(2);
 }
 
+void oCMobInter::OnTrigger(zCVob *vob, zCVob *vobInstigator)
+{
+	if ( vob ) {
+		zINFO(7, "B: MobInter Trigger from " + vob->GetObjectName()); // 1136
+	} else {
+		zINFO(7, "B: MobInter Trigger"); // 1137
+		if ( !vobInstigator && !>state && !IsOccupied() ) {
+			state_target = 1;
+			state = 1;
+			if ( GetModel() )
+				GetModel()->StartAni("S_S1", 0);
+		}
+	}
+
+	if ( triggerTarget ) {
+		zCArray<zCVob*> vobList;
+		homeWorld->SearchVobListByName(triggerTarget, vobList);
+		for (auto vob : vobList) {
+			zINFO(7, "B: MobInter Trigger Target " + vob->GetObjectName()); // 1154
+			if (vobInstigator)
+				vob->GetEM()->OnTrigger(this, vobInstigator);
+			else
+				vob->GetEM()->OnTrigger(this, this);
+		}
+	}
+}
+
+void oCMobInter::OnUntrigger(zCVob *otherVob, zCVob *vobInstigator)
+{
+	if (otherVob) {
+		zINFO(7, "B: MobInter Untrigger from " + otherVob->GetObjectName()); // 1168
+	} else {
+		zINFO(7, "B: MobInter Untrigger"); // 1169
+
+		if (!vobInstigator && state == 1 && !IsOccupied()) {
+			state_target = 0;
+			state = 0;
+			if ( GetModel() ) {
+				GetModel()->StartAni( "S_S0", 0 );
+			}
+		}
+	}
+
+	if ( triggerTarget ) {
+		zCArray<zCVob*> vobList;
+		homeWorld->SearchVobListByName(triggerTarget, vobList);
+		for (auto vob : vobList) {
+			zINFO(7, "B: MobInter Untrigger Target " + vob->GetObjectName()); // 1186
+			vob->GetEM()->OnUntrigger(vobInstigator);
+
+		}
+	}
+}
+
+void oCMobInter::SendStateChange(int from, int to)
+{
+	bool hasNpc = 0;
+	zCVob* playerVob = nullptr;
+
+	if ( GetEM()->GetNetVobControl(1) ) {
+		auto pinfo = GetEM()->GetNetVobControl(1)->playerInfo;
+		if ( pinfo )
+			playerVob = pinfo->playerHostVob;
+	}
+
+	for (auto optPos : optimalPosList) {
+		if (optPos->npc) {
+			auto msg = new oCMobMsg(oCMobMsg::EV_STARTSTATECHANGE, optPos->npc); // 1028
+			OnMessage(msg, dynamic_cast<oCNpc*>(playerVob));
+			hasNpc = 1;
+		}
+
+	}
+
+	if ( !hasNpc ) {
+		auto msg = new oCMobMsg(oCMobMsg::EV_STARTSTATECHANGE,NULL); // 1037
+		GetEM()->OnMessage( msg, dynamic_cast<oCNpc*>(playerVob) );
+		return;
+	}
+}
+
 void oCMobInter::SendEndInteraction(oCNpc *npc, int from, int to)
 {
 	auto msg = new oCMobMsg(EV_ENDINTERACTION, npc);
@@ -600,6 +681,7 @@ void oCMobInter::StartStateChange(oCNpc* npc, int from, int to)
 			aniId = ani->aniId;
 			if ( aniId != -1 ) {
 				// zachem? (loops over anis again)
+				// (all of this is quite a mess)
 				auto ani1 = model->GetAniFromAniID( aniId);
 				if ( !model->IsAniActive(ani1) ) {
 					auto ani2 = model->GetAniFromAniID(aniId);
@@ -607,7 +689,7 @@ void oCMobInter::StartStateChange(oCNpc* npc, int from, int to)
 					if (!stateAni) {
 						if ( ani2->aniName ) {
 							stateAni = model->prototypes[ani2->aniId]->__transitionAni;
-							stateAni = model->GetAniFromAniID(__transitionAni->aniId);
+							stateAni = model->GetAniFromAniID(__transitionAni->protoAni->aniId);
 						}
 					}
 
@@ -634,6 +716,42 @@ void oCMobInter::StartStateChange(oCNpc* npc, int from, int to)
 	}
 
 	OnBeginStateChange(npc, from, to);
+}
+
+void oCMobInter::StartTransitionAniNpc(oCNpc *npc, const zSTRING& yk)
+{
+	auto npcModel = oCNpc::GetModel(npc);
+	auto ani = npcModel->SearchAni(yk);
+	int aniId = ani ? ani->aniId : -1;
+
+	if ( aniId != -1 ) {
+		auto ani = npcModel->GetAniFromAniID(aniId);
+		auto tani = ani->__transitionAni;
+		if (!tani && ani->aniName)
+			tani = model->prototypes->anis[ani->aniId]->__transitionAni;
+		if (tani && tani->protoAni) {
+			npcStateAni = tani->protoAni->aniId;
+		} else {
+			npcStateAni = -1;
+		}
+
+		ani = model->GetAniFromAniID(aniId);
+		if ( (ani->bitfield & 0x3F) == 5 ) {
+			zMAT4 trafo;
+			GetTrafoModelNodeToWorld(trafo, "BIP01 FIRE");
+			zVEC3 pos = npc->GetPositionWorld();
+			float h = (trafo[1][3] - pos.y + 100.0) * 0.005;
+			zClamp(h, 0.0, 1.0);
+			aniCombHeight = h;
+			model->StartAni(aniId, 0);
+			model->SetCombineAniXY(aniId, 0.5, h);
+		} else {
+			if (!model->IsAniActive(aniId))
+				model->StartAni(aniId);
+		}
+		if ( yk.Search("2_STAND") != -1 )
+			npc->GetAnictrl()->SetNextAni(aniId, npc->GetAnictrl()->_s_walk);
+	}
 }
 
 void oCMobInter::CallOnStateFunc(oCNpc *npc, int state)
@@ -781,4 +899,62 @@ bool oCMobInter::CanInteractWith(oCNpc* npc)
 	}
 
 	return false;
+}
+
+void oCMobInter::EndInteraction(oCNpc *npc, int playEndAni)
+{
+	if ( playEndAni ) {
+		if ( auto model = npc->GetModel() ) {
+			auto anictrl = npc->GetAnictrl();
+			auto ani = model->GetAniFromAniID(anictrl->_s_walk);
+			if ( !model->IsAniActive(ani) ) {
+				auto name = "T_" + GetScemeName() + "_S" + state + "_2_STAND";
+				StartTransitionAniNpc(npc, name);
+				inUseVob = 0;
+			}
+		}
+	} else {
+		auto msg = new oCMobMsg{ oCMobMsg::EV_ENDINTERACTION, npc }; //1046
+		msg->state = state;
+		msg->flags = -1;
+		GetEM()->OnMessage(msg, npc);
+	}
+	SetDirection(0);
+}
+
+void oCMobInter::StopInteraction(oCNpc *npc)
+{
+	if ( IsInteractingWith(npc) ) {
+		// looks similar to EndInteraction()
+		if ( !npc->GetAnictrl()->IsStanding() ) {
+			auto name = "T_" + GetScemeName() + "_S" + state + "_2_STAND";
+			StartTransitionAniNpc(npc, name);
+		}
+
+		// looks like InterruptInteraction()
+		if (auto pos = optimalPosList.Search(npc)) // pseudocode
+			pos->npc = 0;
+
+		if ( npc ) {
+			npc->ResetXZRotationsWorld();
+			if (npc->GetModel())
+				npc->GetModel()->RemoveAllVobFX();
+		}
+		if ( !rewind )
+			SetSleeping(1);
+		if ( npc->interactItem ) {
+			npc->PutInInv(npc->interactItem);
+			npc->SetInteractItem(0);
+		}
+
+		npc->SetInteractMob(0);
+		npc->SetFocusVob(0);
+		npc->CheckPutbackTorch(a2);
+
+		if (npcsCurrent-- <= 1)
+			flags1 &= 11011111b;
+
+		ignoreVobList.Remove(npc);
+		inUseVob = 0;
+	}
 }

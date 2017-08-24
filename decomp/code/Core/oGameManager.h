@@ -1196,7 +1196,7 @@ int CGameManager::HandleEvent(int key)
 		return ret;
 
 	auto msg = new oCMsgManipulate(EV_CALLSCRIPT, func);
-	oCNpc::player->GetEM()->OnMessage(msg, oCNpc::player);
+	oCNpc::player->GetEM(1)->OnMessage(msg, oCNpc::player);
 	return 1;
 }
 

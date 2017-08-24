@@ -1,3 +1,14 @@
+struct zCModelAniEvent
+{
+	int type;
+	int unk1;
+	zSTRING name;
+	zSTRING paramz[4];
+	int unk2[4];
+	zCArray<zCResource*> resources;
+	int what[4];
+};
+
 class zCModelAni : zCObject {
 	Z_OBJECT(zCModelAni);
 public:
@@ -26,10 +37,13 @@ private:
 	int layer; // maybe?
 	int unk1[9];
 	zCModelAni *__stateAni;
-	int yob[6];
+	int yob[5];
+	zCModelAniEvent **__aniEvents;
 	float flr;
-	int oyb[6];
+	int oyb[2];
 
+	IntArray __arr;
+	zCModelNode **__nodeList;
 	zTMdl_AniSample *__aniSamples;
 	int __samplePosRangeMin;
 	int __samplePosScaler;

@@ -364,6 +364,87 @@ bool oCMobInter::SetStateToTempState()
 	return ret;
 }
 
+static zCPar_Symbol* symState[4];
+static int mobBodyState[4];
+
+void oCMobInter::SetMobBodyState(oCNpc *npc)
+{
+	if ( !symState[0] ) {
+		symState[0] = zparser.GetSymbol("MOB_NOTINTERRUPTABLE");
+		mobBodyState[0] = BS_MOBINTERACT;
+	}
+	if ( !symState[1] ) {
+		symState[1] = zparser.GetSymbol("MOB_SIT");
+		mobBodyState[1] = BS_SIT;
+	}
+	if ( !symState[2] ) {
+		symState[2] = zparser.GetSymbol("MOB_LIE");
+		mobBodyState[2] = BS_LIE;
+	}
+	if ( !symState[3] ) {
+		symState[3] = zparser.GetSymbol("MOB_CLIMB");
+		mobBodyState[3] = BS_CLIMB;
+	}
+
+	for ( auto [sym, bs] : pairs(symState, mobBodyState) ) {
+		zSTRING list; sym->GetValue(list, 0);
+		int i = 1;
+		while (true) {
+			auto word = list.PickWord(i++, ",", zSTR_SKIP);
+			if (!word)
+				break;
+			auto sceme = GetScemeName();
+			if (sceme.Search(0, word, 1) > 0) {
+				npc->SetBodyState( bs );
+				return;
+			}
+		}
+	}
+
+	npc->SetBodyState(BS_MOBINTERACT_INTERRUPT);
+}
+
+void oCMobInter::ScanIdealPositions()
+{
+	if ( !homeWorld )
+		return;
+	auto pos = GetPositionWorld();
+	if (pos == startPos && optimalPosList.GetNumInList() > 0)
+		return;
+	if ( npcsCurrent > 0 )
+		return;
+
+	auto pos = GetPositionWorld();
+	startPos = pos;
+
+	optimalPosList.DeleteListDatas();
+
+	if ( GetModel() ) {
+		for (auto& node : GetModel()->_prototypes[0].nodes) {
+			if ( node && modelNodeName.Search(0, "ZS_POS", 1u) > 0 ) {
+				auto optPos = new TMobOptPos; //796
+				zMAT4 trafo;
+				GetTrafoModelNodeToWorld( trafo, node.name );
+				optPos->trafo = trafo;
+				optPos->name = node.name;
+
+				if (node.name.Search(0, "DIST", 1) > 0)
+					optPos->isDistNode = 1;
+				if (node.name.Search(0, "NPC", 1) > 0) {
+					++npcsMax;
+					++npcsNeeded;
+				}
+
+				optimalPosList.Insert( optPos );
+			}
+		}
+	}
+	if ( !npcsMax ) {
+		npcsMax = 1;
+		npcsNeeded = 1;
+	}
+}
+
 TMobOptPos* oCMobInter::SearchFreePosition(oCNpc *npc, float maxDist)
 {
 	if ( npcsCurrent >= npcsMax )
@@ -579,6 +660,81 @@ void oCMobInter::SendEndInteraction(oCNpc *npc, int from, int to)
 	msg->flags = to | 0x80000000;
 
 	GetEM()->OnMessage(msg, npc);
+}
+
+void oCMobInter::Interact(oCNpc *npc, int action, int up, int down, int left, int right)
+{
+	CheckStateChange(npc);
+	if ( !IsInteractingWith(npc) ) return;
+	if ( !npc->IsAPlayer() && npc->IsMovLock() ) return;
+
+	npc->DoDoAniEvents();
+	if ( state < 0) return;
+	if (npcsCurrent < npcsNeeded ) return;
+	if ( action && !up && !down ) {
+		if ( GetDirection() == 0) {
+			if (state > 0 && state < state_num && CanChangeState(npc, state, state + 1)) {
+				SendStateChange(state, state+1);
+				SetDirection(1);
+				return;
+			}
+		}
+		if ( state == state_num && GetDirection() == 1) {
+			if (!CanChangeState(npc, state, -1) && CanChangeState(npc, state, state - 1)) {
+				if (zinput->GetToggled(GAMEKEY_ACTION)) {
+					SendStateChange(state, state - 1);
+					SetDirection(2);
+					return;
+				}
+			}
+		}
+	}
+
+	if ( npc->inventory.IsOpen() )
+		return;
+
+	if ( up ) {
+		if ( state == state_num ) {
+			if ( CanChangeState(npc, state, -1) ) {
+				EndInteraction(npc, 1);
+				return;
+			}
+			if ( CanChangeState(npc, state, state - 1) ) {
+				SendStateChange(state, state - 1);
+				SetDirection(2);
+				return;
+			}
+		}
+		else if ( CanChangeState(npc, state, state + 1)) {
+			if (zinput->GetState(GAMEKEY_UP != 0.0) && zinput->GetState(GAMEKEY_UP)) {
+				SendStateChange( state, state + 1);
+				SetDirection(1);
+				return;
+			}
+		}
+	}
+	if ( down ) {
+		if ( state == 0 && CanChangeState(npc, 0, -1) ) {
+			EndInteraction(npc, 1);
+			return;
+		}
+		if ( CanChangeState(npc, state, state - 1) ) {
+			SendStateChange(state, state - 1);
+			SetDirection(2);
+			return;
+		}
+	}
+	else if ( GetDirection() == 1 ) {
+		if ( state == state_num && CanChangeState(npc, state, -1) )
+			EndInteraction(npc, 1);
+		else if ( CanChangeState(npc, state, state + 1) )
+			SendStateChange(state, state + 1);
+	} else if ( GetDirection() == 2 ) {
+		if ( state == 0 && CanChangeState(npc, 0, -1) )
+			EndInteraction(this, npc, 1);
+		else if ( CanChangeState(npc, state, state - 1) )
+			SendStateChange(state, state - 1);
+	}
 }
 
 void oCMobInter::OnMessage(zCEventMessage* message, zCVob* srcVob)
@@ -901,6 +1057,41 @@ bool oCMobInter::CanInteractWith(oCNpc* npc)
 	return false;
 }
 
+void oCMobInter::StartInteraction(oCNpc *npc)
+{
+	if ( IsInteractingWith(npc) )
+		return;
+	mobStateAni = -1;
+	npcStateAni = -1;
+	npc->SetInteractMob(this);
+
+	flags1 |= 0x20;
+	;
+	npc->GetAnictrl()->StopTurnAnis();
+	ScanIdealPositions();
+	SetIdealPosition(npc);
+	if ( auto model = npc->GetModel() ) {
+
+		auto name = "T_" + GetScemeName() + "_STAND_2_S" + state;
+		model->StartAni(name, 0);
+
+		name = "S_" + GetScemeName() + "_S" + state;
+
+		npcStateAni = model->GetAniIDFromAniName(name);
+	}
+
+	SetPhysicsEnabled(0);
+	SetSleeping(0);
+	SetMobBodyState(npc);
+
+	++npcsCurrent;
+
+	if (state == state_num)
+		SetDirection(2);
+	else if (state >= 0)
+		SetDirection(1);
+}
+
 void oCMobInter::EndInteraction(oCNpc *npc, int playEndAni)
 {
 	if ( playEndAni ) {
@@ -957,4 +1148,48 @@ void oCMobInter::StopInteraction(oCNpc *npc)
 		ignoreVobList.Remove(npc);
 		inUseVob = 0;
 	}
+}
+
+int oCMobInter::AI_UseMobToState(oCNpc *npc, int _target)
+{
+	if (!IsInteractingWith(npc) && CanInteractWith(npc)) {
+		if ( target > 0 || target == 0 && state > 0) {
+			auto msg = new oCMobMsg(oCMobMsg::EV_STARTINTERACTION,npc); // 1601
+			GetEm()->OnMessage( msg, npc );
+			return 0;
+		}
+	}
+	if ( target >= state_num )
+		target = state_num;
+	if ( target == -1 ) {
+		if ( npc->GetAnictrl()->IsStanding()) {
+			if (state == 0 || state == state_num) {
+				auto msg = new oCMobMsg(oCMobMsg::EV_ENDINTERACTION,npc); // 1622
+				msg->state = state;
+				msg->flags = 0x7FFF'FFFF;
+				GetEM()->OnMessage(msg, npc);
+				return 1;
+			}
+		}
+		if ( state > 0 && IsInState( npc, state) && CanChangeState( npc, state, -1) ) {
+			auto msg = new oCMobMsg(oCMobMsg::EV_ENDINTERACTION,npc); // 1632
+			msg->state = state;
+			msg->flags = 0xFFFF'FFFF;
+			GetEM()->OnMessage(msg, npc);
+			return 0;
+		}
+	}
+	if ( IsInteractingWith( npc) )
+	{
+		CheckStateChange(npc);
+		if ( !IsInState(npc, target) ) {
+			Interact( npc, state || target != -1, state < target, state > target, 0, 0);
+			return 0;
+		}
+		return 1;
+	}
+
+	if ( target != -1 || state != -1 )
+		return 0;
+	return 1;
 }

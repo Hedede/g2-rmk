@@ -1636,7 +1636,7 @@ void oCGame::Render()
 
 		oCarsten_PerFrame();
 
-		oCGame::CheckObjectRoutines();
+		CheckObjectRoutines();
 
 		GetWorld()->AdvanceClock(timeStep);
 

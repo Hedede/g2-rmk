@@ -620,3 +620,9 @@ int oCGame::IA_TestWay(int key)
 	}
 	return 0;
 }
+
+void oCarsten_PerFrame()
+{
+	if ( freeLook && zrenderer->Vid_GetScreenMode() != 0 && !zCCSCamera::playing )
+		Freelook(); // Inlined and optimized out in G2
+}

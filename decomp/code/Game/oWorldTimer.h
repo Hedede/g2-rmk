@@ -91,7 +91,7 @@ void oCWorldTimer::GetTime(int& hour, int& min) const
 
 double oCWorldTimer::GetSkyTime() const
 {
-	double t = worldTime / (250000.0 * 24.0) + 0.5;
+	double t = worldTime / TicksPerDay + 0.5;
 	while (t > 1.0)
 		--t;
 	return t;

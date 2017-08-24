@@ -1102,3 +1102,18 @@ zCVobSpot* oCNpc::FindSpot(zSTRING const& fpName, int strict, float dist)
 	}
 	return nullptr;
 }
+
+void oCNpc::ProcessAITimer()
+{
+	// all vars are oCNpc static vars
+	if ( ai_messagesSkip > 0.0 ) {
+		if ( ai_messagesSkipTimer > ai_messagesSkip )
+			ai_messagesSkipTimer -= oCNpc::ai_messagesSkip;
+		ai_messagesSkipTimer += ztimer.frameTimeFloat;
+	}
+	if ( ai_scriptStateSkip > 0.0 ) {
+		if ( ai_scriptStateSkipTimer > ai_scriptStateSkip )
+			ai_scriptStateSkipTimer -= oCNpc::ai_scriptStateSkip;
+		ai_scriptStateSkipTimer += ztimer.frameTimeFloat;
+	}
+}

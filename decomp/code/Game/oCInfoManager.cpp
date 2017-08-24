@@ -50,6 +50,12 @@ private:
 };
 
 class oCInformationManager {
+	oCInformationManager& GetInformationManager()
+	{
+		static oCInformationManager informationManager;
+		return informationManager;
+	}
+
 	bool WaitingForEnd() const { return IsWaitingForEnd; }
 	bool HasFinished() const { return IsDone; }
 

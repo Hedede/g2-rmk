@@ -64,8 +64,22 @@ void oCLogTopic::Unarchive(zCArchiver& arc)
 
 class oCLogManager {
 public:
+	static oCLogManager& GetLogManager()
+	{
+		static oCLogManager logMan;
+		return logMan;
+	}
+
+	oCLogManager() = default;
+	oCLogManager(oCLogManager const&) {}
+	oCLogManager& operator=(oCLogManager const&) {}
+	~oCLogManager() { Clear(); }
+
 	void Archive(zCArchiver& arc);
 	void Unarchive(zCArchiver& arc);
+
+	void Clear() { topics.DeleteListDatas(); }
+
 private:
 	zCList<oCLogTopic> topics;
 };

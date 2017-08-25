@@ -15,7 +15,7 @@ public:
 	virtual ~zCCSPoolItem() = default;
 	virtual PrintDebugInfo();
 
-	virtual Archive(zCArchiver& arc)
+	void Archive(zCArchiver& arc) override
 	{
 		arc.WriteString("itemName", *this);
 		arc.WriteEnum("runBehaviour", "RUN_ALWAYS;RUN_TIMES;RUN_PERHOUR;RUN_PERDAY", runBehaviour);
@@ -25,10 +25,10 @@ public:
 		arc.WriteInt("flags", flags);
 	}
 
-	virtual Unarchive(zCArchiver& arc)
+	void Unarchive(zCArchiver& arc) override
 	{
 		arc.ReadString("itemName", *this);
-		zSTRING::Upper();
+		this->Upper();
 
 		arc.ReadEnum("runBehaviour", runBehaviour);
 		arc.ReadInt("runBehaviourValue", runBehaviourValue);
@@ -48,6 +48,38 @@ public:
 		return runBehaviour;
 	}
 
+	void SetRunBehaviour(zCCSProps::zTCSRunBehaviour beh, int& value)
+	{
+		runBehaviour = beh;
+		runBehaviourValue = value;
+	}
+
+	void SetFlags(int flag)
+	{
+		flags |= flag;
+	}
+
+	void ClrFlags(int flag)
+	{
+		flags &= ~flag;
+	}
+
+	bool HasFlags(int flag)
+	{
+		return (flag & this->flags) == flag;
+	}
+
+	bool IsAllowedToPlay()
+	{
+		return runBehaviour == 0 || runBehaviourValue > numRuns || runBehaviour == 0; // [sic]
+	}
+
+	void TestedDeactivation()
+	{
+		if ( runBehaviour == 1 && runBehaviourValue >= numRuns )
+			deactivated = 1;
+	}
+
 protected:
 	zCCSPoolItem()
 	{
@@ -62,6 +94,7 @@ protected:
 		flags = 0;
 	}
 
+
 private:
 	int deactivated;
 	int runBehaviourValue;
@@ -70,3 +103,14 @@ private:
 	int unk;
 	int flags;
 };
+
+//------------------------------------------------------------------------------
+//_andre/zCCsPool.cpp
+void zCCSPoolItem::PrintDebugInfo()
+{
+	zINFO_BEGIN(1, "B: CS: Cutscene \"" + this + "\" in history-pool"); // 93
+	if (deactivated)
+		zINFO(1, "B: CS: *** deactivated ***"); // 95
+	zINFO(1, "B: CS: num of runs: " + numRuns); // 97
+	zINFO_END(1, ""); // 104
+}

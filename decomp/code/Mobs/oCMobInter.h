@@ -737,6 +737,19 @@ void oCMobInter::Interact(oCNpc *npc, int action, int up, int down, int left, in
 	}
 }
 
+void oCMobInter::GetTransitionNames(int from, int to, zSTRING& mobAni, zSTRING& npcAni)
+{
+	if ( to == -1 ) {
+		mobAni = "";
+		npcAni = "T_" + GetScemeName() + "_S" + from + "_2_STAND";
+	} else {
+		mobAni = "T_S" + from + "_2_" + to;
+		npcAni = "T_" + GetScemeName() + "_S" + from + "_2_";
+		mobAni += "S" + to;
+		npcAni += "S" + to;
+	}
+}
+
 void oCMobInter::OnMessage(zCEventMessage* message, zCVob* srcVob)
 {
 	if (auto msg = dynamic_cast<oCMobMsg*>(message)) {
@@ -907,6 +920,47 @@ void oCMobInter::StartTransitionAniNpc(oCNpc *npc, const zSTRING& yk)
 		}
 		if ( yk.Search("2_STAND") != -1 )
 			npc->GetAnictrl()->SetNextAni(aniId, npc->GetAnictrl()->_s_walk);
+	}
+}
+
+void oCMobInter::CheckStateChange(oCNpc *npc)
+{
+	zCModel* model = GetModel();
+	zCModel* npcModel = 0;
+	if ( npc ) {
+		npcModel = npc->GetModel();
+		if ( npc->GetAnictrl()->IsStanding() ) {
+			if ( state != state_target )
+				state = state_target;
+			EndInteraction(npc, 0);
+			return;
+		}
+	} else {
+		npcStateAni = -1;
+	}
+
+	if ( state != state_target ) {
+		if ( mobStateAni == -1 || model->IsAniActive(mobStateAni) ) {
+			if ( npcStateAni == -1 || npcModel->IsAniActive(npcStateAni)) {
+				if ( npcStateAni != -1 ) {
+					auto ani = npcModel->GetAniFromAniID(npcStateAni);
+					if ( (ani->bitfield & 0x3F) == 5 ) {
+						npcModel->SetCombineAniXY(npcStateAni, 0.5, aniCombHeight);
+
+						zINFO("U:MI:Start NpcAniComb " + ani->aniName + " YK :" + aniCombHeight);
+					}
+				}
+
+				zINFO("U:MI:Set State to " + state_target);
+
+				if ( npc ) {
+					OnEndStateChange(npc, state, state_target);
+				} else {
+					zINFO("MK:MI: mob->npc = NULL from " + name);
+				}
+				state = state_target;
+			}
+		}
 	}
 }
 
@@ -1099,8 +1153,9 @@ void oCMobInter::EndInteraction(oCNpc *npc, int playEndAni)
 			auto anictrl = npc->GetAnictrl();
 			auto ani = model->GetAniFromAniID(anictrl->_s_walk);
 			if ( !model->IsAniActive(ani) ) {
-				auto name = "T_" + GetScemeName() + "_S" + state + "_2_STAND";
-				StartTransitionAniNpc(npc, name);
+				zSTRING _, npcAni;
+				GetTransitionNames(state, -1, _, npcAni);
+				StartTransitionAniNpc(npc, npcAni);
 				inUseVob = 0;
 			}
 		}
@@ -1118,8 +1173,9 @@ void oCMobInter::StopInteraction(oCNpc *npc)
 	if ( IsInteractingWith(npc) ) {
 		// looks similar to EndInteraction()
 		if ( !npc->GetAnictrl()->IsStanding() ) {
-			auto name = "T_" + GetScemeName() + "_S" + state + "_2_STAND";
-			StartTransitionAniNpc(npc, name);
+			zSTRING _, npcAni;
+			GetTransitionNames(state, -1, _, npcAni);
+			StartTransitionAniNpc(npc, npcAni);
 		}
 
 		// looks like InterruptInteraction()
@@ -1150,7 +1206,7 @@ void oCMobInter::StopInteraction(oCNpc *npc)
 	}
 }
 
-int oCMobInter::AI_UseMobToState(oCNpc *npc, int _target)
+int oCMobInter::AI_UseMobToState(oCNpc *npc, int target)
 {
 	if (!IsInteractingWith(npc) && CanInteractWith(npc)) {
 		if ( target > 0 || target == 0 && state > 0) {

@@ -16,7 +16,7 @@ public:
 
 	virtual bool GetVisualDied() { return false; }
 
-	virtual void SetVisualUsedBy(zCVob *);
+	virtual void SetVisualUsedBy(zCVob *) { }
 	virtual void DynLightVisual(zCArray<zCVobLight*> const &,zMAT4 *) {}
 
 	virtual void* GetRenderSortKey() { return this; }

@@ -6,7 +6,10 @@ public:
 	virtual void GetBBox3D();
 	zCOBBox3D* GetOBBox3D() override { return &obbox3D; }
 	virtual void GetVisualName();
-	virtual void DynLightVisual(zCArray<zCVobLight *>	const &,zMAT4 *);
+
+	void DynLightVisual(zCArray<zCVobLight *> const& vobLightList, zMAT4* trafoObjToWorld) override {}
+	void DynLightScalePrelit(zCOLOR scaleColor) { }
+
 	virtual void CanTraceRay();
 	virtual void TraceRay(zVEC3 const &,zVEC3 const &,int,zTTraceRayReport	&);
 	virtual void GetFileExtension(int);

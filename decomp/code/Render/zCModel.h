@@ -141,8 +141,11 @@ private:
 	zTBBox3D bbox3d;
 	zTBBox3D bbox3d_1;
 	zTBBox3D bbox3d_2;
-	int pod[3];
-	float __fatness;
+
+	int pod[2];
+	float fatness;
+	float __fatness; // not sure, maybe I accidentally shifted it?
+
 	int unn7;
 	int unknownffs;
 	zVEC3 __vecY;

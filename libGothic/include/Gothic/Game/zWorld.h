@@ -49,7 +49,7 @@ struct zCBspTree {
 	zCArray<zCPolygon*> portalList;
 	int bspTreeMode;
 	int worldRenderMode;
-	int vobFarClipZ;
+	float vobFarClipZ;
 	zTPlane vobFarPlane;
 	int vobFarPlaneSignbits;
 	int drawVobBBox3D;

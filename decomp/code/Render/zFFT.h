@@ -22,18 +22,24 @@ void zCFFT::S_Init()
 
 	zVEC3 v{1.0, 0, 0};
 
-	s_fft.arrays[0] = zCFFT::CreateArray();
-	s_fft.arrays[2] = zCFFT::CreateArray();
-	s_fft.arrays[1] = zCFFT::CreateArray();
-	s_fft.FillH0Array(1.0, v);
+	s_fft.CreateWaveMap(1.0, v);
+	s_fft1.CreateWaveMap(1.0, v);
+	s_fft2.CreateWaveMap(1.0, v);
+}
 
-	s_fft2.arrays[0] = zCFFT::CreateArray();
-	s_fft2.arrays[2] = zCFFT::CreateArray();
-	s_fft2.arrays[1] = zCFFT::CreateArray();
-	s_fft2.FillH0Array(1.0, v);
+void zCFFT::CreateWaveMap(float h, zVEC3& vec)
+{
+	arrays[0] = zCFFT::CreateArray();
+	arrays[2] = zCFFT::CreateArray();
+	arrays[1] = zCFFT::CreateArray();
+	FillH0Array(h, vec);
+}
 
-	s_fft3.arrays[0] = zCFFT::CreateArray();
-	s_fft3.arrays[2] = zCFFT::CreateArray();
-	s_fft3.arrays[1] = zCFFT::CreateArray();
-	s_fft3.FillH0Array(1.0, v);
+zComplex **zCFFT::CreateArray()
+{
+	zComplex** array = new zComplex*[32];
+	for (int i = 0; i < 32; ++i) {
+		array[i] = new zComplex[32] { 0, 0, 0, 0 };
+	}
+	return array;
 }

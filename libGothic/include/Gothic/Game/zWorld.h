@@ -11,6 +11,7 @@ struct zCBspSector;
 struct zCMesh;
 struct zCPolygon;
 struct zCVertex;
+struct zCCamera;
 struct zCVob;
 struct zCVobLight;
 
@@ -26,7 +27,7 @@ enum BspTreeMode {
 };
 
 struct zCBspTree {
-	void Render()
+	void Render(zCCamera*)
 	{
 		Thiscall<void(zCBspTree*)> call{0x530080};
 		call(this);
@@ -75,7 +76,6 @@ struct zCCSPlayer;
 struct zCWayNet;
 struct zCSkyControler;
 struct zCWorldPerFrameCallback;
-struct zCCamera;
 struct zCViewProgressBar;
 struct zCWorld : zCObject {
 	zCSkyControler* GetActiveSkyControler()

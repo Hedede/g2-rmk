@@ -17,6 +17,7 @@ bool oCWorld::HasLevelName( )
 
 #include <Gothic/System/zResourceManager.h>
 #include <Gothic/System/zCache.h>
+#include <Gothic/Game/zOptions.h>
 #include <Gothic/Graphics/zVertex.h>
 #include <Gothic/Graphics/zPolygon.h>
 #include <Gothic/Graphics/zRenderer.h>
@@ -38,6 +39,12 @@ struct zCWorldPerFrameCallback {
 
 void oCWorld::Render(zCCamera *cam)
 {
+	static bool orig_wld_render = zoptions->ReadBool("REMAKE", "orig_wld_render", false);
+	if (orig_wld_render) {
+		Thiscall<void(oCWorld*, zCCamera*)> call{0x621700};
+		return call(this,cam);
+	}
+
 	if (!cam)
 		return;
 	if (!cam->connectedVob)
@@ -45,6 +52,7 @@ void oCWorld::Render(zCCamera *cam)
 
 	if ( cam->connectedVob->homeWorld != this)
 		return;
+
 
 	bool hasLevelName = HasLevelName();
 
@@ -80,7 +88,7 @@ void oCWorld::Render(zCCamera *cam)
 	zCPolygon::PrepareRendering();
 
 	bspTree.vobFarClipZ = vobFarClipZScalability * vobFarClipZ;
-	bspTree.Render(/*cam*/);
+	bspTree.Render(cam);
 	cam->PostRenderProcessing();
 	zrenderer->FlushPolys();
 

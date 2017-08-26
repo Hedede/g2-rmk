@@ -13,7 +13,7 @@ struct zCParser {
 		tree_version = ver;
 	}
 
-	zCParser(int symtab_size);
+	zCParser(int symtab_size = 100);
 
 	int SaveDat(zSTRING& fileName);
 	int LoadDat(zSTRING& fileName);

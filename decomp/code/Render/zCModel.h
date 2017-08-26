@@ -154,7 +154,9 @@ private:
 	zVEC3 __vecB;
 	int pat;
 	int direction;
-	int put[6];
+	int put[2];
+	
+	zCQuat __quat;
 	zVEC3 __vecC;
 	int dunno;
 	zVEC3 velocities[8];

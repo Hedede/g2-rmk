@@ -1502,6 +1502,7 @@ void zCWorld::Render(zCCamera *cam)
 
 	++masterFrameCtr;
 	zCVertex::ResetVertexTransforms();
+	// it's private, so it should be in some func...
 	++zCTexAniCtrl::masterFrameCtr;
 }
 
@@ -3099,14 +3100,7 @@ void zCWorld::Archive(zCArchiver& arc)
 
 	if ( arc.InSaveGame() ) {
 		arc.WriteChunkStart("SkyCtrl", 0);
-
-		if ( bspTree.bspTreeMode > 0 )
-			activeSkyControler = skyControlerOutdoor;
-		else
-			activeSkyControler = skyControlerIndoor;
-
-		arc.WriteObject(activeSkyControler);
-
+		arc.WriteObject( GetActiveSkyControler() );
 		arc.WriteChunkEnd();
 	}
 

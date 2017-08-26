@@ -34,6 +34,21 @@ public:
 			msg->Release();
 		}
 	}
-public:
+
+private:
+	static zCArray<zCEventManager*> activeEM;
+
+private:
 	void* unk[19];
 };
+
+//------------------------------------------------------------------------------
+void zCEventManager::DoFrameActivity()
+{
+	if ( !zCEventManager::disableEventManagers ) {
+		for (auto& em : activeEM) {
+			if (em)
+				em->ProcessMessageList();
+		}
+	}
+}

@@ -5,9 +5,9 @@ struct zComplex {
 };
 
 struct zCFFT;
-auto& fft1 = Value<zCFFT>(0x8D85A0);
-auto& fft2 = Value<zCFFT>(0x8D8558);
-auto& fft3 = Value<zCFFT>(0x8D8574);
+inline auto& fft1 = Value<zCFFT>(0x8D85A0);
+inline auto& fft2 = Value<zCFFT>(0x8D8558);
+inline auto& fft3 = Value<zCFFT>(0x8D8574);
 
 struct zCFFT {
 	static void S_Init()
@@ -19,6 +19,13 @@ struct zCFFT {
 		fft1.CreateWaveMap(1.0, vec);
 		fft2.CreateWaveMap(1.0, vec);
 		fft3.CreateWaveMap(1.0, vec);
+	}
+
+	static void S_SetFrameCtr(int ctr)
+	{
+		fft1.frameCtr = ctr;
+		fft2.frameCtr = ctr;
+		fft3.frameCtr = ctr;
 	}
 
 	static zComplex** CreateArray()
@@ -46,6 +53,6 @@ struct zCFFT {
 	void* vtab;
 	zComplex **arrays[3];
 	float speed;
-	float frameCtr;
+	int frameCtr;
 	float frameCtr2;
 };

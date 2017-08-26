@@ -249,83 +249,18 @@ void oCGame::Render()
 		}
 	};
 
-	if ( game_testmode || !worldEntered ) {
-		zrenderer->BeginFrame();
+	if ( loadNextLevel ) {
+		Log("Game::Render", "Loading level" + loadNextLevelName);
 
-		auto game_holdtime = Value<int>(0xAB0888);
-		if ( !game_holdtime )
-			wldTimer->Timer();
+		Thiscall<void(oCGame*, zSTRING const&, zSTRING const&)> ChangeLevel{0x6C7290};
+		ChangeLevel(this, loadNextLevelName, loadNextLevelStart);
 
-		auto skyCtl = world->GetActiveSkyControler();
+		Log("Game::Render", "Level loaded");
+	}
 
-		skyCtl->SetTime(wldTimer->GetSkyTime());
-
-		Cdecl<void()> oCVisualFX__SetupAIForAllFXInWorld{0x4898B0};
-		oCVisualFX__SetupAIForAllFXInWorld();
-
-		world->Render(camera);
-
+	if ( worldEntered && !game_testmode ) {
 		zCTimer::FrameUpdate();
-
-		spawnman->CheckInsertNpcs();
-
-
-		Cdecl<void()> oCNpc__ProcessAITimer{0x75F360};
-		oCNpc__ProcessAITimer();
-
-		if ( loadNextLevel ) {
-			Log("Game::Render", "Loading level" + loadNextLevelName);
-
-			Thiscall<void(oCGame*, zSTRING const&, zSTRING const&)> ChangeLevel{0x6C7290};
-			ChangeLevel(this, loadNextLevelName, loadNextLevelStart);
-
-			Log("Game::Render", "Level loaded");
-		}
-
-		if ( game_drawall ) {
-			//RenderWaynet();
-			//ShowDebugInfos();
-			Thiscall<void(oCGame*)> UpdatePlayerStatus{0x6C3140};
-			UpdatePlayerStatus(this);
-
-			screen->DrawItems();
-			Cdecl<void()> oCItemContainer__Container_Draw{0x704B90};
-			oCItemContainer__Container_Draw();
-
-			/*if ( drawWayBoxes )
-				rtnMan->DrawWayBoxes();
-			if ( showFreePoints )
-				ShowFreePoints();*/
-
-			static auto& infoman = oCInformationManager::GetInformationManager();
-			if ( infoman.WaitingForEnd() )
-				infoman.Update();
-
-			Cdecl<zCViewDraw*()> GetScreen{ 0x6905C0 };
-			GetScreen()->Render();
-		}
-
-		//GetCamera()->ShowVobDebugInfo();
-
-		zrenderer->Vid_Unlock();
-
-		Cdecl<void()> oCarsten_PerFrame{0x4816C0};
-		oCarsten_PerFrame();
-
-		Thiscall<void(oCGame*)> CheckObjectRoutines{0x6CABB0};
-		CheckObjectRoutines(this);
-
 		AdvanceClock(timeStep);
-
-		zrenderer->EndFrame();
-
-		if ( singleStep )
-			timeStep = 0;
-
-	} else {
-		AdvanceClock(timeStep);
-
-		zCTimer::FrameUpdate();
 
 		camera->Activate();
 
@@ -341,5 +276,70 @@ void oCGame::Render()
 			worldEntered = 0;
 			enterWorldTimer = 0;
 		}
+		return;
 	}
+
+	zrenderer->BeginFrame();
+
+	auto game_holdtime = Value<int>(0xAB0888);
+	if ( !game_holdtime )
+		wldTimer->Timer();
+
+	auto skyCtl = world->GetActiveSkyControler();
+
+	skyCtl->SetTime(wldTimer->GetSkyTime());
+
+	Cdecl<void()> oCVisualFX__SetupAIForAllFXInWorld{0x4898B0};
+	oCVisualFX__SetupAIForAllFXInWorld();
+
+	world->Render(camera);
+
+
+	spawnman->CheckInsertNpcs();
+
+
+	Cdecl<void()> oCNpc__ProcessAITimer{0x75F360};
+	oCNpc__ProcessAITimer();
+
+
+	if ( game_drawall ) {
+		//RenderWaynet();
+		//ShowDebugInfos();
+		Thiscall<void(oCGame*)> UpdatePlayerStatus{0x6C3140};
+		UpdatePlayerStatus(this);
+
+		screen->DrawItems();
+		Cdecl<void()> oCItemContainer__Container_Draw{0x704B90};
+		oCItemContainer__Container_Draw();
+
+		/*if ( drawWayBoxes )
+		  rtnMan->DrawWayBoxes();
+		  if ( showFreePoints )
+		  ShowFreePoints();*/
+
+		static auto& infoman = oCInformationManager::GetInformationManager();
+		if ( infoman.WaitingForEnd() )
+			infoman.Update();
+
+		Cdecl<zCViewDraw*()> GetScreen{ 0x6905C0 };
+		GetScreen()->Render();
+	}
+
+	//GetCamera()->ShowVobDebugInfo();
+
+	zrenderer->Vid_Unlock();
+
+	Cdecl<void()> oCarsten_PerFrame{0x4816C0};
+	oCarsten_PerFrame();
+
+	Thiscall<void(oCGame*)> CheckObjectRoutines{0x6CABB0};
+	CheckObjectRoutines(this);
+
+	zCTimer::FrameUpdate();
+	AdvanceClock(timeStep);
+
+	zrenderer->EndFrame();
+
+	if ( singleStep )
+		timeStep = 0;
 }

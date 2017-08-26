@@ -165,6 +165,11 @@ struct zCRenderer {
 		vtab->EndFrame(this);
 	}
 
+	void FlushPolys()
+	{
+		vtab->FlushPolys(this);
+	}
+
 	zCRenderer_vt *vtab;
 	int polySortMode;
 	int polyDrawMode;

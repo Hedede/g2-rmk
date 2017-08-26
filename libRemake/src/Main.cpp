@@ -77,6 +77,7 @@ void aw_main(char const* args)
 }
 
 
+#include <windows.h>
 void GameLoop()
 {
 	using namespace g2;

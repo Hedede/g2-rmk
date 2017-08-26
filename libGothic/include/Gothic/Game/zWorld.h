@@ -20,8 +20,18 @@ struct zTPlane {
 	zVEC3 normal;
 };
 
+enum BspTreeMode {
+	MODE_INDOOR,
+	MODE_OUTDOOR
+};
 
 struct zCBspTree {
+	void Render()
+	{
+		Thiscall<void(zCBspTree*)> call{0x530080};
+		call(this);
+	}
+
 	zCBspNode *actNodePtr;
 	zCBspLeaf *actLeafPtr;
 	zCBspBase *bspRoot;
@@ -66,21 +76,11 @@ struct zCWayNet;
 struct zCSkyControler;
 struct zCWorldPerFrameCallback;
 struct zCCamera;
+struct zCViewProgressBar;
 struct zCWorld : zCObject {
 	zCSkyControler* GetActiveSkyControler()
 	{
-		// TODO: is this necessary?
-		if ( bspTree.bspTreeMode == 0 )
-			activeSkyControler = skyControlerIndoor;
-		else
-			activeSkyControler = skyControlerOutdoor;
 		return activeSkyControler;
-	}
-
-	void Render(zCCamera* cam)
-	{
-		Thiscall<void(zCWorld*, zCCamera*)> call{0x621700};
-		call(this,cam);
 	}
 
 	void MoveVobs()
@@ -121,13 +121,12 @@ struct zCWorld : zCObject {
 	int unarchiveStartPosVobtree;
 	int numVobsInWorld;
 
-	zCWorldPerFrameCallback **perFrameCallbackList_array;
-	int perFrameCallbackList_numAlloc;
-	int perFrameCallbackList_numInArray;
+	zCArray<zCWorldPerFrameCallback*> perFrameCallbackList;
 
 	zCSkyControler *skyControlerIndoor;
 	zCSkyControler *skyControlerOutdoor;
 	zCSkyControler *activeSkyControler;
+
 	char data1[192];
 
 	zCBspTree bspTree;
@@ -138,9 +137,15 @@ struct zCWorld : zCObject {
 
 
 struct oCWorld : zCWorld {
-	char data2[52];
+	void Render(zCCamera* cam);
+	bool HasLevelName();
+
+	zSTRING worldFilename;
+	zSTRING worldName;
+	char data2[12];
 };
 
+#include <Hook/size_checker.h>
 CHECK_SIZE(zCWorld, 0x6258);
 CHECK_SIZE(oCWorld, 0x628C);
 //CHECK_SIZE(oCWorld, sizeof(zCWorld));

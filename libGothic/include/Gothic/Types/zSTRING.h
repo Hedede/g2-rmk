@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <string_view>
 #include <Hook/Externals.h>
 #include <Gothic/Types/Base.h>
 
@@ -32,7 +33,12 @@ struct zSTRING {
 
 	explicit operator std::string() const
 	{
-		return std::string(ptr, len);
+		return std::string{ptr, len};
+	}
+
+	operator std::string_view() const
+	{
+		return std::string_view{ptr, len};
 	}
 
 	char const* Data() const { return ptr; }
@@ -50,7 +56,8 @@ struct zSTRING {
 
 private:
 	void* _vtab;
-	char alloc;
+
+	int alloc;
 	char *ptr;
 	size_t len;
 	int res;

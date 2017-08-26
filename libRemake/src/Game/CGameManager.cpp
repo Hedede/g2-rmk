@@ -91,10 +91,10 @@ void CGameManager::Init(void* hwnd)
 #include <Gothic/System/zFILE_VDFS.h>
 #include <Gothic/Graphics/zTexture.h>
 #include <Gothic/Game/oObjectFactory.h>
-#include <Gothic/Game/zResourceManager.h>
 #include <Gothic/Menu/zView.h>
 #include <Graphics/FontMan.h>
 #include <Gothic/Script/zParser.h>
+#include <Gothic/System/zResourceManager.h>
 #include <Gothic/System/zMemPoolBase.h>
 #include <Gothic/Graphics/zModelPrototype.h>
 #include <Gothic/Graphics/zMorphMeshProto.h>

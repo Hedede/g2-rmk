@@ -20,4 +20,9 @@ struct zCArraySort : zCArray<T> {
 	using CompareFunc = int(T const&,T const&);
 	CompareFunc *Compare;
 };
+
+template <class T>
+T* begin(zCArray<T>& array) { return array.array; }
+template <class T>
+T* end(zCArray<T>& array) { return array.array + array.numInArray; }
 #endif//Gothic_zArray_H

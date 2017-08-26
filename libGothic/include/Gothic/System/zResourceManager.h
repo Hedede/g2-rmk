@@ -2,8 +2,7 @@
 #include <Hook/Externals.h>
 #include <Gothic/Types/zArray.h>
 #include <Gothic/System/zThread.h>
-//#include <Gothic/System/zCriticalSection.h>
-//
+#include <Gothic/System/zCriticalSection.h>
 
 struct zCClassDef;
 struct zCResourceManager : zCThread {
@@ -36,6 +35,12 @@ struct zCResourceManager : zCThread {
 		func(this, cd);
 	}
 
+	void DoFrameActivity()
+	{
+		Thiscall<void(zCResourceManager*)> func{0x5DD4F0};
+		func(this);
+	}
+
 	struct zCClassCache {};
 
 // private:
@@ -45,12 +50,18 @@ struct zCResourceManager : zCThread {
 
 	zBOOL threadingEnabled;
 
-	char data[0x34];
-	//zCCriticalSection critSect;
-	//int queued;
-	//int loaded;
-	//zBOOL showDebugInfo;
-	//float cacheInImmedMsec;
-	//int wha;
+	zCCriticalSection critSect;
+
+	int queued;
+	int loaded;
+
+	zBOOL showDebugInfo;
+	float cacheInImmedMsec;
+
+	int purged;
 };
-static auto& zresMan = Value<zCResourceManager*>(0x99AB30);
+
+#include <Hook/size_checker.h>
+CHECK_SIZE(zCResourceManager, 0x64);
+
+inline auto& zresMan = Value<zCResourceManager*>(0x99AB30);

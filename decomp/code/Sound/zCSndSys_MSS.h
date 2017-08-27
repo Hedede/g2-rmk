@@ -1,4 +1,16 @@
-// _carsten\\zSndMss.cpp
+struct zCDrvProperties_MSS {
+	zCDrvProperties_MSS() = default;
+	~zCDrvProperties_MSS() = default;
+	float volume;
+	int bitResolution;
+	int sampleRate;
+	int useStereo;
+	int numChannels;
+	zSTRING providerName;
+	char unk4[100];
+	zSTRING str[20];
+};
+
 zCParser* sfxParser;
 struct zCSndSys_MSS : zCSoundSystem {
 	void ~zCSndSys_MSS() override;
@@ -138,6 +150,7 @@ private:
 };
 
 //------------------------------------------------------------------------------
+// _carsten/zSndMss.cpp
 void zCSndSys_MSS::SetListener(zCVob* listenerVob)
 {
 	Release(listener);
@@ -429,4 +442,9 @@ void zCSndSys_MSS::CloseProvider()
 		actProviderIdx = -1;
 		_snd_provider_name.Clear();
 	}
+}
+
+void MSS_auto_cleanup()
+{
+	atexit(AIL_shutdown);
 }

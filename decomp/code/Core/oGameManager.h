@@ -1307,7 +1307,7 @@ int CGameManager::IntroduceChapter()
 
 	if ( zsound ) {
 		if (!chapWAV.IsEmpty()) {
-			auto sfx = zsound->LoadSavegame(chapWAV);
+			auto sfx = zsound->LoadSoundFX(chapWAV);
 			zsound->PlaySound(sfx, 0);
 			Release(sfx);
 		}

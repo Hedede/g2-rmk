@@ -235,18 +235,23 @@ void CGameManager::PreRun()
 	InitScreen_Close();
 }
 
+bool& chapBool = Value<bool>(0x8C2954);
 void CGameManager::RenderFrame()
 {
 	if (backLoop) {
-		backLoop->Render();
-		backLoop->RenderBlit();
-	} else if (gameSession && gameSession->GetCamera()) {
+		g2::Warning("Game", "backloop is actually used!");
+	}
+
+	if (gameSession && gameSession->GetCamera()) {
 		gameSession->Render();
 		gameSession->RenderBlit();
 	}
+
+	Cdecl<void()> IntroduceChapter{0x42B220};
+	if (chapBool && MenuEnabled())
+		IntroduceChapter();
 }
 
-bool& chapBool = Value<bool>(0x8C2954);
 void CGameManager::Run()
 {
 	while (!exitGame) {
@@ -269,10 +274,6 @@ void CGameManager::Run()
 			sysEvent();
 			zCInputCallback::GetInput();
 			RenderFrame();
-
-			Cdecl<void()> IntroduceChapter{0x42B220};
-			if (chapBool && MenuEnabled())
-				IntroduceChapter();
 		}
 	}
 }
@@ -567,10 +568,13 @@ void g2::InitSound()
 
 	if ( soundEnabled ) {
 		//zsound = new zCSndSys_MSS;
-		zsound = new g2::SoundOpenAL;
+		zsound = new zCSndSys_OpenAL;
 	} else {
 		zsound = new zCSoundSystemDummy;
 	}
+
+	auto fx = reinterpret_cast<zCSndSys_OpenAL*>(zsound)->LoadSoundFX("chapter_01.wav");
+	reinterpret_cast<zCSndSys_OpenAL*>(zsound)->PlaySound(*fx, 0);
 
 	zsndMan = new zCSoundManager;
 

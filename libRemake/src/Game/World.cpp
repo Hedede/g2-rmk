@@ -3,11 +3,11 @@
 
 bool oCWorld::HasLevelName( )
 {
-	if (std::string_view{levelName} != std::string_view{worldFilename}) {
+	/*if (std::string_view{levelName} != std::string_view{worldFilename}) {
 		std::string a(levelName);
 		std::string b(worldFilename);
 		g2::Log("World", "World names aren't equal: " + a + " | " + b);
-	}
+	}*/
 	if (levelName)
 		return true;
 	if (worldFilename)

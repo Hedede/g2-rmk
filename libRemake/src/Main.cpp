@@ -13,6 +13,7 @@ extern void InitFunctions();
 #include <Gothic/Game/CGameManager.h>
 #include <Gothic/Debug/zERROR.h>
 #include <Gothic/Debug/zExceptionHandler.h>
+#include <aw/fileformat/wav/log.h>
 
 void GameLoop();
 void aw_main(char const* args);
@@ -24,6 +25,7 @@ extern "C" void __attribute__((dllexport)) aw_main_crt_startup(void* hinst)
 
 	LogFile file_log;
 	logger.set_logger(&file_log);
+	aw::wav::log.set_logger(&file_log);
 
 	Log("Main", "aw_main_crt_startup");
 	hInstApp = hinst;

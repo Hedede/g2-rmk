@@ -86,10 +86,29 @@ struct zCParser {
 
 	using MessageFunc = void (*)(zSTRING);
 
-	zCParser(size_t symtab_size)
+	zCParser(size_t symtab_size = 100)
 	{
 		Thiscall<void(zCParser*,int)> call{0x78DED0};
 		call(this, symtab_size);
+	}
+
+	bool Parse(std::string const& fileName)
+	{
+		Thiscall<int(zCParser*, zSTRING)> call{0x78EBA0};
+		return call(this, fileName);
+	}
+
+	void CreatePCode()
+	{
+		Thiscall<void(zCParser*)> call{0x7900E0};
+		call(this);
+
+	}
+
+	bool CheckClassSize(std::string const& className, size_t size)
+	{
+		Thiscall<int(zCParser*, zSTRING const&, int)> call{0x794450};
+		return call(this, className, size);
 	}
 
 	zCPar_Symbol* GetSymbol(std::string const& name)

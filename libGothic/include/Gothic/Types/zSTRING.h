@@ -7,7 +7,11 @@
 char const spaceChar = ' ';
 
 struct zSTRING {
-	zSTRING() = default;
+	zSTRING()
+	{
+		Thiscall<void(zSTRING*)> ctor{0x402AF0};
+		ctor(this);
+	}
 
 	zSTRING(char const* str)
 	{

@@ -1,62 +1,49 @@
 #ifndef G2Remake_SoundOpenAL_H
 #define G2Remake_SoundOpenAL_H
 #include <string>
+#include <memory>
 #include <Logging/Log.h>
 //#include <Gothic/Audio/zSound.h>
 #include <Gothic/Audio/zSoundSystemDummy.h>
 
-
 namespace g2 {
-
-
-struct SoundOpenAL : zCSoundSystemDummy {
-	struct TypeInfo {
-		TypeInfo(zCSoundSystem_vt const& proto)
-			: vt{proto}
-		{
-			vt.LoadSoundFX =
-			[] (zCSoundSystem* ss, zSTRING const& name) __thiscall -> zCSoundFX*
-			{
-				auto _this = static_cast<SoundOpenAL*>(ss);
-				return _this->LoadSoundFX(std::string(name));
-			};
-
-			vt.LoadSoundFXScript =
-			[] (zCSoundSystem* ss, zSTRING const& name) __thiscall -> zCSoundFX*
-			{
-				auto _this = static_cast<SoundOpenAL*>(ss);
-				return _this->LoadSoundFXScript(std::string(name));
-			};
-		}
-
-		void* rtti = reinterpret_cast<void*>(0x846CF8);
-		zCSoundSystem_vt vt;
-	};
-
-	SoundOpenAL() : zCSoundSystemDummy()
-	{
-		static const TypeInfo tinfo{*vtab};
-		vtab = &tinfo.vt;
-	}
-
+struct SoundOpenAL {
+	SoundOpenAL();
 	~SoundOpenAL();
 
-	zCSoundFX* LoadSoundFX(std::string const& name)
+protected:
+	struct Impl;
+	static constexpr size_t impl_size  = 0x20;
+	//static constexpr auto   impl_align = alignof(void*);
+
+	Impl& impl()
 	{
-		Log("SFX", "LoadSoundFX requst: " + name);
-		return nullptr;
+		return Value<Impl>(&data);
 	}
+
+private:
+	using storage = std::aligned_storage< impl_size >::type;
+	storage data;
+};
+} // namespace g2
+
+struct zCParser;
+struct zCSndSys_OpenAL : zCSoundSystemDummy {
+	zCSndSys_OpenAL();
+
+	zCSoundFX* LoadSoundFX(std::string name);
 
 	zCSoundFX* LoadSoundFXScript(std::string const& name)
 	{
-		Log("SFX", "LoadSoundFXScript request: " + name);
+		g2::Log("SFX", "LoadSoundFXScript request: " + name);
 		return nullptr;
 	}
 
-	zCParser* GetSFXParser()
+	zCParser& GetSFXParser()
 	{
-		return nullptr;
+		return *sfx_parser;
 	}
+
 	float GetPlayingTimeMSEC(zSTRING const &)
 	{
 		return 0.0;
@@ -78,7 +65,8 @@ struct SoundOpenAL : zCSoundSystemDummy {
 	}
 
 	void PlaySound(zCSoundFX *,int,int,float,float) {}
-	void PlaySound(zCSoundFX *,int) {}
+	void PlaySound(zCSoundFX& sfx, int slot);
+
 	void PlaySound3D(zSTRING const &,zCVob *,int,zTSound3DParams *) {}
 	void PlaySound3D(zCSoundFX *,zCVob *,int,zTSound3DParams *) {}
 	void StopSound(int const &) {}
@@ -124,8 +112,9 @@ struct SoundOpenAL : zCSoundSystemDummy {
 
 private:
 	float snd3D_defaultRadius;
+	g2::SoundOpenAL impl;
+
+	std::unique_ptr<zCParser> sfx_parser;
+
 };
-
-}
-
 #endif//G2Remake_SoundOpenAL_H

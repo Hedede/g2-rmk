@@ -163,6 +163,11 @@ struct zCOptions {
 		return func(this, filename);
 	}
 
+	std::string GetDirString(zTOptionPath path)
+	{
+		return (std::string)dir_string[path];
+	}
+
 private:
 	void* vtable;
 	zBOOL readTemp;

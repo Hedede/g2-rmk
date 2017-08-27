@@ -10,6 +10,8 @@ Game/GameSession.cpp \
 Game/World.cpp \
 Graphics/SplashWindow.cpp \
 Graphics/FontMan.cpp \
+Sound/zCSndSys_OpenAL.cpp \
+Sound/SoundOpenAL.cpp \
 Menu/zMenu.cpp \
 Input/InputCallback.cpp
 
@@ -22,17 +24,19 @@ includes=\
 -I$(awlib_path)/include   \
 -I../../dependencies/filesystem/include/aw/fallback/std
 
+lib_path=../../dependencies/lib
 #USE_WINE=true
 ifeq ($(USE_WINE), true)
 CXX = winegcc -m32
 else
 libraries += -Wl,-rpath,$(sdl_path)/lib -L$(sdl_path)/lib
+libraries += -L/usr/i686-w64-mingw32/lib -lOpenAL32.dll
 includes  += -I$(sdl_path)/include
 CXX = i686-w64-mingw32-g++
 endif
 
 
-cxx_flags = -std=c++1z -g -fno-strict-aliasing -fno-exceptions -fno-rtti
+cxx_flags = -std=c++1z -g -fno-strict-aliasing -fexceptions -fno-rtti
 pp_flags  = -DNOMINMAX
 
 linker_flags=$(libraries)
@@ -41,7 +45,7 @@ static_gcc=-lstdc++ -lpthread
 else
 static_gcc=-static-libgcc -static-libstdc++ -static -lwinpthread
 endif
-libs= -lgdi32 -lSDL2_image -lSDL2main -lSDL2 ../../dependencies/filesystem/source/libfs.a
+libs= -lgdi32 -lSDL2_image -lSDL2main -lSDL2 $(lib_path)/libawaudio.a $(lib_path)/libawio.a $(lib_path)/libfs.a
 
 %.o: %.cpp
 	@ echo [Build] Compiling $@

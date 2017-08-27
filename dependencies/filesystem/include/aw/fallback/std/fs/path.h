@@ -40,13 +40,19 @@ struct path {
 		: path(std::basic_string<CharT>(source))
 	{ }
 
+	path& swap(path& other)
+	{
+		p.swap(other.p);
+		return *this;
+	}
+
 	path& make_preferred();
 
 	path filename() const  { return filename_view(); }
 	//! Filename without extension: "file.txt" -> "file"
-	path stem() const;
+	path stem() const      { return stem_view(); }
 	//! Extract extension: "file.txt" -> ".txt"
-	path extension() const;
+	path extension() const { return extension_view(); }
 
 	std::string generic_string() const;
 	std::string generic_u8string() const;

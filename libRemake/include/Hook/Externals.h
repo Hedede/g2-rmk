@@ -16,6 +16,12 @@ constexpr T& Value(uintptr_t addr)
 	return *reinterpret_cast<T*>(addr);
 }
 
+template<typename T>
+constexpr T& Value(void* addr)
+{
+	return *reinterpret_cast<T*>(addr);
+}
+
 
 /*!
  * Syntactic sugar for function pointers/references:

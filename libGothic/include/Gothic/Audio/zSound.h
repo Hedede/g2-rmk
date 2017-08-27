@@ -59,4 +59,4 @@ private:
 	float volume;
 };
 
-auto& zsound = Value<zCSoundSystem*>(0x99B03C);
+static auto& zsound = Value<zCSoundSystem*>(0x99B03C);

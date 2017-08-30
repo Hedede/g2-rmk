@@ -38,7 +38,7 @@ struct zCActiveSnd {
 	static int GetNum3DSamplesUsed()
 	{
 		int count = 0;
-		for (auto& snd : activeSndList) {
+		for (auto* snd : activeSndList) {
 			if (snd->bitfield.is3d && snd->sampleHandle3d)
 				++count;
 		}
@@ -50,6 +50,40 @@ struct zCActiveSnd {
 		for (int i = 0; i < GetNumActive(); ++i ) {
 			if ( activeSndList[i]->frame == frame )
 				RemoveSound(activeSndList[i--]);
+		}
+	}
+
+	static void RemoveSoundByVobSlot(const zCVob *vob, int slot)
+	{
+		for (auto* snd : activeSndList) {
+			if (snd->sourceVob == vob && snd->flags.slot == slot) {
+				RemoveSound(snd);
+				break;
+			}
+		}
+	}
+
+	static void ResumeSoundsByFrame(zCSndFrame *frame)
+	{
+		for (auto* snd : activeSndList) {
+			if (snd->frame == frame) {
+				if (snd->flags.is3d)
+					AIL_resume_3D_sample(snd->sampleHandle3d);
+				else
+					AIL_resume_sample(snd->sampleHandle);
+			}
+		}
+	}
+
+	static void StopSoundsByFrame(zCSndFrame *frame)
+	{
+		for (auto& snd : activeSndList) {
+			if (snd->frame == frame) {
+				if (snd->flags.is3d)
+					AIL_stop_3D_sample(snd->sampleHandle3d);
+				else
+					AIL_stop_sample(snd->sampleHandle);
+			}
 		}
 	}
 
@@ -146,7 +180,7 @@ private:
 	int sampleHandle3d;
 
 	int __updateCtr;
-	int unk1[1];
+	int isLooped;
 	float radius;
 	int reverbLevel;
 	int pitchOff;
@@ -157,12 +191,12 @@ private:
 	int __timer;
 
 	struct {
-		uint8_t playing : 1; // 1
-		uint8_t loop    : 1; // 2
-		uint8_t unk1    : 1; // 4
-		uint8_t is3d    : 1; // 8
-		uint8_t in_use  : 1; // 16
-		uint8_t slot    : 3;
+		uint8_t playing     : 1; // 1
+		uint8_t loop        : 1; // 2
+		uint8_t volOverride : 1; // 4
+		uint8_t is3d        : 1; // 8
+		uint8_t in_use      : 1; // 16
+		uint8_t slot        : 3;
 	} bitfield;
 	char pan;
 	char volume;

@@ -151,6 +151,39 @@ private:
 
 //------------------------------------------------------------------------------
 // _carsten/zSndMss.cpp
+zSTRING DIRECTLOAD_PREFIX = "%";
+
+void zCSndSys_MSS::~zCSndSys_MSS()
+{
+	zCExceptionHandler::RemoveUnhandledExceptionReleaseCallback(Exc_ReleaseSound);
+	zINFO(5, "C: Shutting down MSS"); // 629
+
+	DELETE(actFrameEdited);
+	DisposeAllSampleHandles();
+
+	for (auto* snd : zCActiveSnd::activeSndList)
+		snd->RemoveSound();
+
+	handleManager.DisposeAllSamples();
+
+	for (auto* snd : zCSoundFX::classDef.objectList)
+		snd->cacheState &= ~2;
+
+	CloseProvider(); // was inlined
+
+	AIL_waveOutClose(sndDrv);
+	AIL_shutdown();
+
+	zCActiveSnd::CleanupPreAllocedData(); // was inlined
+
+
+	zINFO(10, "C: done"); // 652
+
+	Delete(sfxParser);
+	Delete(listener);
+}
+
+//------------------------------------------------------------------------------
 void zCSndSys_MSS::SetListener(zCVob* listenerVob)
 {
 	Release(listener);
@@ -397,32 +430,21 @@ int zCSndSys_MSS::PlaySound3D(zSTRING  const& fileName, zCVob *sourceVob, int sl
 
 void zCSndSys_MSS::StopSound(const int& sfxHandle)
 {
-	auto idx = zCActiveSnd::GetHandleIndex(sfxHandle);
-	if ( idx != -1 ) {
-		auto asnd = zCActiveSnd::activeSndList.GetSafe(idx);
-		if (asnd)
-			asnd->RemoveSound();
-	}
+	if (auto asnd = zCActiveSnd::GetHandleSound(sfxHandle))
+		asnd->RemoveSound();
 }
 
 float zCSndSys_MSS::GetActiveVolume(int const& sfxHandle)
 {
-	auto idx = zCActiveSnd::GetHandleIndex(sfxHandle);
-	if ( idx != -1 ) {
-		auto asnd = zCActiveSnd::activeSndList.GetSafe(idx);
-		if (asnd)
-			return asnd->GetVolume() * asnd;
-	}
+	if (auto asnd = zCActiveSnd::GetHandleSound(sfxHandle))
+		return asnd->GetVolume() * asnd;
 	return -1.0;
 }
 
 bool zCSndSys_MSS::IsSoundActive(int const& sfxHandle)
 {
-	auto idx = zCActiveSnd::GetHandleIndex(sfxHandle);
-	if ( idx != -1 ) {
-		auto asnd = zCActiveSnd::activeSndList.GetSafe(idx);
-		if (!asnd)
-			return false;
+	auto asnd = zCActiveSnd::GetHandleSound(sfxHandle);
+	if (asnd) {
 		if (asnd->bitfield.playing)
 			return true;
 		if (asnd->sampleHandle)
@@ -431,6 +453,22 @@ bool zCSndSys_MSS::IsSoundActive(int const& sfxHandle)
 			return true;
 	}
 	return false;
+}
+
+void zCSndSys_MSS::GetPlayingTimeMSEC(const zSTRING& fileName)
+{
+	if ( fileName ) {
+		zSTRING name = fileName;
+		if (fileName.Search(0, ".WAV", 1) != -1)
+			name = DIRECTLOAD_PREFIX + name;
+
+		auto snd = zCSoundFX::classDef.SearchHashTable( name );
+		// it is useless, beacuse tehy both use &zCSoundFX::classDef
+		// i.e. sndfx_mss doesn't have it's own classdef
+		if ( CHECK_INHERITANCE( snd, zCSndFX_MSS ) )
+			return snd->GetPlayingTimeMSEC();
+	}
+	return 0.0;
 }
 
 // private
@@ -447,4 +485,208 @@ void zCSndSys_MSS::CloseProvider()
 void MSS_auto_cleanup()
 {
 	atexit(AIL_shutdown);
+}
+
+void zCSndSys_MSS::SetGlobalReverbPreset(int type, float weight)
+{
+	if ( reverbEnabled ) {
+		if (_snd_provider_name == PROV_EAX2)
+			weight *= 0.5;
+
+		if ( eaxEnvironment != type || globalReverbWeight != weight ) {
+			AIL_set_3D_room_type(act3dProvider, type);
+			eaxEnvironment = type;
+			if ( type == 0 )
+				globalReverbWeight = 0;
+			else
+				globalReverbWeight = weight;
+		}
+	}
+}
+
+int zCSndSys_MSS::GetSound3DProps(const int& sfxHandle, zCSoundSystem::zTSound3DParams& params)
+{
+	auto asnd = zCActiveSnd::GetHandleSound( sfxHandle )
+	if ( asnd ) {
+		float outer_angle;
+		int   outer_volume;
+		if (asnd->bitfield & 8)
+			AIL_3D_sample_cone(asnd->sampleHandle3d, &params.coneAngle, &outer_angle, outer_volume);
+
+		params.__outer_volume = asnd->__outer_volume / 0.7;
+		params.radius = asnd->radius;
+		params.reverbLevel = GetReverbEnabled() ? asnd->reverbLevel : 0.0;
+		params.volume = asnd->__master_volume;
+		params.unk2 = (asnd->bitfield >> 2) & 1;
+		params.pitchOff = asnd->pitchOff;
+		params.unk1 = asnd->unk1;
+		return 1;
+	}
+
+	params.SetDefaults();
+	return 0;
+}
+
+void zCSndSys_MSS::GetSoundProps(const int& sfxHandle, int& freq, float& vol, float& pan)
+{
+	auto asnd = zCActiveSnd::GetHandleSound( sfxHandle )
+	if (asnd) {
+		if (asnd->volume == asnd->frame.vol) {
+			vol = -1.0
+		} else {
+			vol = asnd->volume / 127.0;
+		}
+
+		if (asnd->pan == 64) {
+			pan = -2.0;
+		} else {
+			pan = asnd->pan / 127.0 * (1.0 - -1.0) + -1.0; // [sic!]
+			// probably some constants
+		}
+
+		if (asnd->frequency == asnd->frame->waveData->waveInfo->rate) {
+			freq = -1;
+		} else {
+			freq = asnd->frequency;
+		}
+	} else {
+		zWARNING("C: zSndMSS.cpp(zCSndSys_MSS::GetSoundProps): Handle not used!"); // 2076
+		vol = 0;
+		freq = -1;
+		pan = -2.0;
+	}
+}
+
+void zCSndSys_MSS::SetSpeakerType(zTSpeakerType type)
+{
+	switch ( type ) {
+	case ST_2_SPEAKERS:
+		AIL_set_3D_speaker_type(act3dProvider, AIL_3D_2_SPEAKER);
+		break;
+	case ST_4_SPEAKERS:
+		AIL_set_3D_speaker_type(act3dProvider, AIL_3D_4_SPEAKER);
+		break;
+	case ST_HEADPHONES:
+		AIL_set_3D_speaker_type(act3dProvider, AIL_3D_HEADPHONE);
+		break;
+	case ST_SURROUND:
+		AIL_set_3D_speaker_type(act3dProvider, AIL_3D_SURROUND);
+		break;
+	case ST_5_1_SPEAKERS:
+		AIL_set_3D_speaker_type(act3dProvider, AIL_3D_51_SPEAKER);
+		break;
+	case ST_7_1_SPEAKERS:
+		AIL_set_3D_speaker_type(act3dProvider, AIL_3D_71_SPEAKER);
+		break;
+	default:
+		zINFO(10, "C: speaker type not supported"); // 2498
+	speakerType = type;
+}
+
+void zCSndSys_MSS::DoSoundUpdate()
+{
+	if ( d_noUpdate )
+		return;
+
+	if ( listener )
+		trafoWStoLS = listener->trafoObjToWorld.InverseLinTrafo();
+
+	zCWavePool::GetPool().NewFrame(); // was inlined
+	zCActiveSnd::NewFrame();
+	zCSndFX_MSS::NewFrame(); // was inlined
+}
+
+void zCSndSys_MSS::FrmCon_ParamChanged(const zSTRING& in)
+{
+	auto str = in; str.Upper();
+
+	for (auto* snd : zCSoundFX::classDef.objectList) {
+		for (int i = 0, e = snd->GetNumChannels(); i < e; ++i) {
+			auto* channel = snd->channels[i];
+			for (auto* frame : channel->frames) {
+				if (frame->instanceName == actFrameEdited->instanceName) {
+					bool fileUpdated = false;
+					if (actFrameEdited->scripted.file != frame->scripted.file) {
+						frame->scripted.file = actFrameEdited.scripted.file;
+						zCActiveSnd::StopSoundsByFrame(frame); // was inlined
+						frame->CacheIn(); // wac inlined
+						fileUpdated = true;
+					}
+					zCActiveSnd::UpdateSoundsByFrame(frame);
+					if ( fileUpdated )
+						zCActiveSnd::ResumeSoundsByFrame(frame); // waas inlined
+				}
+			}
+		}
+	}
+}
+
+void zCSndSys_MSS::UpdateSoundPropsAmbient(zCActiveSnd *snd, zCSoundSystem::zTSound3DParams* params)
+{
+	_snd = snd;
+	_params = params;
+	if ( params ) {
+		snd->radius = (params->radius == -1) ? defaultRadius_3d : params->radius;
+		snd->__master_volume = (params->volume == -1) ? 1.0 : params->volume;
+		snd->unk1 = _params->unk1;
+		if (params->__outer_volume <= 0.0)
+			snd->AutoCalcObstruction(0);
+	} else {
+		snd->AutoCalcObstruction(0);
+	}
+
+	if ( snd->flags.volOverride )
+		snd->volume = snd->GetVolume() * 127.0;
+	else
+		snd->volume = snd->frame->volume;
+	snd->volume *= snd->__master_volume;
+
+	if ( snd->volume ) {
+		bool loaded = 1;
+		if ( !snd->sampleHandle ) {
+			if ( !snd->RequestChannel() )
+				return;
+			loaded = 0;
+			if ( !snd->sampleHandle )
+				zWARNING("C: could not allocate sample"); // 2003,
+			AIL_init_sample(snd->sampleHandle);
+			AIL_set_sample_file(snd->sampleHandle, snd->frame->waveData->soundData, 0);
+			AIL_set_sample_processor(snd->sampleHandle, 1, reverb3Filter);
+			snd->__lastUpdate = 0;
+		}
+		if ( params ) {
+			snd->__outer_volume = 0.7 * _params->__outer_volume;
+			snd->reverbLevel = GetReverbEnabled() ? params->reverbLevel : 0.0;
+		}
+
+		AIL_set_sample_playback_rate(snd->sampleHandle, snd->frequency);
+		AIL_set_sample_volume_pan(snd->sampleHandle, (1.0 - snd->__outer_volume) * (snd->volume * snd->__master_volume) / 127.0, snd->pan/127.0);
+		AIL_set_sample_loop_block( snd->sampleHandle, snd->frame->scripted.loopStartOffset, snd->frame->scripted.loopEndOffset);
+		if (snd->unk1)
+			snd->loop = snd->unk1 == 1;
+		else
+			snd->loop = snd->frame->scripted.loop;
+		AIL_set_sample_loop_count(snd->sampleHandle, ~snd->bitfield.loop );
+		if ( GetReverbEnabled() ) {
+			AIL_set_filter_sample_preference(snd->sampleHandle, "Reverb EAX Environment", eaxEnvironment);
+			if ( eaxEnvironment == 0 )
+				AIL_set_filter_sample_preference(_snd->sampleHandle, "Reverb Mix", &CONST_ZERO);
+			else
+				AIL_set_filter_sample_preference(_snd->sampleHandle, "Reverb Mix", &snd->reverbLevel);
+		}
+		AIL_set_filter_sample_preference(snd->sampleHandle, "Lowpass Cutoff", 20000.0 - s_globalOcclusion * 19800.0);
+		if ( !snd.isPlaying ) {
+			snd.isPlaying = 1;
+			snd->__lastUpdate = 0;
+			if ( loaded )
+				AIL_resume_sample(snd->sampleHandle);
+			else
+				AIL_start_sample(snd->sampleHandle);
+		}
+	} else {
+		if (snd->playing) {
+			snd->playing = false;
+			AIL_stop_sample(snd->sampleHandle);
+		}
+	}
 }

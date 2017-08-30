@@ -11,20 +11,36 @@ public:
 		return 26;
 	}
 
-	enum zTSpeakerType {};
+	enum zTSpeakerType {
+		ST_2_SPEAKERS,
+		ST_HEADPHONES,
+		ST_SURROUND,
+		ST_4_SPEAKERS,
+		ST_5_1_SPEAKERS,
+		ST_7_1_SPEAKERS
+	};
 
 	struct zTSound3DParams {
 		void SetDefaults()
 		{
-			unk0 = 0;
-			unk1 = 1.0;
-			unk2 = -1.0;
-			unk4 = 0;
-			unk5 = 1.0;
-			unk6 = 0;
-			unk7 = -999999.0;
-			unk3 = 1;
+			__outer_volume = 0;
+			volume = 1.0;
+			radius = -1.0;
+			unk1 = 0;
+			coneAngle = 1.0;
+			reverbLevel = 0;
+			unk2 = 0;
+			pitchOf = -999999.0;
 		}
+
+		int __outer_volume;
+		float volume;
+		float radius;
+		int unk1;
+		float coneAngle;
+		float reverbLevel;
+		float unk2;
+		float pitchOff;
 	};
 
 public:

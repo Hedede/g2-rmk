@@ -184,8 +184,8 @@ private:
 #include <Hook/size_checker.h>
 CHECK_SIZE(zCOptions, 0x298);
 
-static auto& zoptions     = Value<zCOptions*>(0x8CD988);
+inline auto& zoptions     = Value<zCOptions*>(0x8CD988);
 // TODO: rename to modoptions?
-static auto& zgameoptions = Value<zCOptions*>(0x8CD98C);
+inline auto& zgameoptions = Value<zCOptions*>(0x8CD98C);
 
 #endif//GOTHIC_ZOPTIONS_H

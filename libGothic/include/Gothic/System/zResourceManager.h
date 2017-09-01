@@ -5,6 +5,7 @@
 #include <Gothic/System/zCriticalSection.h>
 
 struct zCClassDef;
+struct zCResource;
 struct zCResourceManager : zCThread {
 	zCResourceManager()
 	{
@@ -41,12 +42,21 @@ struct zCResourceManager : zCThread {
 		func(this);
 	}
 
+	void CacheIn(zCResource* res, float priority)
+	{
+		Thiscall<void(zCResourceManager*,zCResource*,float)> call{0x05DD040};
+		call(this, res, priority);
+	}
+
 	struct zCClassCache {};
 
 // private:
 	zCArray< zCClassCache > classCache;
-	void* resource[2];
-	int unk;
+
+	zCResource *queueStart;
+	zCResource *queueLast;
+
+	int lastUpdateTime;
 
 	zBOOL threadingEnabled;
 

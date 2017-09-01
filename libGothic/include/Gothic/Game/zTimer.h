@@ -51,6 +51,8 @@ public:
 		call(this);
 	}
 
+	int GetTotalTime() const { return totalTime; }
+
 private:
 	float factorMotion = 1.0;
 	float frameTimeFloat = 1.0;      // [msec]

@@ -11,7 +11,9 @@ Game/World.cpp \
 Graphics/SplashWindow.cpp \
 Graphics/FontMan.cpp \
 Sound/zCSndSys_OpenAL.cpp \
+Sound/zCSndFX_OpenAL.cpp \
 Sound/SoundOpenAL.cpp \
+System/zResource.cpp \
 Menu/zMenu.cpp \
 Input/InputCallback.cpp
 

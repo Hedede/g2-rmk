@@ -1,10 +1,19 @@
 #pragma once
 #include <Gothic/Types/zSTRING.h>
+
+struct zCClassDef;
+struct zCArchiver;
 struct zCObject {
 	void Release()
 	{
-		Thiscall<void(zCObject*)> call{0x40C310};
-		call(this);
+		if (1 >= refCtr--)
+			delete this;
+	}
+
+	int SetObjectName(std::string const& name)
+	{
+		Thiscall<int(zCObject*, zSTRING const&)> call{0x5A9CE0};
+		call( this, zSTRING{name} );
 	}
 
 	void* _vtab;

@@ -152,6 +152,8 @@ private:
 //------------------------------------------------------------------------------
 // _carsten/zSndMss.cpp
 zSTRING DIRECTLOAD_PREFIX = "%";
+zSTRING ID_CHANNEL_CHAR   = "V";
+zSTRING ID_FRAME_CHAR     = "A";
 
 void zCSndSys_MSS::~zCSndSys_MSS()
 {
@@ -298,21 +300,8 @@ zTSndHandle zCSndSys_MSS::PlaySound(zCSoundFX* sfx, int slot)
 	if (!sfx)
 		return 0;
 
-	// was inlined, private
-	// friend or part of bigger func?
-	sfx->ChooseVariance();
-	auto chan = sfx->channels[sfx->curChannel];
-	if ( chan->frames.GetNum() <= 1) {
-		sfx->curFrame = 0;
-	} else {
-		if (sfx->selFrame == -1) {
-			sfx->curFrame = rand() * (frames.GetNum() - 1) / 32767.0 + 0.5;
-		} else {
-			sfx->curFrame = sfx->selFrame;
-		}
-	}
-
-	sfx->CacheIn();
+	sfx->ChooseVariance(); // was inlined
+	sfx->CacheIn();        // was inlined
 
 	sfx->GetCurFrame()->SetDefaultProperties();
 
@@ -320,10 +309,8 @@ zTSndHandle zCSndSys_MSS::PlaySound(zCSoundFX* sfx, int slot)
 		return -1;
 
 	auto actSnd = zCActiveSnd::AllocNextFreeSnd();
-	if ( !actSnd ) {
+	if ( !actSnd )
 		return -1;
-	}
-
 
 	// looks very similar to part of other func,
 	// need to find common inlined stuff
@@ -381,7 +368,107 @@ zTSndHandle zCSndSys_MSS::PlaySound(zCSoundFX* sfx, int slot)
 	AIL_set_sample_loop_count(sample, !actSnd.bitfield.loop);
 	AIL_start_sample(sample);
 
-	zCActiveSnd.activeSndList.InsertSort(actSnd);
+	zCActiveSnd::AddSound(actSnd);
+	D_SpyFrameInfo(actSnd, 0);
+	actSnd->bitfield.playing = true;
+	actSnd->sndFx = sfx;
+	sfx->AddRef();
+	return actSnd->handle;
+}
+
+int zCSndSys_MSS::PlaySound(zCSndFX_MSS *sfx, int slot, int freq, float vol, float pan)
+{
+	if (!sfx)
+		return 0;
+	sfx->ChooseVariance(); // was inlined
+	sfx->CacheIn();        // was inlined
+	sfx->GetCurFrame()->SetDefaultProperties();
+
+	if ( !sfx->GetCurFrame()->waveData->CheckForCorrectFormat(0) )
+		return 0;
+
+	auto actSnd = zCActiveSnd::AllocNextFreeSnd();
+	if ( !actSnd )
+		return 0;
+
+	actSnd->handle = ++zCActiveSnd::lastHandle;
+	actSnd->bitfield.unk1 = 0;
+	actSnd->frame = sfx->GetCurFrame();
+
+	if ( slot ) {
+		for (auto& snd : zCActiveSnd::activeSndList) {
+			if (snd->bitfield.slot == slot) {
+				zCActiveSnd::RemoveSound( snd );
+				break;
+			}
+		}
+	}
+
+	if ( !actSnd->RequestChannel() )
+		return -1;
+
+	if ( !actSnd->sampleHandle ) {
+		zWARNING("C: could not allocate sample"); //1417,
+		return -1;
+	}
+
+
+	AIL_set_sample_file( actSnd->sampleHandle, sfx->GetCurFrame()->waveData->soundData, 0);
+
+	// TODO: these 1.0 - -1.0 are related to
+	// MSS_VOL_MAX - MSS_VOL_MIN
+	// MSS_PAN_RIGHT - MSS_PAN_LEFT
+	if ( pan == -2.0 )
+		actSnd->pan = 64;
+	else
+		actSnd->pan = (pan - -1.0) / (1.0 - -1.0) * 127.0;
+
+	if ( vol == -1.0 )
+		actSnd->volume = sfx->GetCurFrame()->scripted.vol;
+	else
+		actSnd->volume = vol * 127.0;
+
+	if ( freq == -1 )
+		actSnd->frequency = sfx->GetCurFrame()->waveData->waveInfo->rate;
+	else
+		actSnd->frequency = freq;
+
+	actSnd->bitfield.loop = sfx->GetCurFrame()->scripted.loop;
+
+	if ( GetReverbEnabled() )
+		actSnd->reverbLevel = sfx->GetCurFrame()->scripted.reverbLevel;
+	else
+		actSnd->reverbLevel = 0.0;
+
+	actSnd->reverbLevel->reverbLevel *= 0.5 * globalReverbWeight;
+
+	if ( !actSnd->sampleHandle ) {
+		zWARNING("C: could not allocate sample"); //1437,
+		return -1;
+	}
+
+	// I copied this from other PlaySound, didn't check thorougly for diffrences
+	AIL_init_sample(sample);
+
+	if ( eaxEnvironment ) {
+		AIL_set_sample_processor(sample, 1, reverb3Filter);
+		AIL_set_filter_sample_preference(sample, "Reverb EAX Environment", &eaxEnvironment);
+		AIL_set_filter_sample_preference(sample, "Reverb Mix", &actSnd->reverbLevel);
+	}
+
+	AIL_set_sample_file(sample, actSnd->frame->waveData->soundData, 0);
+	AIL_set_sample_playback_rate(sample, actSnd->frequency);
+
+	auto vol = actSnd->volume / 127.0;
+	auto pan = actSnd->pan    / 127.0;
+	AIL_set_sample_volume_pan(sample, vol, pan);
+	auto start = actSnd->frame->loopStartOffset;
+	auto end   = actSnd->frame->loopEndOffset;
+	AIL_set_sample_loop_block(sample, start, end);
+	AIL_set_sample_loop_count(sample, !actSnd.bitfield.loop);
+	AIL_start_sample(sample);
+
+	zCActiveSnd::AddSound(actSnd);
 	D_SpyFrameInfo(actSnd, 0);
 	actSnd->bitfield.playing = true;
 	actSnd->sndFx = sfx;
@@ -647,8 +734,10 @@ void zCSndSys_MSS::UpdateSoundPropsAmbient(zCActiveSnd *snd, zCSoundSystem::zTSo
 			if ( !snd->RequestChannel() )
 				return;
 			loaded = 0;
-			if ( !snd->sampleHandle )
+			if ( !snd->sampleHandle ) {
 				zWARNING("C: could not allocate sample"); // 2003,
+				return;
+			}
 			AIL_init_sample(snd->sampleHandle);
 			AIL_set_sample_file(snd->sampleHandle, snd->frame->waveData->soundData, 0);
 			AIL_set_sample_processor(snd->sampleHandle, 1, reverb3Filter);
@@ -666,7 +755,7 @@ void zCSndSys_MSS::UpdateSoundPropsAmbient(zCActiveSnd *snd, zCSoundSystem::zTSo
 			snd->loop = snd->unk1 == 1;
 		else
 			snd->loop = snd->frame->scripted.loop;
-		AIL_set_sample_loop_count(snd->sampleHandle, ~snd->bitfield.loop );
+		AIL_set_sample_loop_count(snd->sampleHandle, !snd->bitfield.loop );
 		if ( GetReverbEnabled() ) {
 			AIL_set_filter_sample_preference(snd->sampleHandle, "Reverb EAX Environment", eaxEnvironment);
 			if ( eaxEnvironment == 0 )
@@ -683,10 +772,105 @@ void zCSndSys_MSS::UpdateSoundPropsAmbient(zCActiveSnd *snd, zCSoundSystem::zTSo
 			else
 				AIL_start_sample(snd->sampleHandle);
 		}
-	} else {
-		if (snd->playing) {
+	} else if (snd->playing) {
+		snd->playing = false;
+		AIL_stop_sample(snd->sampleHandle);
+	}
+}
+
+void zCSndSys_MSS::UpdateSoundProps(const int& sfxHandle, int freq, float vol, float pan)
+{
+	if ( auto asnd = zCActiveSnd::GetHandleSound( sfxHandle ) ) {
+		if ( asnd->is3d ) {
+			zWARNING("C: shit happens: a sound which should be an ambient sound is suddenly 3d, what the heck!!|!"); // 2162
+			return;
+		}
+
+		if ( pan == -2.0 )
+			asnd->pan = 64;
+		else
+			asnd->pan = (pan - -1.0) / (1.0 - -1.0) * 127.0;
+		if ( vol == -1.0 )
+			asnd->volume = asnd->frame->scripted.vol;
+		else
+			asnd->volume = vol * 127.0;
+
+		if ( freq == -1 )
+			asnd->frequency = asnd->frame->waveData->waveInfo->rate;
+		else
+			asnd->frequency = freq;
+
+		if ( asnd->volume ) {
+			bool loaded = 1;
+			if ( !asnd->sampleHandle ) {
+				if ( !asnd->RequestChannel() )
+					return;
+				if ( !asnd->sampleHandle ) {
+					zWARNING("C: could not allocate sample for 2d sound"); // 2188
+					return;
+				}
+				AIL_init_sample(asnd->sampleHandle);
+				AIL_set_sample_file(asnd->sampleHandle, asnd->frame->waveData->soundData, 0);
+				if ( eaxEnvironment )
+					AIL_set_sample_processor(asnd->sampleHandle, 1, reverb3Filter);
+				asnd->__lastUpdate = 0;
+				loaded = 0;
+			}
+
+			AIL_set_sample_playback_rate(asnd->sampleHandle, asnd->frequency);
+			AIL_set_sample_volume_pan(asnd->sampleHandle, asnd->volume / 127.0, asnd->pan / 127.0);
+			if ( eaxEnvironment && GetReverbEnabled() ) {
+				AIL_set_filter_sample_preference(asnd->sampleHandle, "Reverb EAX Environment", &eaxEnvironment);
+				AIL_set_filter_sample_preference(asnd->sampleHandle, "Reverb Mix", &asnd->reverbLevel);
+			}
+			AIL_set_sample_loop_block( asnd->sampleHandle, asnd->frame->scripted.loopStartOffset, asnd->frame->scripted.loopEndOffset);
+			AIL_set_sample_loop_count(snd->sampleHandle, !snd->bitfield.loop );
+			if ( !snd.isPlaying ) {
+				snd.isPlaying = 1;
+				snd->__lastUpdate = 0;
+				if ( loaded )
+					AIL_resume_sample(snd->sampleHandle);
+				else
+					AIL_start_sample(snd->sampleHandle);
+			}
+		} else if (snd->playing) {
 			snd->playing = false;
 			AIL_stop_sample(snd->sampleHandle);
 		}
 	}
+}
+
+zCSndFX_MSS* zCSndSys_MSS::LoadSingle(const zSTRING& id)
+{
+	auto snd = zCSoundFX::classDef.SearchHashTable( id );
+	if (snd && CHECK_INHERITANCE( snd, zCSndFX_MSS )) {
+		++snd->refCtr;
+	} else {
+		snd = new zCSndFX_MSS; // 1074 g1d
+		auto chan = new zCSndChannel; // 1075 g1d
+
+		zSTRING name = id;
+		int i = 0;
+
+		do {
+			auto frame = new zCSndFrame; // 1083 g1d
+			sfxParser->CreateInstance(name, frame);
+			frame->scripted.file.Upper();
+			if (!frame->scripted.file)
+				frame->scripted.file = MSS_NO_WAVE;
+			frame->instanceName = name;
+
+			zINFO(5, "C: SND: Creating Sound Instance " + id + "   (alternative: " + i + ")"); //1297
+
+			chan->frames.InsertEnd(frame);
+
+			zSTRING num{++i};
+			name = id + UNDERBAR + ID_FRAME_CHAR + num;
+		} while (sfxParser->GetSymbol(&name))
+
+		chan->__loaded = 1;
+		snd->channels->InsertEnd(chan);
+		snd->SetObjectName( id );
+	}
+	return snd;
 }

@@ -90,6 +90,7 @@ public:
 	{
 		return objectName;
 	}
+	int SetObjectName(zSTRING const& name);
 
 	void GetMemStats(int& numBytesTotal, int& numObjTotal, zCClassDef* parentClassDef);
 
@@ -176,10 +177,6 @@ zCObject* zCObject::CreateCopy()
 
 void zCObject::GetMemStats(int& numBytesTotal, int& numObjTotal, zCClassDef* parentClassDef)
 {
-	zCArraySort__zCClassDef *v3; // ecx@3
-	int v4; // ebx@3
-	struct zCClassDef *v5; // eax@4
-
 	if ( !parentClassDef ) {
 		numBytesTotal = 0;
 		numObjTotal = 0;
@@ -192,4 +189,45 @@ void zCObject::GetMemStats(int& numBytesTotal, int& numObjTotal, zCClassDef* par
 			GetMemStats(numBytesTotal, numObjTotal, cd);
 		}
 	}
+}
+
+int zCObject::SetObjectName(const zSTRING& name)
+{
+	if (_GetClassDef()->classFlags & zCLASS_FLAG_SHARED_OBJECTS == 0) {
+		objectName = name;
+		name.Upper();
+		return 1;
+	}
+
+	if ( name ) {
+		auto obj = _GetClassDef()->SearchHashTable( name ); // was inlined
+		if ( obj ) {
+			zWARNING("D: OBJ: SetObjectName() on shared object class '" + cd->className + "' failed: object with that name already exists! "); // 299
+			return 0;
+		}
+	}
+
+	// there was separate branch for each case with duplicate code
+	// and jumps into each other
+
+	if (objectName) {
+		if (!name) {
+			objectName = name;
+			objectName.Upper();
+			_GetClassDef()->RemoveHashTable(this); // was inlined
+			return 1;
+		}
+
+		_GetClassDef()->RemoveHashTable(this); // was inlined
+		objectName = name;
+		objectName.Upper();
+		goto Insert;
+	}
+	if (name) {
+		objectName = name;
+		objectName.Upper();
+	Insert:
+		_GetClassDef()->InsertHashTable(this); // was inlined;
+	}
+	return 1;
 }

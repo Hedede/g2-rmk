@@ -94,6 +94,38 @@ public:
 	}
 
 private:
+	void RemoveHashTable(zCObject* obj)
+	{
+		zCObject** ptr = &hashTable[obj->hashIndex];
+		for (*ptr; ptr = &ptr->hashNext) {
+			if (ptr == obj) {
+				*ptr = obj->hashNext;
+				obj->hashNext = nullptr;
+				obj->hashIndex = -1;
+			}
+		}
+	}
+
+	void InsertHashTable(zCObject* obj)
+	{
+		auto hash = zCChecksum::GetBufferCRC32( obj->name.Data(), obj.name.Length(), 0 );
+		auto index = hash & 0x3FF;
+
+		obj->hashIndex = index;
+		obj->hashNext = hashTable[index];
+		hashTable[index] = obj;
+	}
+
+	zCObject* SearchHashTable(zSTRING const& name)
+	{
+		auto obj = hashTable[GetHashIndex(name)];
+		for (; obj; obj = obj->hashNext) {
+			if (obj->objectName == name)
+				return obj;
+		}
+		return nullptr;
+	}
+
 	zSTRING className;
 	zSTRING baseClassName;
 	zSTRING scriptClassName;

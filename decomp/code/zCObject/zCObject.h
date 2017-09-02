@@ -210,24 +210,13 @@ int zCObject::SetObjectName(const zSTRING& name)
 	// there was separate branch for each case with duplicate code
 	// and jumps into each other
 
-	if (objectName) {
-		if (!name) {
-			objectName = name;
-			objectName.Upper();
-			_GetClassDef()->RemoveHashTable(this); // was inlined
-			return 1;
-		}
-
+	if (objectName)
 		_GetClassDef()->RemoveHashTable(this); // was inlined
-		objectName = name;
-		objectName.Upper();
-		goto Insert;
-	}
-	if (name) {
-		objectName = name;
-		objectName.Upper();
-	Insert:
+
+	objectName = name;
+	objectName.Upper();
+
+	if (name)
 		_GetClassDef()->InsertHashTable(this); // was inlined;
-	}
 	return 1;
 }

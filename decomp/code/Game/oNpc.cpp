@@ -469,6 +469,16 @@ void oCNpc::Unarchive(zCArchiver& arc)
 	AddEffect(this->effect, 0);
 }
 
+void oCNpc::InitBodyStates()
+{
+	ZeroFill(oCNpc::bodyStateList); // pseudofunc, memset(a,0,sizeof(a))
+	for ( auto& [name,bs] : pairs(BS_NAMES,bodyStateList) ) {
+		auto sym = zparser.GetSymbol(name);
+		if (sym && sym->type == zPAR_TYPE_INT)
+			sym->GetValue(bs, 0);
+	}
+}
+
 
 zCModel* oCNpc::GetModel()
 {
@@ -888,6 +898,17 @@ oCItem oCNpc::GetEquippedRangedWeapon()
 	return item;
 }
 
+int oCNpc::CanDrawWeapon()
+{
+	if (!GetAnictrl())
+		return 0;
+	if (GetAnictrl()->IsStanding() || GetAnictrl()->IsWalking())
+		return 1;
+	if (GetInteractMob())
+		return 1;
+	return in(GetWeaponMode(), FMODE_BOW, FMODE_CBOW);
+}
+
 void oCNpc::DoSpellBook()
 {
 	mag_book->DoPerFrame();
@@ -948,6 +969,17 @@ void oCNpc::StopCutscenes()
 				cutscene->Stop(cutscene);
 		}
 	}
+}
+
+void oCNpc::StopAllVoices()
+{
+	for (int i = 0, e = size(listOfVoiceHandles); i < e; ++i ) {
+		auto hndl = listOfVoiceHandles.GetSafe(i);
+		zsound->StopSound(hndl);
+	}
+	voiceIndex = 0;
+	while ( !UpdateNextVoice() )
+		;
 }
 
 zSTRING oCNpc::GetInstanceByID(int nr) const

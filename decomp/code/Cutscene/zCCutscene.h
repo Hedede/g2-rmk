@@ -1,4 +1,4 @@
-class zCCutscene : public zCObject {
+class zCCutscene : public zCCSBlock {
 	Z_OBJECT(zCCutscene);
 public:
 	virtual void Archive(zCArchiver& arc)
@@ -57,6 +57,10 @@ public:
 		mainRoleVob = dynamic_cast<zCVob*>(obj);
 	}
 
+	zCCSProps* GetProperties() { return properties; }
+	int GetActualBlockNum() { return blockNum; }
+	void ResumeAtBlock(int nr) { blockNum = nr; }
+
 	virtual ~zCCutscene();
 	virtual void NewBlock(int,int);
 	virtual void AddMainRole(zCVob *);
@@ -72,13 +76,28 @@ public:
 	virtual void ResumeActBlock();
 	virtual void PlaySub(float,float);
 	virtual void NewCS(zCCSManager *);
-	virtual void IsCutscene();
-	virtual void IsFinished();
-	virtual void PrintDebugInfo(zSTRING const &);
+	virtual zBOOL IsCutscene() { return true; }
+	virtual zBOOL IsFinished()
+	{
+		return GetNumOfChilds() == GetActualBlockNum();
+	}
+
+	virtual void PrintDebugInfo(zSTRING const&) {}
 	virtual void CheckRoles(int &);
 	virtual void CSCheck(int &);
-	virtual void GetStage();
+	virtual zCVob* GetStage() { return nullptr; }
 	virtual void LoadStage();
-	virtual void CatchPlayer(zCVob	*);
+	virtual void CatchPlayer(zCVob*);
 	virtual void PrepareBlock();
+
+private:
+	int unkro;
+	zCArrat<zCCSRole*> roles;
+	zCArray<zCEventManager*> eventManagers;
+	zCArray<zCVob*> roleVobs;
+	zCVob *mainRoleVob;
+	zCCSProps *properties;
+	int notarray1;
+	int blockNum;
+	int notarray3;
 };

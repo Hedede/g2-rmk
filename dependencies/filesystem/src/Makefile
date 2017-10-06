@@ -1,7 +1,7 @@
-objects = fsops.o fspath.o
-include = -I../include -I/home/shared/devel/Projects/awlib/include
+objects = ops.o path.o dir.o cow-ops.o cow-path.o cow-dir.o
+include = -I../include
 
-%.o: %.c++
+%.o: %.cc
 	i686-w64-mingw32-g++ -std=c++17 $(include) -c $< -o $@
 
 libfs.a: $(objects)

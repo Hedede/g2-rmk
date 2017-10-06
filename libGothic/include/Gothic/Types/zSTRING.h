@@ -37,12 +37,12 @@ struct zSTRING {
 
 	explicit operator std::string() const
 	{
-		return std::string{ptr, len};
+		return std::string{ptr};
 	}
 
 	operator std::string_view() const
 	{
-		return std::string_view{ptr, len};
+		return std::string_view{ptr};
 	}
 
 	char const* Data() const { return ptr; }

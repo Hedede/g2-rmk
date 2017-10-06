@@ -24,7 +24,7 @@ includes=\
 -I../../libGothic/include \
 -I../../libRemake/include \
 -I$(awlib_path)/include   \
--I../../dependencies/filesystem/include/aw/fallback/std
+-I../../dependencies/filesystem/include
 
 lib_path=../../dependencies/lib
 #USE_WINE=true
@@ -55,7 +55,7 @@ libs= -lgdi32 -lSDL2_image -lSDL2main -lSDL2 $(lib_path)/libawaudio.a $(lib_path
 
 hook: $(objects)
 	@ echo [Build] Linking:
-	$(CXX) $(includes) $(cxx_flags) $(static_gcc) $(objects) $(linker_flags) $(libs) -shared -o testlib.dll
+	$(CXX) $(static_gcc) $(objects) $(linker_flags) $(libs) -shared -o testlib.dll
 
 rebuild:
 	touch $(sources)

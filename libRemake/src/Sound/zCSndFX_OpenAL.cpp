@@ -1,5 +1,5 @@
 #include "zCSndFX_OpenAL.h"
-#include "zCSndSys_OpenAL.h"
+#include <Sound/zCSndSys_OpenAL.h>
 
 #include <Gothic/Game/zOptions.h>
 
@@ -9,9 +9,11 @@
 #include <Types/string_view.h>
 #include <aw/utility/string/case.h>
 
+#include <Filesystem.h>
+#include <Types/string_view.h>
 #include <aw/io/input_file_stream.h>
 #include <aw/fileformat/wav/reader.h>
-
+#include <Filesystem/directory_config.h>
 
 namespace {
 struct TypeInfo {
@@ -37,32 +39,49 @@ zCSndFX_OpenAL::zCSndFX_OpenAL()
 	_vtab = static_cast<void*>(&tinfo.vt);
 }
 
+std::optional<fs::path> find_sound(fs::path const& dir, string_view name)
+try {
+	for (fs::path const& path : fs::recursive_directory_iterator{"_work/data/sound/"}) {
+		auto file = path.filename().generic_u8string();
+		aw::string::tolower( file );
+		if (file == name)
+			return dir/path;
+	}
+	return {};
+} catch( fs::filesystem_error& e ) {
+	g2::Error("SFX", e.what());
+	g2::Error("SFX", dir.generic_u8string());
+	g2::Error("SFX", e.path1().generic_u8string());
+	g2::Error("SFX", e.path2().generic_u8string());
+	return {};
+}
+
 void zCSndFX_OpenAL::LoadResourceData()
 {
-	g2::Log("SFX", "Loading wave " + sound.file);
+	using namespace g2;
+	g2::Log("SFX", "Loading wave " + (std::string)sound.file);
 
-	// TODO: organize it such that it queried only once
-	auto dir = zoptions->GetDirString(DIR_SOUND);
-	for (auto& c : dir)
-		if (c == '\\') c = '/';
+	auto result = find_sound( directory_config[dir::sound], sound.file);
+	if (!result) {
+		g2::Log("SFX", "Couldn't find SFX file " + (std::string)sound.file);
+		return;
+	}
 
 	using namespace std::string_literals;
-	auto path = (dir.data()+1) + "sfx/"s + (std::string)sound.file;
-	aw::string::tolower(path);
+	auto path = *result;
 
 	aw::io::input_file_stream file{ path };
 	if (!file.is_open()) {
-		g2::Warning("SFX", "Can't open file " + path);
+		g2::Warning("SFX", "Can't open file " + path.generic_u8string());
 		return;
 	}
 
 	auto wav = aw::wav::read( file );
 	if (!wav) {
-		g2::Warning("SFX", "Failed to load sound " + path);
+		g2::Warning("SFX", "Failed to load sound " + path.generic_u8string());
 		return;
 	}
 
 	buffer.set_data( *wav );
 	source.set_buffer( buffer );
-
 }

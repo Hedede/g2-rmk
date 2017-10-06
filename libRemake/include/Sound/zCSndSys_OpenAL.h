@@ -1,3 +1,4 @@
+#pragma once
 struct zCParser;
 struct zCSndSys_OpenAL : zCSoundSystemDummy {
 	zCSndSys_OpenAL();

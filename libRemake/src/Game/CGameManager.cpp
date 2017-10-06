@@ -555,6 +555,7 @@ void g2::InitGraphics()
 #include <Gothic/Audio/zSoundSystemDummy.h>
 #include <Gothic/Audio/zSoundSys_MSS.h>
 #include <Sound/SoundOpenAL.h>
+#include <Sound/zCSndSys_OpenAL.h>
 #include <Gothic/Audio/zSoundManager.h>
 auto ChangeFxVol = func<zCOptions::ChangeHandler>(0x509370);
 void g2::InitSound()
@@ -574,7 +575,7 @@ void g2::InitSound()
 	}
 
 	auto fx = reinterpret_cast<zCSndSys_OpenAL*>(zsound)->LoadSoundFX("chapter_01.wav");
-	reinterpret_cast<zCSndSys_OpenAL*>(zsound)->PlaySound(*fx, 0);
+	//reinterpret_cast<zCSndSys_OpenAL*>(zsound)->PlaySound(*fx, 0);
 
 	zsndMan = new zCSoundManager;
 

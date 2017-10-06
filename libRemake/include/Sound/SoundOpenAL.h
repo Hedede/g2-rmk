@@ -39,7 +39,9 @@ struct SoundOpenAL {
 	SoundOpenAL();
 	~SoundOpenAL();
 
+	int max_sources() const;
 	void play( Source& src );
+
 
 protected:
 	struct Impl;
@@ -50,6 +52,13 @@ protected:
 	{
 		return Value<Impl>(&data);
 	}
+
+	Impl const& impl() const
+	{
+		return Value<Impl>(&data);
+	}
+
+
 
 private:
 	using storage = std::aligned_storage< impl_size >::type;

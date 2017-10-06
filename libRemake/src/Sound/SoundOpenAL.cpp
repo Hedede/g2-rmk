@@ -5,6 +5,10 @@
 #include <stdexcept>
 //------------------------------------------------------------------------------
 namespace g2 {
+struct Attributes {
+	ALint max_sources;
+};
+
 struct SoundOpenAL::Impl {
 	Impl()
 	{
@@ -18,6 +22,9 @@ struct SoundOpenAL::Impl {
 			Fatal( "could not create context" );
 		if (!MakeContextCurrent())
 			Fatal(  "failed to make context current" );
+
+		alcGetIntegerv( dev, ALC_MONO_SOURCES, 1, &attrib.max_sources );
+		Log( "OpenAL", "ALC_MONO_SOURCES = " + std::to_string(attrib.max_sources) );
 	}
 
 
@@ -38,6 +45,7 @@ struct SoundOpenAL::Impl {
 
 	ALCdevice*  dev;
 	ALCcontext* ctx;
+	Attributes attrib;
 };
 
 
@@ -54,6 +62,11 @@ SoundOpenAL::SoundOpenAL()
 SoundOpenAL::~SoundOpenAL()
 {
 	impl().~Impl();
+}
+
+int SoundOpenAL::max_sources() const
+{
+	return impl().attrib.max_sources;
 }
 
 void SoundOpenAL::play( Source& src )

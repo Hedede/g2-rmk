@@ -1,7 +1,7 @@
 #include <Hook/type_info.h>
 #include <Hook/Externals.h>
 #include <Sound/SoundOpenAL.h>
-#include "zCSndSys_OpenAL.h"
+#include <Sound/zCSndSys_OpenAL.h>
 
 namespace {
 struct OALTypeDescriptor : TypeDescriptor {
@@ -113,8 +113,7 @@ zCSoundFX* zCSndSys_OpenAL::LoadSoundFX(std::string name)
 		aw::string::tolower(name); // TODO: handle case-sensitive FS
 	g2::Log("SFX", "LoadSoundFX request: " + name);
 	fs::path path{name};
-	g2::Log("SFX", path.extension().generic());
-	//if (path.extension().generic() == ".wav")
+	if (path.extension().generic_u8string() == ".wav")
 	{
 		auto sfx = new zCSndFX_OpenAL;
 		sfx->sound.file = name.data();
@@ -124,7 +123,6 @@ zCSoundFX* zCSndSys_OpenAL::LoadSoundFX(std::string name)
 
 	return nullptr;
 }
-
 
 using namespace std::string_literals;
 void zCSndSys_OpenAL::PlaySound(zCSoundFX& sfx, int slot)
@@ -137,10 +135,11 @@ void zCSndSys_OpenAL::PlaySound(zCSoundFX& sfx, int slot)
 	impl.play( osfx.source );
 }
 
-void zCSndSys_OpenAL::PlaySound3D(zCSoundFX* sfx, zCVob *, int, zTSound3DParams *)
+void zCSndSys_OpenAL::PlaySound3D(zCSoundFX* sfx, zCVob *, int slot, zTSound3DParams *)
 {
 	if (sfx) {
 		auto& osfx = static_cast<zCSndFX_OpenAL&>(*sfx);
 		g2::Log("SFX", "Playing sfx "s + osfx.sound.file.Data());
+		PlaySound(*sfx, slot);
 	}
 }

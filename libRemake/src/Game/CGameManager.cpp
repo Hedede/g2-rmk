@@ -614,8 +614,7 @@ void g2::InitMusic()
 }
 
 #include <aw/utility/string/case.h>
-#include <filesystem>
-namespace fs = awstd::filesystem;
+#include <Filesystem/directory_config.h>
 void g2::InitOptions()
 {
 	Log("Startup", "Initializing options");
@@ -623,6 +622,9 @@ void g2::InitOptions()
 	zoptions = new zCOptions{};
 	zoptions->Init(sysCommandLine);
 	zoptions->ChangeDir(DIR_SYSTEM);
+
+	// TODO: parameter is a dummy, it just copies paths from zoptions
+	read_directory_config( "system/paths.d" );
 
 	std::string ini = zoptions->ParmValue("ini");
 	if ( ini.empty() )

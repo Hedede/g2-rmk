@@ -14,6 +14,7 @@ Sound/zCSndSys_OpenAL.cpp \
 Sound/zCSndFX_OpenAL.cpp \
 Sound/SoundOpenAL.cpp \
 System/zResource.cpp \
+Filesystem/filesystem.cpp \
 Menu/zMenu.cpp \
 Input/InputCallback.cpp
 

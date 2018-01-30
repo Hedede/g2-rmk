@@ -45,31 +45,6 @@ public:
 			if (b1 >= bp)
 				pos.block->Play(aiman, b1, b2);
 		}
-  v5 = 0;
-  if ( this->subBlocks.numInArray > 0 )
-  {
-    aiman = a3;
-    v7 = 0;
-    do
-    {
-      min = this->subBlocks.array->block->vtbl->GetMinTime((zCCSBlock *)this->subBlocks.array->block);
-      if ( min == 0.0 )
-        min = 1.0;
-      block = &this->subBlocks.array[v7];
-      pos = min * block->pos;
-      if ( b1 < (double)pos && pos <= (double)b2 )
-        block->block->vtbl->Play((zCCSBlock *)block->block, aiman);
-      if ( b1 >= (double)pos )
-      {
-        v10 = (zCCSBlock *)this->subBlocks.array[v7].block;
-        v10->vtbl->Play_f(v10, aiman, b1, b2);
-      }
-      ++v5;
-      ++v7;
-    }
-    while ( v5 < this->subBlocks.numInArray );
-  }
-}
 	}
 
 	void Play(zCArray<zCEventManager *> const&) override
@@ -154,4 +129,14 @@ void zCCSBlock::Unarchive(zCArchiver& arc)
 		sub.block = arc.ReadObject(0);
 		subBlocks.InsertEnd(sub);
 	}
+}
+
+void zCCSBlock::DeleteChild(int pos)
+{
+	if ( pos < 0 || pos > subBlocks.numInArray )
+		return;
+
+	subBlocks.RemoveOrderIndex(pos);
+
+	BlockCorrection();
 }

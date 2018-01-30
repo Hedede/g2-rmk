@@ -36,7 +36,7 @@ public:
 			blocks.Insert(block);
 			// strange, should be InsertSort,
 			// but inlined code just inserts into the end
-			// (In Gothic1Demo there was zCArray, not zCArraySort
+			// (In Gothic1Demo there was zCArray, not zCArraySort, btw)
 			block->AddRef();
 			Change();
 
@@ -65,7 +65,7 @@ public:
 		return wasChanged;
 	}
 
-	int zCCSLib::NextFree()
+	int NextFree()
 	{
 		return blocks.GetNumInList();
 	}

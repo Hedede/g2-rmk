@@ -106,8 +106,8 @@ public:
 		LibCheckLoaded();
 		csLib->RemoveFromLib(id, 0);
 	}
-	virtual void LibLoad(int);
-	virtual void LibStore(int);
+	virtual void LibLoad(int flags);
+	virtual void LibStore(int flags);
 	virtual int LibValidateOU(zSTRING& token)
 	{
 		LibCheckLoaded(3);
@@ -357,6 +357,120 @@ void zCCSManager::Unarchive(zCArchiver& arc)
 	}
 }
 
+//--------------------------------------------------------------------------------
+void zCCSManager::LibStore(int flags)
+{
+	zSTRING name = "";
+	if ( zgameoptions )
+		name = zgameoptions->ReadString(zgameoptions, zOPT_SEC_FILES, "OutputUnits", 0);
+	if ( !name )
+		name = "OU";
+	if ( LibIsLoaded() ) {
+		auto oudir = zoptions->GetDirString(DIR_OUTPUTUNITS);
+		if ( flags & 1 )
+			zINFO(4, "B: CSL: Writing ascii version of Cutscene-Library (OutputUnits) to " + name + ".csl ..."); // 533
+
+			auto fileName = oudir + name + ".csl";
+			auto arc = zarcFactory.CreateArchiverWrite(fileName, 1, 0, 0);
+
+			if (arc) {
+				arc->WriteObject( csLib );
+				arc->Close();
+				arc->Release();
+			}
+		}
+		if ( flags & 2 ) {
+			zINFO(4,  "B: CSL: Writing binary version of Cutscene-Library (OutputUnits) to " + name + ".bin ..."); //546
+
+			auto fileName = oudir + name + ".bin";
+			auto arc = zarcFactory.CreateArchiverWrite( fileName, 3, 0, 0 );
+
+			if (arc) {
+				arc->WriteObject( csLib );
+				arc->Close();
+				arc->Release();
+			}
+		}
+	}
+}
+
+void zCCSManager::LibLoad(int flags)
+{
+	if ( csLib ) {
+		DeleteLib(csLib);
+
+		int loaded = 0;
+		int binTried = 0;
+
+		zSTRING name = "";
+		if ( zgameoptions )
+			name = zgameoptions->ReadString(zgameoptions, zOPT_SEC_FILES, "OutputUnits", 0);
+
+		if ( !name )
+			name = "OU";
+
+		// was duplicated in each branch
+		auto oudir = zoptions->GetDirString(DIR_OUTPUTUNITS);
+
+		if ( flags & 2 ) {
+			binTried = 1;
+
+			auto fileName = oudir + name + ".bin";
+			auto file = zfactory->CreateZFile( fileName );
+
+			if ( file->Exists() ) {
+				zINFO(5, "B: SPC: Loading binary output-library " + file->GetFile() + "..."); // 387
+				file->Open(0);
+				arc->CreateArchiverRead(file, 0);
+				if (arc) {
+					arc->ReadObject( csLib );
+					arc->Close();
+					arc->Release();
+				}
+
+				file->Close();
+				loaded = 1;
+			}
+
+			delete file;
+		}
+
+		if ( loaded )
+			return;
+
+		if ( flags & 1 ) {
+			auto fileName = oudir + name + ".csl";
+
+			auto file = zfactory->CreateZFile( fileName );
+
+			if ( file->Exists() ) {
+				zINFO(5, "B: SPC: Loading ascii output-library " + file->GetFile() + "..."); // 414
+				file->Open(0);
+				arc->CreateArchiverRead(file, 0);
+				if (arc) {
+					arc->ReadObject( csLib );
+					arc->Close();
+					arc->Release();
+				}
+
+				file->Close();
+				loaded = 1;
+			}
+
+			// not sure about condition, because stack is messed up in decompiler
+			if ( binTried ) {
+				zCCSManager->LibStore( 2 );
+			}
+
+			delete file;
+
+			if ( !loaded ) {
+				csLib->loaded = 1;
+				zFAULT( "N: CS: File for output-units not found: " + name ".bin or " + name + ".csl");
+			}
+		}
+	}
+}
 //--------------------------------------------------------------------------------
 zCCSCutsceneContext* zCCSManager::InitiateCSwithContext(zCCSCutsceneContext *context);
 {

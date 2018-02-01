@@ -37,11 +37,13 @@ struct zSTRING {
 
 	explicit operator std::string() const
 	{
+		if (!ptr) return {};
 		return std::string{ptr};
 	}
 
 	operator std::string_view() const
 	{
+		if (!ptr) return {};
 		return std::string_view{ptr};
 	}
 

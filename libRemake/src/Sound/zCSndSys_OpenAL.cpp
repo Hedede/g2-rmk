@@ -124,6 +124,29 @@ zCSoundFX* zCSndSys_OpenAL::LoadSoundFX(std::string name)
 	return nullptr;
 }
 
+
+zCSoundFX* zCSndSys_OpenAL::LoadSoundFXScript(std::string name)
+{
+	if (name.empty()) {
+		g2::Warning("SFX", "SFX script name is empty!");
+		return nullptr;
+	}
+
+	g2::Log("SFX", "LoadSoundFXScript request: " + name);
+	aw::string::toupper(name);
+
+	auto sym = sfx_parser->GetSymbol(name);
+	if (!sym) {
+		g2::Warning("SFX", "SFX script not found! " + name);
+		return nullptr;
+	}
+
+	C_SFX sfx;
+	sfx_parser->CreateInstance(name, &sfx);
+
+	return LoadSoundFX( (std::string)sfx.file );
+}
+
 using namespace std::string_literals;
 void zCSndSys_OpenAL::PlaySound(zCSoundFX& sfx, int slot)
 {

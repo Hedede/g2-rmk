@@ -574,9 +574,6 @@ void g2::InitSound()
 		zsound = new zCSoundSystemDummy;
 	}
 
-	auto fx = reinterpret_cast<zCSndSys_OpenAL*>(zsound)->LoadSoundFX("chapter_01.wav");
-	//reinterpret_cast<zCSndSys_OpenAL*>(zsound)->PlaySound(*fx, 0);
-
 	zsndMan = new zCSoundManager;
 
 	Log("Startup", "Adding sound options");

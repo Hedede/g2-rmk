@@ -1,15 +1,12 @@
 #pragma once
+#include <unordered_map>
+
 struct zCParser;
 struct zCSndSys_OpenAL : zCSoundSystemDummy {
 	zCSndSys_OpenAL();
 
 	zCSoundFX* LoadSoundFX(std::string name);
-
-	zCSoundFX* LoadSoundFXScript(std::string const& name)
-	{
-		g2::Log("SFX", "LoadSoundFXScript request: " + name);
-		return nullptr;
-	}
+	zCSoundFX* LoadSoundFXScript(std::string name);
 
 	zCParser& GetSFXParser()
 	{

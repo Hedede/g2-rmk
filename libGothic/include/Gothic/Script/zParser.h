@@ -117,6 +117,12 @@ struct zCParser {
 		return call(this, name);
 	}
 
+	bool CreateInstance(std::string const& name, void* adr)
+	{
+		Thiscall<int(zCParser*, zSTRING const&, void*)> call{0x792F20};
+		return call( this, name, adr );
+	}
+
 private:
 	MessageFunc msgfunc = nullptr;
 

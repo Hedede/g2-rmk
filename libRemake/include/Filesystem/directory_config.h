@@ -37,15 +37,10 @@ inline dir& operator++(dir& d) { d = dir(aw::underlying(d) + 1); return d; }
 
 constexpr size_t dir_count = aw::underlying(dir::count);
 
-struct {
-	fs::path& operator[]( dir idx )
-	{
-		return dirs[ aw::underlying(idx) ];
-	}
-
-private:
-	fs::path dirs[ dir_count ];
-} directory_config;
+struct dir_config_accessor {
+	string_view operator[]( dir idx ) const;
+};
+inline dir_config_accessor directory_config;
 
 void read_directory_config( [[maybe_unused]] string_view );
 

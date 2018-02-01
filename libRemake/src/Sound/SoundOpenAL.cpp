@@ -2,6 +2,10 @@
 #include <aw/fileformat/wav/reader.h>
 #include <AL/al.h>
 #include <AL/alc.h>
+// correct way to do things would be query extensions and then load them
+// but I don't care really
+#define AL_ALEXT_PROTOTYPES
+#include <AL/alext.h>
 #include <stdexcept>
 //------------------------------------------------------------------------------
 namespace g2 {
@@ -110,7 +114,7 @@ Buffer::Buffer()
 	}
 }
 
-ALenum to_al_format(short channels, short samples)
+ALenum to_al_format_pcm(short channels, short samples)
 {
         bool stereo = (channels > 1);
 
@@ -130,13 +134,36 @@ ALenum to_al_format(short channels, short samples)
         }
 }
 
+using wave_fmt = aw::wav::format;
+
+ALenum to_al_format( aw::wav::wave_data& wave)
+{
+
+	switch ( wave.format ) {
+	case wave_fmt::pcm:
+		return to_al_format_pcm( wave.channels, wave.bits_per_sample() );
+	case wave_fmt::ima_adpcm:
+		if (wave.channels > 1)
+			return AL_FORMAT_STEREO_IMA4;
+		else
+			return AL_FORMAT_MONO_IMA4;
+	default:
+		return -1;
+	}
+}
+
+
 bool Buffer::set_data(aw::wav::wave_data& wave)
 {
-	auto fmt = to_al_format(wave.channels, wave.bits_per_sample);
+	auto fmt = to_al_format(wave);
 	if (fmt == -1) {
 		g2::Warning( "SFX", "unsupported format" );
 		return false;
 	}
+
+	if (wave.format == wave_fmt::ima_adpcm)
+		alBufferi( handle, AL_UNPACK_BLOCK_ALIGNMENT_SOFT, wave.samples_per_block() );
+
 	alBufferData(handle, fmt, wave.data.data(), wave.data.size(), wave.sample_rate);
 	if (alGetError() != AL_NO_ERROR) {
 		//cleanup();

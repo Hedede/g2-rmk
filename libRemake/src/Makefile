@@ -40,7 +40,7 @@ endif
 
 
 cxx_flags = -std=c++1z -g -fno-strict-aliasing -fexceptions -fno-rtti
-pp_flags  = -DNOMINMAX
+pp_flags  = -DNOMINMAX -DAW_STATIC_BUILD
 
 linker_flags=$(libraries)
 ifeq ($(USE_WINE), true)

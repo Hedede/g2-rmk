@@ -85,14 +85,10 @@ std::optional<fs::path> find_file_recursive( string_view path, string_view mask 
 	auto filter = [&] (DirectoryEntry& ent) {
 		if (ent.type != ENT_FILE)
 			return false;
-		auto fname = aw::string::tolower(ent.name);
-		if (fname == name)
-			g2::Log("ZOROZO", narrow(ent.name) + " " + std::string(mask));
-		return fname == name;
+		return aw::string::tolower(ent.name) == name;
 	};
 	DirectoryEntry dent;
 	if (FindFileRecursiveW(widen(path), filter, dent)) {
-		g2::Log("ZOROZO", narrow(dent.name));
 		return dent.name;
 	}
 	return {};

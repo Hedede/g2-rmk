@@ -9,11 +9,11 @@
 #include <Types/string_view.h>
 #include <aw/utility/string/case.h>
 
-#include <Filesystem.h>
 #include <Types/string_view.h>
 #include <aw/io/input_file_stream.h>
 #include <aw/fileformat/wav/reader.h>
 #include <Filesystem/directory_config.h>
+#include <Filesystem.h>
 
 namespace {
 struct TypeInfo {
@@ -39,29 +39,12 @@ zCSndFX_OpenAL::zCSndFX_OpenAL()
 	_vtab = static_cast<void*>(&tinfo.vt);
 }
 
-std::optional<fs::path> find_sound(fs::path const& dir, string_view name)
-try {
-	for (fs::path const& path : fs::recursive_directory_iterator{"_work/data/sound/"}) {
-		auto file = path.filename().generic_u8string();
-		aw::string::tolower( file );
-		if (file == name)
-			return dir/path;
-	}
-	return {};
-} catch( fs::filesystem_error& e ) {
-	g2::Error("SFX", e.what());
-	g2::Error("SFX", dir.generic_u8string());
-	g2::Error("SFX", e.path1().generic_u8string());
-	g2::Error("SFX", e.path2().generic_u8string());
-	return {};
-}
-
 void zCSndFX_OpenAL::LoadResourceData()
 {
 	using namespace g2;
 	g2::Log("SFX", "Loading wave " + (std::string)sound.file);
 
-	auto result = find_sound( directory_config[dir::sound], sound.file);
+	auto result = find_file_recursive( directory_config[dir::sound], sound.file);
 	if (!result) {
 		g2::Log("SFX", "Couldn't find SFX file " + (std::string)sound.file);
 		return;

@@ -18,7 +18,16 @@ public:
 	virtual void OnCSUntrigger(zSTRING &,zCVob *);
 	virtual void SetOwnerWorld(zCWorld *);
 	virtual void SetOwnerManager(zCCSManager *);
-	virtual void Process();
+	virtual void Process()
+	{
+		if (UpdateCutscenesNow()) {
+			int day, hour, min;
+			wld->GetOwnerSession()->GetTime(day, hour, min);
+			auto cam = wld->GetOwnerSession()->GetCameraVob();
+			auto pos = cam->GetPositionWorld();
+			ProcessList( pos, day, hour, min );
+		}
+	}
 	virtual void ProcessCutscene(zCCSCutsceneContext *,zVEC3 const &);
 	virtual void ProcessList(zVEC3 const &,int,int,int);
 	virtual void CSDB_BeginSyncBlock(zCCSSyncBlock *);
@@ -28,9 +37,62 @@ public:
 	virtual void CSDB_Warning(zCCSBlockBase *,zSTRING &);
 	virtual void CSDB_StartPlaying(zCCutscene *);
 	virtual void CSDB_Stop(zCCutscene *);
+
+	void Resume()
+	{
+		// GetNumInList() and Get() make this O(n²) instead of O(n)!
+		// There are also examples of O(n³) algorithms
+		// on linked lists in the game code...
+		for (int i = 0; i < playList.GetNumInList(); ++i) {
+			if ( playList.Get(i)->IsFinished() )
+				continue;
+
+			// also for some reason compiler inserted
+			// (nullptr)->ResumeActBlock(0)
+			playList.Get(i)->ResumeActBlock(0)
+		}
+	}
+
+	void ToggleDebugInfo()
+	{
+		__debugShow = !__debugShow;
+		if ( !__debugView )
+			// TODO: ,2);  — don't forget to add def arg to zCView ctor
+			__debugView = new zCView(0,500,8192,8000); // 907
+		if ( __debugShow ) {
+			screen->InsertItem(__debugView, 0);
+			DebugResetInfoscreen();
+		} else {
+			screen->RemoveItem(__debugView);
+		}
+	}
+
+protected:
+	int UpdateCutscenesNow()
+	{
+		if ( playList.GetNumInList() > 0 ) {
+			if (__timer < 250.0) {
+				__timer += ztimer.frameTimeFloat;
+				return 0;
+			} else {
+				__timer = 0.0;
+				return 1;
+			}
+		} else {
+			DebugResetInfoscreen();
+		}
+		return 0;
+	}
 private:
-	zCList<zCCSCutsceneContext> playList;
-	zCCSManager* csMan;
+	int lastProcessDay;
+	int lastProcessHour;
+	int unk0[2];
+	zBOOL __debugShow;
+	zCView *__debugView;
+	float __timer;
+	CsContextList playList;
+	zCCSManager *csMan;
+	int wtd;
 };
 
 void zCCSPlayer::Archive(zCArchiver& arc)

@@ -106,7 +106,7 @@ void zCWaveData::CacheIn()
 		zPATH path(name);
 		auto dir = zoptions->GetDirString(DIR_SOUND);
 
-		if (path.file->SearchFile(name, dir, 1) == 5003) {
+		if (path.file->SearchFile(name, dir, TRUE) == 5003) {
 			zWARNING("C: zSndMSS.h(zCWaveData::zCWaveData): Wave not found: " + name); // 3947,
 			auto dir = zoptions->GetDirString(DIR_SOUND);
 

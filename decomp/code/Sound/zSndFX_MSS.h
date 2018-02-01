@@ -75,9 +75,13 @@ struct zCSndFX_MSS : zCSoundFX {
 private:
 	void ChooseVariance();
 	void CacheInActChannel();
+	void CacheInActFrame()
+	{
+		channels[curChannel]->frames[curFrame]->CacheIn();
+	}
 	void CacheOutActFrame()
 	{
-		zCWavePool::GetPool()->CacheOut( channels[curChannel]->frames[curFrame];
+		channels[curChannel]->frames[curFrame]->CacheOut();
 	}
 	void SetDefaultProperties()
 	{
@@ -96,6 +100,7 @@ private:
 };
 
 //------------------------------------------------------------------------------
+// _carsten/zSndMss.cpp
 void zCSndFX_MSS::ChooseVariance()
 {
 	auto num_frames = GetNumChannelFrames(curChannel) - 1;
@@ -111,6 +116,8 @@ void zCSndFX_MSS::ChooseVariance()
 	}
 }
 
+
+
 // private
 void zCSndFX_MSS::CacheInActChannel()
 {
@@ -118,4 +125,17 @@ void zCSndFX_MSS::CacheInActChannel()
 		for (auto& frame : chan->frames)
 			frame->waveData->CacheIn();
 	}
+}
+
+int zCSndFX_MSS::LoadResourceData()
+{
+	zINFO( 8, "C: zCSndFX_MSS :: LoadResourceData() for " + GetObjectName()); //2671
+
+	for ( int i = 0; i < GetNumChannels(this); ++i ) {
+		auto channel = channels[i];
+		for (auto frame : channel->frames) {
+			frame->CacheIn(); // was inlined
+		}
+	}
+	return 1;
 }

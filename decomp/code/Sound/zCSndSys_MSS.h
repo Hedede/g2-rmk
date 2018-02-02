@@ -37,11 +37,14 @@ struct zCSndSys_MSS : zCSoundSystem {
 			return -1.0;
 		return prefs.volume / 127;
 	}
-	void PlaySound(zCSoundFX *,int,int,float,float) override;
-	void PlaySound(zCSoundFX *,int) override;
-	int PlaySound3D(zSTRING const &,zCVob *,int,zCSoundSystem::zTSound3DParams *) override;
-	int PlaySound3D(zCSoundFX *,zCVob *,int,zCSoundSystem::zTSound3DParams *) override;
-	void StopSound(int const &) override;
+
+	zTSndHandle PlaySound(zCSoundFX* sfx, int slot, int freq, float vol, float pan) override;
+	zTSndHandle PlaySound(zCSoundFX* sft, int slot) override;
+	zTSndHandle PlaySound3D(zSTRING const &,zCVob *,int,zCSoundSystem::zTSound3DParams *) override;
+	zTSndHandle PlaySound3D(zCSoundFX *,zCVob *,int,zCSoundSystem::zTSound3DParams *) override;
+
+	void StopSound(zTSndHandle const& handle) override;
+
 	void StopAllSounds() override
 	{
 
@@ -235,7 +238,7 @@ zCSoundFX* zCSndSys_MSS::LoadSoundFX(zSTRING const& fileName)
 	zINFO(5, "C: SND: Creating Sound " + name + "   (single) "); // 1126,
 
 	chan->frames.InsertEnd(frame);
-	chan->unk[2] = 1;
+	chan->__loaded = 1;
 	snd->channels.InsertEnd(chan);
 
 	snd->SetObjectName(DIRECTLOAD_PREFIX + name);
@@ -261,6 +264,7 @@ zCSoundFX* zCSndSys_MSS::LoadSoundFXScript(zSTRING const& identifier)
 	for (int i = 1; ; ++i) {
 		auto word1 = name.PickWord(i, "_", "_");
 
+		// Похоже нигде не используется
 		int digit = 0;
 		if (word1[0] == ID_CHANNEL_CHAR) {
 			if ( isdigit(word1[1]) )
@@ -293,6 +297,41 @@ zCSoundFX* zCSndSys_MSS::LoadSoundFXScript(zSTRING const& identifier)
 	if ( multi )
 		return LoadMulti(name1.Copied(0, name1.Length() - 1), chan);
 	return LoadSingle(name1);
+}
+
+zCSndFX_MSS* zCSndSys_MSS::LoadSingle(const zSTRING& id)
+{
+	auto snd = zCSoundFX::classDef.SearchHashTable( id );
+	if (snd && CHECK_INHERITANCE( snd, zCSndFX_MSS )) {
+		++snd->refCtr;
+	} else {
+		snd = new zCSndFX_MSS; // 1074 g1d
+		auto chan = new zCSndChannel; // 1075 g1d
+
+		zSTRING name = id;
+		int i = 0;
+
+		do {
+			auto frame = new zCSndFrame; // 1083 g1d
+			sfxParser->CreateInstance(name, frame);
+			frame->scripted.file.Upper();
+			if (!frame->scripted.file)
+				frame->scripted.file = MSS_NO_WAVE;
+			frame->instanceName = name;
+
+			zINFO(5, "C: SND: Creating Sound Instance " + id + "   (alternative: " + i + ")"); //1297
+
+			chan->frames.InsertEnd(frame);
+
+			zSTRING num{++i};
+			name = id + UNDERBAR + ID_FRAME_CHAR + num;
+		} while (sfxParser->GetSymbol(&name))
+
+		chan->__loaded = 1;
+		snd->channels->InsertEnd(chan);
+		snd->SetObjectName( id );
+	}
+	return snd;
 }
 
 zTSndHandle zCSndSys_MSS::PlaySound(zCSoundFX* sfx, int slot)
@@ -838,39 +877,4 @@ void zCSndSys_MSS::UpdateSoundProps(const int& sfxHandle, int freq, float vol, f
 			AIL_stop_sample(snd->sampleHandle);
 		}
 	}
-}
-
-zCSndFX_MSS* zCSndSys_MSS::LoadSingle(const zSTRING& id)
-{
-	auto snd = zCSoundFX::classDef.SearchHashTable( id );
-	if (snd && CHECK_INHERITANCE( snd, zCSndFX_MSS )) {
-		++snd->refCtr;
-	} else {
-		snd = new zCSndFX_MSS; // 1074 g1d
-		auto chan = new zCSndChannel; // 1075 g1d
-
-		zSTRING name = id;
-		int i = 0;
-
-		do {
-			auto frame = new zCSndFrame; // 1083 g1d
-			sfxParser->CreateInstance(name, frame);
-			frame->scripted.file.Upper();
-			if (!frame->scripted.file)
-				frame->scripted.file = MSS_NO_WAVE;
-			frame->instanceName = name;
-
-			zINFO(5, "C: SND: Creating Sound Instance " + id + "   (alternative: " + i + ")"); //1297
-
-			chan->frames.InsertEnd(frame);
-
-			zSTRING num{++i};
-			name = id + UNDERBAR + ID_FRAME_CHAR + num;
-		} while (sfxParser->GetSymbol(&name))
-
-		chan->__loaded = 1;
-		snd->channels->InsertEnd(chan);
-		snd->SetObjectName( id );
-	}
-	return snd;
 }

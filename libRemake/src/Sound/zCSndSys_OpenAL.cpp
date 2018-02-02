@@ -171,6 +171,14 @@ zCSoundFX* zCSndSys_OpenAL::LoadSoundFXScript(std::string name)
 	return LoadSoundFX( (std::string)sfx.file );
 }
 
+constexpr bool has_prefix(string_view str, string_view prefix)
+{
+	auto plen = prefix.size();
+	if (str.size() < plen)
+		return false;
+	return str.substr(0, plen) == prefix;
+}
+
 using namespace std::string_literals;
 zTSndHandle zCSndSys_OpenAL::PlaySound(zCSoundFX& sfx, int slot)
 {
@@ -178,7 +186,14 @@ zTSndHandle zCSndSys_OpenAL::PlaySound(zCSoundFX& sfx, int slot)
 	auto& osfx = static_cast<zCSndFX_OpenAL&>(sfx);
 	//osfx.LoadResourceData();
 
-	g2::Log("SFX", "Playing wave "s + osfx.sound.file.Data());
+	string_view sv = osfx.sound.file;
+
+	g2::Log("SFX", "Playing wave "s + sv.data());
+
+	/* FIXME: better ryr */
+	int priority = 0;
+	if (has_prefix( sv, "dia_" ))
+		++priority;
 
 	g2::Source source( impl().pool.request_source(0) );
 	source.set_buffer( osfx.buffer );

@@ -431,7 +431,7 @@ int zCSndSys_MSS::PlaySound(zCSndFX_MSS *sfx, int slot, int freq, float vol, flo
 		return 0;
 
 	actSnd->handle = ++zCActiveSnd::lastHandle;
-	actSnd->bitfield.unk1 = 0;
+	actSnd->bitfield.__isLooped = 0;
 	actSnd->frame = sfx->GetCurFrame();
 
 	if ( slot ) {
@@ -639,13 +639,13 @@ int zCSndSys_MSS::GetSound3DProps(const int& sfxHandle, zCSoundSystem::zTSound3D
 		if (asnd->bitfield & 8)
 			AIL_3D_sample_cone(asnd->sampleHandle3d, &params.coneAngle, &outer_angle, outer_volume);
 
-		params.__outer_volume = asnd->__outer_volume / 0.7;
+		params.__obstruction = asnd->__obstruction / 0.7;
 		params.radius = asnd->radius;
 		params.reverbLevel = GetReverbEnabled() ? asnd->reverbLevel : 0.0;
 		params.volume = asnd->__master_volume;
 		params.unk2 = (asnd->bitfield >> 2) & 1;
 		params.pitchOff = asnd->pitchOff;
-		params.unk1 = asnd->unk1;
+		params.__isLooped = asnd->__isLooped;
 		return 1;
 	}
 
@@ -754,8 +754,8 @@ void zCSndSys_MSS::UpdateSoundPropsAmbient(zCActiveSnd *snd, zCSoundSystem::zTSo
 	if ( params ) {
 		snd->radius = (params->radius == -1) ? defaultRadius_3d : params->radius;
 		snd->__master_volume = (params->volume == -1) ? 1.0 : params->volume;
-		snd->unk1 = _params->unk1;
-		if (params->__outer_volume <= 0.0)
+		snd->__isLooped = params->__isLooped;
+		if (params->__obstruction <= 0.0)
 			snd->AutoCalcObstruction(0);
 	} else {
 		snd->AutoCalcObstruction(0);
@@ -783,15 +783,15 @@ void zCSndSys_MSS::UpdateSoundPropsAmbient(zCActiveSnd *snd, zCSoundSystem::zTSo
 			snd->__lastUpdate = 0;
 		}
 		if ( params ) {
-			snd->__outer_volume = 0.7 * _params->__outer_volume;
+			snd->__obstruction = 0.7 * _params->__obstruction;
 			snd->reverbLevel = GetReverbEnabled() ? params->reverbLevel : 0.0;
 		}
 
 		AIL_set_sample_playback_rate(snd->sampleHandle, snd->frequency);
-		AIL_set_sample_volume_pan(snd->sampleHandle, (1.0 - snd->__outer_volume) * (snd->volume * snd->__master_volume) / 127.0, snd->pan/127.0);
+		AIL_set_sample_volume_pan(snd->sampleHandle, (1.0 - snd->__obstruction) * (snd->volume * snd->__master_volume) / 127.0, snd->pan/127.0);
 		AIL_set_sample_loop_block( snd->sampleHandle, snd->frame->scripted.loopStartOffset, snd->frame->scripted.loopEndOffset);
-		if (snd->unk1)
-			snd->loop = snd->unk1 == 1;
+		if (snd->__isLooped)
+			snd->loop = snd->__isLooped == 1;
 		else
 			snd->loop = snd->frame->scripted.loop;
 		AIL_set_sample_loop_count(snd->sampleHandle, !snd->bitfield.loop );

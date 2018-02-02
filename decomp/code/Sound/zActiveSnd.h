@@ -185,7 +185,7 @@ private:
 	int reverbLevel;
 	int pitchOff;
 	float __master_volume;
-	float __outer_volume;
+	float __obstruction;
 
 	float unk4[2];
 	int __timer;

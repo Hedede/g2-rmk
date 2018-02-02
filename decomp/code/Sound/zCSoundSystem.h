@@ -23,20 +23,20 @@ public:
 	struct zTSound3DParams {
 		void SetDefaults()
 		{
-			__outer_volume = 0;
+			__obstructon = 0.0;
 			volume = 1.0;
 			radius = -1.0;
-			unk1 = 0;
+			__isLooping = 0;
 			coneAngle = 1.0;
 			reverbLevel = 0;
 			unk2 = 0;
 			pitchOf = -999999.0;
 		}
 
-		int __outer_volume;
-		float volume;
+		float __obstructon;
+		float volume; // volScale
 		float radius;
-		int unk1;
+		int __isLooping;
 		float coneAngle;
 		float reverbLevel;
 		float unk2;

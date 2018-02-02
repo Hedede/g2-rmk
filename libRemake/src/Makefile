@@ -59,6 +59,7 @@ libs= -lgdi32 -lSDL2_image -lSDL2main -lSDL2 $(lib_path)/libawaudio.a $(lib_path
 hook: $(objects)
 	@ echo [Build] Linking:
 	$(CXX) $(static_gcc) $(objects) $(linker_flags) $(libs) -shared -o testlib.dll
+	cp -f testlib.dll ../../../System
 
 rebuild:
 	touch $(sources)

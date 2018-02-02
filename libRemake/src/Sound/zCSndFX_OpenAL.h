@@ -13,10 +13,10 @@ struct C_SFX {
 	zSTRING    pfxName;
 };
 
-#include <Sound/SoundOpenAL.h>
+#include <Sound/OpenALSource.h>
 #include <Gothic/Audio/zSoundFX.h>
 struct zCSndFX_OpenAL : zCSoundFX {
-	zCSndFX_OpenAL();
+	zCSndFX_OpenAL( g2::SoundOpenAL& sys );
 	void LoadResourceData();
 
 	// TODO: check whether this is necessary {

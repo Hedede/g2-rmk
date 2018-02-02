@@ -21,6 +21,7 @@ SoundOpenAL::SoundOpenAL()
 	alcGetIntegerv( dev, ALC_MONO_SOURCES, 1, &attrib.max_sources );
 	Log( "OpenAL", "ALC_MONO_SOURCES = " + std::to_string(attrib.max_sources) );
 
+	pool = SourcePool( attrib.max_sources );
 
 	Log("OpenAL", "OpenAL is initialized");
 }
@@ -51,20 +52,25 @@ void SoundOpenAL::play( Source& src )
 }
 
 //------------------------------------------------------------------------------
+constexpr unsigned invalid_handle = -1;
 Source::Source()
+	: handle{invalid_handle}
 {
-	alGenSources(1, &handle);
-	if (alGetError() != AL_NO_ERROR) {
-		Warning( "SFX", "could not create sound handle" );
-		return;
-	}
-	
+}
+
+Source::Source( unsigned handle )
+	: handle{handle}
+{
+	Log( "SFX", std::to_string(handle) );
 	alSourcei(handle,  AL_SOURCE_RELATIVE, AL_TRUE);
 	alSourcef(handle,  AL_PITCH, 1);
 	alSourcef(handle,  AL_GAIN, 1);
 	alSource3f(handle, AL_POSITION, 0, 2, 0);
 	alSource3f(handle, AL_VELOCITY, 0, 0, 0);
 	alSourcei(handle,  AL_LOOPING, AL_FALSE);
+
+	if (alGetError() != AL_NO_ERROR)
+		Warning( "SFX", "could not set source attributes" );
 }
 
 void Source::set_buffer(Buffer& buf)

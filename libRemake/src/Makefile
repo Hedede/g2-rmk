@@ -13,6 +13,7 @@ Graphics/FontMan.cpp \
 Sound/zCSndSys_OpenAL.cpp \
 Sound/zCSndFX_OpenAL.cpp \
 Sound/SoundOpenAL.cpp \
+Sound/SourcePool.cpp \
 System/zResource.cpp \
 Filesystem/filesystem.cpp \
 Filesystem/find_files.cpp \

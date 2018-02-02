@@ -1,7 +1,11 @@
 #include <Hook/type_info.h>
 #include <Hook/Externals.h>
-#include <Sound/SoundOpenAL.h>
+
 #include <Sound/zCSndSys_OpenAL.h>
+
+#include "SoundOpenAL.h"
+
+//#include <aw/utility/string/lazy_split.h>
 
 namespace {
 struct OALTypeDescriptor : TypeDescriptor {
@@ -124,7 +128,7 @@ zCSoundFX* zCSndSys_OpenAL::LoadSoundFX(std::string name)
 	fs::path path{name};
 	if (path.extension().generic_u8string() == ".wav")
 	{
-		auto sfx = new zCSndFX_OpenAL;
+		auto sfx = new zCSndFX_OpenAL( impl() );
 		sfx->sound.file = name.data();
 		sfx->SetObjectName(non_scirpt_prefix + name);
 		return sfx;

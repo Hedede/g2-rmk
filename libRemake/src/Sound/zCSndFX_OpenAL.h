@@ -16,7 +16,7 @@ struct C_SFX {
 #include <Sound/OpenALSource.h>
 #include <Gothic/Audio/zSoundFX.h>
 struct zCSndFX_OpenAL : zCSoundFX {
-	zCSndFX_OpenAL( g2::SoundOpenAL& sys );
+	zCSndFX_OpenAL( );
 	void LoadResourceData();
 
 	// TODO: check whether this is necessary {
@@ -33,5 +33,4 @@ struct zCSndFX_OpenAL : zCSoundFX {
 	C_SFX sound;
 
 	g2::Buffer buffer;
-	g2::Source source;
 };

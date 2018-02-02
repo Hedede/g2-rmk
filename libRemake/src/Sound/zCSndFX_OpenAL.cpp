@@ -32,8 +32,8 @@ struct TypeInfo {
 };
 } // namespace
 
-zCSndFX_OpenAL::zCSndFX_OpenAL( g2::SoundOpenAL& sys )
-	: zCSoundFX{}, source{ sys.pool.request_source(0) }
+zCSndFX_OpenAL::zCSndFX_OpenAL( )
+	: zCSoundFX{}
 {
 	static TypeInfo tinfo{*zCSoundFX::vtab()};
 	_vtab = static_cast<void*>(&tinfo.vt);
@@ -66,5 +66,4 @@ void zCSndFX_OpenAL::LoadResourceData()
 	}
 
 	buffer.set_data( *wav );
-	source.set_buffer( buffer );
 }

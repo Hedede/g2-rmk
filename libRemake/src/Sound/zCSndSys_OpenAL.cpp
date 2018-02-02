@@ -77,6 +77,7 @@ struct TypeInfo {
 };
 } // end of typeinfo
 
+//------------------------------------------------------------------------------
 #include <Filesystem.h>
 #include <Gothic/Script/zParser.h>
 #include <Gothic/Game/zOptions.h>
@@ -128,7 +129,7 @@ zCSoundFX* zCSndSys_OpenAL::LoadSoundFX(std::string name)
 	fs::path path{name};
 	if (path.extension().generic_u8string() == ".wav")
 	{
-		auto sfx = new zCSndFX_OpenAL( impl() );
+		auto sfx = new zCSndFX_OpenAL;
 		sfx->sound.file = name.data();
 		sfx->SetObjectName(non_scirpt_prefix + name);
 		return sfx;
@@ -168,7 +169,12 @@ void zCSndSys_OpenAL::PlaySound(zCSoundFX& sfx, int slot)
 	//osfx.LoadResourceData();
 
 	g2::Log("SFX", "Playing wave "s + osfx.sound.file.Data());
-	impl().play( osfx.source );
+
+	g2::Source source( impl().pool.request_source(0) );
+	source.set_buffer( osfx.buffer );
+	impl().play( source );
+
+	return source.handle;
 }
 
 void zCSndSys_OpenAL::PlaySound3D(zCSoundFX* sfx, zCVob *, int slot, zTSound3DParams *)
@@ -176,6 +182,8 @@ void zCSndSys_OpenAL::PlaySound3D(zCSoundFX* sfx, zCVob *, int slot, zTSound3DPa
 	if (sfx) {
 		auto& osfx = static_cast<zCSndFX_OpenAL&>(*sfx);
 		g2::Log("SFX", "Playing sfx "s + osfx.sound.file.Data());
-		PlaySound(*sfx, slot);
+		return PlaySound(*sfx, slot);
 	}
+
+	return 0;
 }

@@ -1,11 +1,11 @@
 #include "zCSndFX_OpenAL.h"
+#include "SoundOpenAL.h"
 #include <Sound/zCSndSys_OpenAL.h>
 
 #include <Gothic/Game/zOptions.h>
 
 #include <Hook/type_info.h>
 #include <Hook/Externals.h>
-#include <Sound/SoundOpenAL.h>
 #include <Types/string_view.h>
 #include <aw/utility/string/case.h>
 

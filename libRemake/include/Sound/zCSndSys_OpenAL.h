@@ -1,9 +1,17 @@
 #pragma once
-#include <unordered_map>
+#include <string>
+#include <memory>
 
+//#include <Gothic/Audio/zSound.h>
+#include <Gothic/Audio/zSoundSystemDummy.h>
+
+namespace g2 {
+struct SoundOpenAL;
+} // namespace
 struct zCParser;
 struct zCSndSys_OpenAL : zCSoundSystemDummy {
 	zCSndSys_OpenAL();
+	~zCSndSys_OpenAL();
 
 	zCSoundFX* LoadSoundFX(std::string name);
 	zCSoundFX* LoadSoundFXScript(std::string name);
@@ -80,9 +88,25 @@ struct zCSndSys_OpenAL : zCSoundSystemDummy {
 		return -1.0;
 	}
 
+protected:
+	static constexpr size_t impl_size  = 0x40;
+	static constexpr auto   impl_align = alignof(void*);
+
+	g2::SoundOpenAL& impl()
+	{
+		return Value<g2::SoundOpenAL>(&data);
+	}
+
+	g2::SoundOpenAL const& impl() const
+	{
+		return Value<g2::SoundOpenAL>(&data);
+	}
+
 private:
 	float snd3D_defaultRadius;
-	g2::SoundOpenAL impl;
 
 	std::unique_ptr<zCParser> sfx_parser;
+
+	using storage = std::aligned_storage< impl_size >::type;
+	storage data;
 };

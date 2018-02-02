@@ -86,6 +86,10 @@ zCSndSys_OpenAL::zCSndSys_OpenAL()
 	static const TypeInfo tinfo{*vtab};
 	vtab = &tinfo.vt;
 
+	static_assert( sizeof(g2::SoundOpenAL)  <= sizeof(data)  );
+	static_assert( alignof(g2::SoundOpenAL) <= alignof(data) );
+	new (&data) g2::SoundOpenAL;
+
 	g2::Log("OpenAL", "creating sfx parser");
 	sfx_parser.reset( new zCParser );
 
@@ -99,6 +103,11 @@ zCSndSys_OpenAL::zCSndSys_OpenAL()
 	sfx_parser->CreatePCode();
 	sfx_parser->CheckClassSize( "C_SFX", sizeof(C_SFX) );
 	sfx_parser->CheckClassSize( "C_SNDSYS_CFG", 40 );
+}
+
+zCSndSys_OpenAL::~zCSndSys_OpenAL()
+{
+	impl().~SoundOpenAL();
 }
 
 #include <Types/string_view.h>
@@ -155,7 +164,7 @@ void zCSndSys_OpenAL::PlaySound(zCSoundFX& sfx, int slot)
 	//osfx.LoadResourceData();
 
 	g2::Log("SFX", "Playing wave "s + osfx.sound.file.Data());
-	impl.play( osfx.source );
+	impl().play( osfx.source );
 }
 
 void zCSndSys_OpenAL::PlaySound3D(zCSoundFX* sfx, zCVob *, int slot, zTSound3DParams *)

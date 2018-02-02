@@ -1,76 +1,48 @@
-#include <Sound/SoundOpenAL.h>
+#include "SoundOpenAL.h"
+
 #include <aw/fileformat/wav/reader.h>
-#include <AL/al.h>
-#include <AL/alc.h>
-// correct way to do things would be query extensions and then load them
-// but I don't care really
-#define AL_ALEXT_PROTOTYPES
-#include <AL/alext.h>
 #include <stdexcept>
+
 //------------------------------------------------------------------------------
 namespace g2 {
-struct Attributes {
-	ALint max_sources;
-};
-
-struct SoundOpenAL::Impl {
-	Impl()
-	{
-		Log("OpenAL", "Creating audio device");
-		dev = alcOpenDevice(nullptr);
-		if (!dev)
-			Fatal( "OpenAL", "could not open default device" );
-		Log("OpenAL", "Creating context");
-		ctx = alcCreateContext(dev, nullptr);
-		if (!ctx)
-			Fatal( "could not create context" );
-		if (!MakeContextCurrent())
-			Fatal(  "failed to make context current" );
-
-		alcGetIntegerv( dev, ALC_MONO_SOURCES, 1, &attrib.max_sources );
-		Log( "OpenAL", "ALC_MONO_SOURCES = " + std::to_string(attrib.max_sources) );
-	}
-
-
-	~Impl()
-	{
-		alcDestroyContext(ctx);
-		alcCloseDevice(dev);
-	}
-
-	bool MakeContextCurrent()
-	{
-		if (!alcMakeContextCurrent(ctx))
-			return false;
-		if (alcGetError(dev) != ALC_NO_ERROR)
-			return false;
-		return true;
-	}
-
-	ALCdevice*  dev;
-	ALCcontext* ctx;
-	Attributes attrib;
-};
-
-
-
 SoundOpenAL::SoundOpenAL()
 {
-	static_assert( sizeof(SoundOpenAL::Impl)  <= sizeof(data)  );
-	static_assert( alignof(SoundOpenAL::Impl) <= alignof(data) );
+	Log("OpenAL", "Creating audio device");
+	dev = alcOpenDevice(nullptr);
+	if (!dev)
+		Fatal( "OpenAL", "could not open default device" );
+	Log("OpenAL", "Creating context");
+	ctx = alcCreateContext(dev, nullptr);
+	if (!ctx)
+		Fatal( "could not create context" );
+	if (!MakeContextCurrent())
+		Fatal(  "failed to make context current" );
 
-	new (&data) Impl;
+	alcGetIntegerv( dev, ALC_MONO_SOURCES, 1, &attrib.max_sources );
+	Log( "OpenAL", "ALC_MONO_SOURCES = " + std::to_string(attrib.max_sources) );
+
+
 	Log("OpenAL", "OpenAL is initialized");
+}
+
+bool SoundOpenAL::MakeContextCurrent()
+{
+	if (!alcMakeContextCurrent(ctx))
+		return false;
+	if (alcGetError(dev) != ALC_NO_ERROR)
+		return false;
+	return true;
 }
 
 SoundOpenAL::~SoundOpenAL()
 {
-	impl().~Impl();
+	alcDestroyContext(ctx);
+	alcCloseDevice(dev);
 }
 
 int SoundOpenAL::max_sources() const
 {
-	return impl().attrib.max_sources;
+	return attrib.max_sources;
 }
 
 void SoundOpenAL::play( Source& src )

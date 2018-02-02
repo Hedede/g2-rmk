@@ -37,6 +37,7 @@ Source SourcePool::request_source(int priority)
 
 	for (auto [s,p] : aw::zip(used_sources, priorities)) {
 		if (p > priority) {
+			alSourceStop( s );
 			p = priority;
 			return s;
 		}

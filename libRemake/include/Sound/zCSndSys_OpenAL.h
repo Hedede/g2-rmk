@@ -42,12 +42,13 @@ struct zCSndSys_OpenAL : zCSoundSystemDummy {
 	}
 
 	void PlaySound(zCSoundFX *,int,int,float,float) {}
-	void PlaySound(zCSoundFX& sfx, int slot);
+	zTSndHandle PlaySound(zCSoundFX& sfx, int slot);
 
 	void PlaySound3D(zSTRING const &,zCVob *,int,zTSound3DParams *) {}
-	void PlaySound3D(zCSoundFX *,zCVob *,int,zTSound3DParams *);
+	zTSndHandle PlaySound3D(zCSoundFX* sfx, zCVob *,int,zTSound3DParams *);
 
-	void StopSound(int const &) {}
+	void StopSound(zTSndHandle handle);
+
 	void StopAllSounds() {}
 
 	void GetSound3DProps(int const &,zTSound3DParams &) {}

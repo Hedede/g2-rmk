@@ -10,6 +10,8 @@ struct zCVob;
 
 enum zTSpeakerType {};
 
+enum class zTSndHandle : int {};
+
 struct zCSoundSystem_vt {
 	void (__thiscall *dtor)(zCSoundSystem *);
 	zCSoundFX *(__thiscall *LoadSoundFX)(zCSoundSystem *, const zSTRING&);
@@ -20,11 +22,11 @@ struct zCSoundSystem_vt {
 	void (__thiscall *GetSound3DDefaultRadius)(zCSoundSystem *);
 	void (__thiscall *SetMasterVolume)(zCSoundSystem *, float);
 	void (__thiscall *GetMasterVolume)(zCSoundSystem *);
-	void (__thiscall *PlaySound1)(zCSoundSystem *, zCSoundFX *, int, int, float, float);
-	void (__thiscall *PlaySound2)(zCSoundSystem *, zCSoundFX *, int);
-	void (__thiscall *PlaySound3D1)(zCSoundSystem *, const zSTRING *, zCVob *, int, zTSound3DParams *);
-	zCActiveSnd *(__thiscall *PlaySound3D2)(zCSoundSystem *, zCSoundFX *, zCVob *, int, zTSound3DParams *);
-	void (__thiscall *StopSound)(zCSoundSystem *, const int *);
+	zTSndHandle (__thiscall *PlaySound1)(zCSoundSystem*, zCSoundFX*, int, int, float, float);
+	zTSndHandle (__thiscall *PlaySound2)(zCSoundSystem*, zCSoundFX*, int);
+	zTSndHandle (__thiscall *PlaySound3D1)(zCSoundSystem*, const zSTRING*, zCVob *, int, zTSound3DParams *);
+	zTSndHandle (__thiscall *PlaySound3D2)(zCSoundSystem*, zCSoundFX*, zCVob *, int, zTSound3DParams *);
+	void (__thiscall *StopSound)(zCSoundSystem *, const zTSndHandle&);
 	void (__thiscall *StopAllSounds)(zCSoundSystem *);
 	int (__thiscall *GetSound3DProps)(zCSoundSystem *, const int *, zTSound3DParams *);
 	void (__thiscall *UpdateSound3D)(zCSoundSystem *, const int *, zTSound3DParams *);

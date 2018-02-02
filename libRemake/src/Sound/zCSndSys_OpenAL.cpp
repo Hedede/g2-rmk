@@ -7,6 +7,10 @@
 
 //#include <aw/utility/string/lazy_split.h>
 
+//------------------------------------------------------------------------------
+constexpr zTSndHandle invalid_snd_handle = zTSndHandle(-1);
+
+//------------------------------------------------------------------------------
 namespace {
 struct OALTypeDescriptor : TypeDescriptor {
 	const char name[22];
@@ -56,20 +60,25 @@ struct TypeInfo {
 		};
 
 		vt.PlaySound2 =
-		[] (zCSoundSystem* ss, zCSoundFX* sfx, int slot) __thiscall -> void
+		[] (zCSoundSystem* ss, zCSoundFX* sfx, int slot) __thiscall -> zTSndHandle
 		{
 			if (sfx)
-				oal(ss)->PlaySound(*sfx, slot);
-			else
-				g2::Warning("OpenAL", "Chto za bodyagoo ty preevolok?");
+				return oal(ss)->PlaySound(*sfx, slot);
+			g2::Warning("OpenAL", "Chto za bodyagoo ty preevolok?");
+			return invalid_snd_handle;
 		};
 
 		vt.PlaySound3D2 =
-		[] (zCSoundSystem* ss, zCSoundFX* sfx, zCVob* source, int slot, zTSound3DParams* params) __thiscall -> zCActiveSnd*
+		[] (zCSoundSystem* ss, zCSoundFX* sfx, zCVob* source, int slot, zTSound3DParams* params) __thiscall -> zTSndHandle
 		{
-			oal(ss)->PlaySound3D(sfx, source, slot, params);
-			return nullptr;
+			return oal(ss)->PlaySound3D(sfx, source, slot, params);
 		};
+
+		vt.StopSound =
+		[] (zCSoundSystem* ss, const zTSndHandle& handle) __thiscall {
+			oal(ss)->StopSound( handle );
+		};
+
 		g2::Log("OpenAL", "vtable initialized");
 	}
 	RTTICompleteObjectLocator* rtti = &oal_rtti;
@@ -78,6 +87,7 @@ struct TypeInfo {
 } // end of typeinfo
 
 //------------------------------------------------------------------------------
+
 #include <Filesystem.h>
 #include <Gothic/Script/zParser.h>
 #include <Gothic/Game/zOptions.h>
@@ -162,7 +172,7 @@ zCSoundFX* zCSndSys_OpenAL::LoadSoundFXScript(std::string name)
 }
 
 using namespace std::string_literals;
-void zCSndSys_OpenAL::PlaySound(zCSoundFX& sfx, int slot)
+zTSndHandle zCSndSys_OpenAL::PlaySound(zCSoundFX& sfx, int slot)
 {
 	sfx.CacheIn( -1.0 );
 	auto& osfx = static_cast<zCSndFX_OpenAL&>(sfx);
@@ -174,10 +184,10 @@ void zCSndSys_OpenAL::PlaySound(zCSoundFX& sfx, int slot)
 	source.set_buffer( osfx.buffer );
 	impl().play( source );
 
-	return source.handle;
+	return (zTSndHandle)source.handle;
 }
 
-void zCSndSys_OpenAL::PlaySound3D(zCSoundFX* sfx, zCVob *, int slot, zTSound3DParams *)
+zTSndHandle zCSndSys_OpenAL::PlaySound3D(zCSoundFX* sfx, zCVob* source, int slot, zTSound3DParams*)
 {
 	if (sfx) {
 		auto& osfx = static_cast<zCSndFX_OpenAL&>(*sfx);
@@ -185,5 +195,10 @@ void zCSndSys_OpenAL::PlaySound3D(zCSoundFX* sfx, zCVob *, int slot, zTSound3DPa
 		return PlaySound(*sfx, slot);
 	}
 
-	return 0;
+	return invalid_snd_handle;
+}
+
+void zCSndSys_OpenAL::StopSound(zTSndHandle handle)
+{
+	alSourceStop( ALuint(handle) );
 }

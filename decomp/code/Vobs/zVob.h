@@ -1723,3 +1723,54 @@ zCVisual* zCVob::GetClassHelperVisual()
 	it = s_helperVisualMap.insert( it ).first;
 	return it.second;
 }
+
+bool zCVob::IsColliding()
+{
+	if ( !(flags1.collDetectionStatic || flags1.collDetectionDynamic ))
+		return false;
+
+	zTCollisionContext colContext;
+
+	zCArray<zCCollisionReport *> colReportList;
+
+	v4 = this->collisionObject;
+	v5 = v4->vt;
+	LOBYTE(v19) = 2;
+	numCol = 0;
+
+	zTBBox3D bbox1 = collisionObject->GetLargestBBox3DLocal();
+	zTBBox3D bbox2;
+
+	bbox1.Transform(collisionObject->trafo, bbox2);
+	bbox1.Transform(collisionObject->trafoObjToWorld, bbox1);
+
+	bbox1.CalcGreaterBBox3D( bbox2 );
+
+	colContext.colContext.Clear();// don't remember the method name
+
+	CollectCollisionContext_Vobs(bbox, colContext);
+	CollectCollisionContext_Static(bbox, colContext.collObjects);
+
+	s_poCollisionDetector->DetectCollisions( collisionObject, colContext.collObjects, colReportList);
+
+	bool colliding = false;
+	for (auto i = 0, e = colReportList.Num(); i < e; ++i) {
+		auto col2 = colReportList[i]->col2;
+		if ( col2->SuppressCollisionResponse() )
+			colReportList.RemoveIndex( i-- );
+		colliding = e > 0;
+	}
+
+	for (auto& vob = 0 : colContext.vobList ) {
+		if ( !vob->isInMovementMode  ) {
+			if ( auto colClass = vob->collisionObjectClass )
+			{
+				if ( colClass->isVolatile )
+					DeleteAndNull(vob->collisionObject); // pseudocode
+			}
+		}
+		vob->Release();
+	}
+
+	return colliding;
+}

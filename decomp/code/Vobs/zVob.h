@@ -369,13 +369,19 @@ private:
 		uint32_t staticVob                 : 1; // 0x10
 		uint32_t ignoredByTraceRay         : 1; // 0x20
 		uint32_t collDetectionStatic       : 1; // 0x40
-		uint32_t collDetectionDynamic      : 1; // 0x80
-		uint32_t castDynShadow             : 2; // 0x100
-		uint32_t lightColorStatDirty       : 1; // 0x200 / 4
-		uint32_t lightColorDynDirty        : 1; // 0x400 / 8
+		uint32_t collDetectionDynamic      : 1; // 0x80  / 1
+		uint32_t castDynShadow             : 2; // 0x100 / 2
+		uint32_t lightColorStatDirty       : 1; // 0x400 / 4
+		uint32_t lightColorDynDirty        : 1; // 0x800 / 8
 	} flags1;
 
-	uint8_t isInMovementMode : 2;
+	enum zTMovementMode {
+		? = 0,
+		? = 1,
+		? = 2
+	};
+
+	zTMovementMode isInMovementMode : 2; //uint8_t
 
 	struct {
 		uint32_t sleepingMode              : 2;
@@ -1017,52 +1023,6 @@ void zCVob::SetPositionLocal(zVEC3 const& vec)
 		EndMovement(1);
 }
 
-void zCVob::SetHeadingWorld(zVEC3 const& vec)
-{
-	int movmode = isInMovementMode;
-	if (!movmode)
-		BeginMovement();
-
-	auto pos = collisionObject.trafoObjToWorld.GetTranslation();
-	auto diff = pos - vec;
-	if (diff.Length() > 0.0 ) {
-		SetHeadingAtWorld(diff.Normalized()); // didn't care to look up
-		if (!movmode)
-			EndMovement(1);
-	}
-}
-
-void zCVob::SetHeadingLocal(zVEC3 const& vec)
-{
-	int movmode = isInMovementMode;
-	if (!movmode)
-		BeginMovement();
-
-	auto pos = collisionObject->trafoObjToWorld.GetTranslation();
-	auto diff = pos - vec;
-	if (diff.Length() > 0.0 ) {
-		SetHeadingAtLocal(diff.Normalized()); // didn't care to look up
-		if (!movmode)
-			EndMovement(1);
-	}
-}
-
-void zCVob::SetHeadingYLocal(zVEC3 const& targetPos)
-{
-	int movmode = isInMovementMode;
-	if (!movmode)
-		BeginMovement();
-
-	auto pos = collisionObject->trafoObjToWorld.GetTranslation();
-	auto diff = pos - vec;
-	if (diff.Length() > 0.0 ) {
-		SetHeadingAtLocal(diff.Normalized()); // didn't care to look up
-		if (!movmode)
-			EndMovement(1);
-	}
-
-	ResetXZRotationsLocal();
-}
 
 zVEC3 zCVob::GetPositionWorld() const
 {
@@ -1099,36 +1059,6 @@ void zCVob::GetPositionLocal(zCVob *this, float& x, float& y, float& z)
 	x = (*trafo)[0][3];
 	y = (*trafo)[1][3];
 	z = (*trafo)[2][3];
-}
-
-void zCVob::SetRotationWorld(zCQuat const& quat)
-{
-	int movmode = isInMovementMode;
-	if ( !movmode )
-		BeginMovement();
-
-	quat.QuatToMatrix4(collisionObject->trafoObjToWorld);
-	collisionObject->flags |= 2u;
-
-	if ( !movmode )
-		EndMovement(1);
-}
-
-
-void zCVob::ResetRotationsWorld()
-{
-	auto movmode = isInMovementMode;
-	if ( !movmode )
-		BeginMovement();
-
-	auto pos = GetPositionWorld();
-	collisionObject->trafoObjToWorld = zMAT4::s_identity;
-	collisionObject->trafoObjToWorld.SetTranslation(pos); // didn't look up, was inlined
-
-	collisionObject->flags |= 2u;
-
-	if ( !movmode )
-		EndMovement(1);
 }
 
 void zCVob::UpdateVisualDependencies(int calcGround)
@@ -1206,7 +1136,7 @@ void zCVob::ReleaseVobSubtree(zCTree<zCVob>* node)
 
 void zCVob::AddRefVobSubtree(zCTree<zCVob>* node, int addTree)
 {
-	if (node || node = globalVobTreeNoe) {
+	if (node || node = globalVobTreeNode) {
 		auto data = node->data;
 		if ( data ) {
 			if ( addTree ) {

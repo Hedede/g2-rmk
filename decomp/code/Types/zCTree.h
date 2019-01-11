@@ -1,15 +1,20 @@
 //--------------------------------------
 // Baum / Knoten. Für Vobtree
 //--------------------------------------
+extern zCMemPoolBase s_TreePool; // TODO: actual type
+
 template <class T> 
 class zCTree {
-	zCTree* parent;
-	zCTree* firstChild;
-	zCTree* next;
-	zCTree* prev;
-	T*      data;
+
+	zCTree* parent = nullptr;
+	zCTree* firstChild = nullptr;
+	zCTree* next = nullptr;
+	zCTree* prev = nullptr;
+	T*      data = nullptr;
 
 public:
+	zCTree() = default;
+
 	void DeleteDataSubtree()
 	{
 		if ( data )
@@ -30,4 +35,44 @@ public:
 		this->next = nullptr;
 		this->prev = nullptr;
 	}
+
+	void AddChild(zCTree<T> *node)
+	{
+		node->parent = this;
+		node->prev = nullptr;
+		node->next = this->firstChild;
+		this->firstChild = node;
+		auto next = node->next;
+		if ( next )
+			next->prev = node;
+	}
+
+	zCTree<T>* AddChild(zCVob *d)
+	{
+		auto node = new zCTree<T>;
+		node->data = d;
+		AddChild( node );
+		return node;
+	}
+
+	int CountNodes() const
+	{
+		int result = 1;
+		if (firstChild)
+			result += firstChild->CountNodes();
+		if (next)
+			result += next->CountNodes();
+		return result;
+	}
+
+	void operator delete(void *ptr)
+	{
+		s_TreePool.Free(ptr);
+	}
+
+	void operator new(size_t count)
+	{
+		return s_TreePool.Alloc();
+	}
 };
+

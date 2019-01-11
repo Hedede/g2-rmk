@@ -10,54 +10,26 @@ public:
 	int LoadWorld(zSTRING const& fileName, zCWorld::zTWorldLoadMode loadMode) override;
 	void SaveWorld(zSTRING const& fileName, zCWorld::zTWorldSaveMode saveMode, int writeBinary, int saveLevelMesh) override;
 
-	void DisposeWorld() override
-	{
-		DisposeVobs();
-		zCWorld::DisposeWorld();
-	}
+	void DisposeWorld() override;
 
-	virtual void AddVobAsChild(zCVob *,zCTree<zCVob> *);
-	virtual void RemoveVob(zCVob *);
-	virtual void SearchVob(zCVob *,zCTree<zCVob> *);
-	virtual void SearchVobByID(ulong,zCTree<zCVob> *);
-	virtual void SearchVobByName(zSTRING const &);
-	virtual void SearchVobListByName(zSTRING const &,zCArray<zCVob *> &);
 
-	virtual void CreateVob(zTVobType type, int instanceId)
-	{
-		zINFO(10, "U: (oCWorld::CreateVob) "_s + instanceId); // 315, oWorld.cpp
-		if ( type == VOB_TYPE_ITEM ) {
-			auto ofactory = dynamic_cast<oCObjectFactory*>(zfactory);
-			ofactory->CreateItem(instanceId);
-		} else if ( type == VOB_TYPE_NPC ) {
-			auto ofactory = dynamic_cast<oCObjectFactory*>(zfactory);
-			ofactory->CreateNpc(instanceId);
-		}
-	}
+	zCTree<zCVob>* AddVobAsChild(zCVob * childVob,zCTree<zCVob> * tree) override;
+	void RemoveVob(zCVob* vob) override;
+	zCVob* SearchVob(zCVob* vob, zCTree<zCVob> * vobNode) override;
+	zCVob* SearchVobByID(ulong,zCTree<zCVob> *) override;
+	zCVob* SearchVobByName(zSTRING const &) override;
+	zCVob* SearchVobListByName(zSTRING const &,zCArray<zCVob *> &) override;
 
-	virtual void InsertVobInWorld(zCVob* vob)
-	{
-		if (vob)
-			InsertInLists(vob);
-	}
-	virtual void EnableVob(zCVob *,zCVob *);
-	virtual void DisableVob(zCVob *);
-	virtual void TraverseVobList(zCVobCallback& cb, void* cb_data)
-	{
-		for (auto vob : voblist)
-			if (vob)
-				cb->HandleVob(vob, cb_data);
-	}
+	virtual zCVob* CreateVob(zTVobType type, int instanceId);
+	zCVob* CreateVob(zTVobType type, zSTRING const& name);
 
-	void ClearNpcPerceptionVobLists()
-	{
-		for (auto npc : voblist_npcs) {
-			if (!npc->IsSelfPlayer()) {
-				npc->ClearPerceptionLists();
-				npc->SetEnemy(0);
-			}
-		}
-	}
+	virtual void InsertVobInWorld(zCVob* vob);
+
+	virtual void EnableVob(zCVob* vob, zCVob * parent);
+	virtual void DisableVob(zCVob* vob);
+	virtual void TraverseVobList(zCVobCallback& cb, void* cb_data);
+	void ClearNpcPerceptionVobLists();
+
 
 	virtual void DisposeVobs();
 
@@ -85,6 +57,8 @@ private:
 	zCListSort<oCItem>*  voblist_items;
 };
 
+//------------------------------------------------------------------------------
+//Gothic/_ulf/oWorld.cpp
 oCWorld::oCWorld()
 	: zCWorld()
 {
@@ -115,6 +89,31 @@ oCWorld::~oCWorld()
 	Delete(voblist_items);
 
 	zINFO(9,"U: (oCWorld) Destruction"); // 298
+}
+
+zCVob* oCWorld::CreateVob(zTVobType type, int instanceId)
+{
+	zINFO(10, "U: (oCWorld::CreateVob) "_s + instanceId); // 315, oWorld.cpp
+
+	zCVob* vob = nullptr;
+	if ( type == VOB_TYPE_ITEM ) {
+		auto ofactory = dynamic_cast<oCObjectFactory*>(zfactory);
+		vob = ofactory->CreateItem(instanceId);
+	}
+	if ( type == VOB_TYPE_NPC ) {
+		auto ofactory = dynamic_cast<oCObjectFactory*>(zfactory);
+		vob = ofactory->CreateNpc(instanceId);
+	}
+	return vob;
+}
+
+zCVob* oCWorld::CreateVob(zTVobType type, zSTRING const& name)
+{
+	zINFO( 10, "U: (oCWorld::CreateVob) " + name); // 307 in g2, 281 in g1demo
+	int instanceId = zparser.GetIndex(name);
+	if ( instanceId < 0 )
+		zFAULT("U: OBJ: Script-object " + name + " not found ! Please correct instancename !"); // 309, 283
+	return CreateVob(type, instanceId);
 }
 
 void oCWorld::Archive(zCArchiver& arc)
@@ -197,6 +196,216 @@ int oCWorld::LoadWorld(zSTRING const& fileName, zCWorld::zTWorldLoadMode mode)
 	return 1;
 }
 
+zCTree<zCVob> * oCWorld::AddVobAsChild(zCVob * childVob, zCTree<zCVob> * tree)
+{
+	if ( !childVob )
+		return 0;
+	InsertVobInWorld(childVob);
+	auto node = AddVobAsChild(childVob, tree);
+	zINFO(10, "U: (oCWorld::AddVobAsChild) " + childVob->GetObjectName() + " (" + 1 + ")"); // 466
+	return node;
+}
+
+void oCWorld::RemoveVob(zCVob *vob)
+{
+	if ( vob ) {
+		zINFO( "U: (oCWorld::RemoveVob) " + vob->GetObjectName() + " (" + 1 + ")"); // 475
+		RemoveFromLists(vob);
+		if ( vob->homeWorld )
+			zCWorld::RemoveVob(vob);
+	}
+}
+
+void oCWorld::InsertVobInWorld(zCVob* vob)
+{
+	if (vob)
+		InsertInLists(vob);
+}
+
+void oCWorld::EnableVob(zCVob *vob, zCVob *papa)
+// 'papa' is the name in g1demo executable
+{
+	if ( !vob->homeWorld ) {
+		zINFO( 9, "U: (oCWorld::EnableVob) " + vob->GetObjectName() ); // 496
+		if (auto npc = dynamic_cast<oCNpc*>(vob))
+			vob->globalVobTreeNode = 0;
+		if ( parent )
+			zCWorld::AddVobAsChild(vob, parent);
+		else
+			zCWorld::AddVobAsChild(vob, &globalVobTree);
+		vob->SetSleeping(0);
+	}
+}
+
+void oCWorld::DisableVob(zCVob *vob)
+{
+	if ( vob->homeWorld ) {
+		voblist.RemoveOrder( vob );
+
+		zINFO("U: (oCWorld::DisableVob) " + vob->GetObjectName() ); // 525
+		zCWorld::RemoveVobSubtree(vob);
+		vob->SetSleeping(1);
+	}
+}
+
+zCVob* oCWorld::SearchVob(zCVob *vob, zCTree<zCVob> * vobNode)
+{
+	zCVob *result = zCWorld::SearchVob(vob, vobNode);
+	if ( !result && !vobNode )
+		result = voblist? voblist->Search( vob ) : nullptr;
+	return result;
+}
+
+zCVob* oCWorld::SearchVobByID(unsigned int vobId, zCTree<zCVob> * vobNode)
+{
+	zCVob *result = zCWorld::SearchVobByID(vobId, vobNode);
+	if ( !result && !vobNode )
+		// pseudocode
+		result = voblist? voblist->Search( vobId ) : nullptr;
+	return result;
+}
+
+zCVob* oCWorld::SearchVobByName(zSTRING const& vobName)
+{
+	zCVob *result = zCWorld::SearchVobByName(vobName);
+	if ( !result )
+		// pseudocode
+		result = voblist? voblist->Search( vobName ) : nullptr;
+	return result;
+}
+
+void oCWorld::SearchVobListByName(zSTRING const& name, zCArray<zCVob *>& resultVobList)
+{
+	zCWorld::SearchVobListByName( name, resultVobList );
+	if (!voblist)
+		return;
+	for (zCVob* vob : voblist)
+		if (vob->GetObjectName() == name)
+			resultVobList.InsertEnd( vob );
+}
+
+
+void oCWorld::InsertInLists(zCVob *vob)
+{
+	if (!vob)
+		return;
+
+	if ( !CheckInheritance(&oCVob::classDef, vob) )
+		return;
+
+	if (!voblist.Search(vob)) {
+		voblist.InsertSort( vob );
+		vob->AddRef();
+	}
+
+	if (auto npc = zDYNAMIC_CAST<oCNpc>(vob))
+	{
+		if (!voblist_npcs.Search(npc)) {
+			voblist_npcs.InsertSort( npc );
+			npc->AddRef();
+			return;
+		}
+	}
+
+	if (auto item = zDYNAMIC_CAST<oCItem>(vob))
+	{
+		if (!voblist_items.Search(item)) {
+			voblist_items.InsertSort( item );
+			item->AddRef();
+		}
+	}
+}
+
+void oCWorld::TraverseVobList(zCVobCallback& cb, void* cb_data)
+{
+	for (auto vob : voblist)
+		if (vob)
+			cb->HandleVob(vob, cb_data);
+}
+
+void oCWorld::ClearNpcPerceptionVobLists()
+{
+	for (auto npc : voblist_npcs) {
+		if (!npc->IsSelfPlayer()) {
+			npc->ClearPerceptionLists();
+			npc->SetEnemy(0);
+		}
+	}
+}
+
+void oCWorld::RemoveFromLists(zCVob *vob)
+{
+	if ( vob->refDtr <= 0 ) {
+		zWARNING( "RemoveFromList(vob) called from vob destructor!\n" ); // 673
+		return;
+	}
+
+	vob->AddRef();
+
+	if ( !CheckInheritance(&oCVob::classDef, vob) )
+		return;
+
+	if (voblist.Search(vob)) {
+		voblist.RemoveOrder( vob );
+		vob->Release();
+	}
+
+	// Really inefficient, traverses the linked list twice
+	// I have no idea how this code was originally structured
+	// why does check 'else' branch if npc isn't found in the list?
+	// it is already established that it is npc, it can't be item
+	// it would even look simpler without that jump, am I missing something?
+	auto npc = zDYNAMIC_CAST<oCNpc>(vob);
+	if (npc && voblist_npcs.Search(npc)) {
+		voblist_npcs.RemoveOrder( npc );
+		npc->CleanUp();
+		npc->Release();
+	} else if (auto item = zDYNAMIC_CAST<oCItem>(vob)) {
+		if (voblist_items.Search(item)) {
+			voblist_items.RemoveOrder( item );
+			item->Release();
+		}
+	}
+
+	vob->Release();
+}
+
+void oCWorld::DisposeVobs()
+{
+	auto list = &voblist_npcs;
+	for ( auto i = list->next; i; i = list->next ) {
+		auto npc = i->Get();
+
+		npc->CleanUp();
+		npc->DestroySpellBook();
+		npc->RemoveFromAllSlots(0);
+		npc->Release();
+
+		voblist_npcs->Remove( npc );
+	}
+
+	list = &voblist_items;
+	for ( auto i = list->next; i; i = list->next ) { {
+		auto item = i->Get();
+		list->Remove( item );
+		item->Release();
+	}
+
+	list = &voblist;
+	for ( auto i = list->next; i; i = list->next ) {
+		auto vob = i->Get();
+		list->Remove( vob );
+		vob->Release();
+	}
+	zCWorld::DisposeVobs(0);
+}
+
+void oCWorld::DisposeWorld()
+{
+	DisposeVobs();
+	zCWorld::DisposeWorld();
+}
+
 //------------------------------------------------------------------------------
 int CompareVobsByID(zCVob* vob1, zCVob* vob2)
 {
@@ -213,3 +422,5 @@ int CompareNpcsByID(oCNpc *vob1, oCNpc *vob2)
 {
 	return CompareVobsByID(vob1, vob2);
 }
+
+

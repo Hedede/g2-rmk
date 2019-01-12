@@ -1026,22 +1026,22 @@ void zCVob::SetPositionLocal(zVEC3 const& vec)
 
 zVEC3 zCVob::GetPositionWorld() const
 {
-	return {trafoObjToWorld[2][3], trafoObjToWorld[1][3], trafoObjToWorld[0][3]};
+	return trafoObjToWorld->GetTranslation();
 }
 
 zVEC3 zCVob::GetAtVectorWorld() const
 {
-	return {trafoObjToWorld[2][2], trafoObjToWorld[1][2], trafoObjToWorld[0][2]};
+	return trafoObjToWorld->GetAtVector();
 }
 
 zVEC3 zCVob::GetUpVectorWorld() const
 {
-	return {trafoObjToWorld[2][1], trafoObjToWorld[1][1], trafoObjToWorld[0][1]};
+	return trafoObjToWorld->GetUpVector();
 }
 
 zVEC3 zCVob::GetRightVectorWorld() const
 {
-	return {trafoObjToWorld[2][0], trafoObjToWorld[1][0], trafoObjToWorld[0][0]};
+	return trafoObjToWorld->GetRightVector();
 }
 
 void zCVob::GetPositionWorld(float& x, float& y, float& z)

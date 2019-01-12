@@ -174,6 +174,8 @@ struct zCActiveSnd {
 
 	int CalcListenerPan() { return 64; }
 
+	double GetVolume() const;
+
 private:
 	int handle;
 	int sampleHandle;
@@ -203,7 +205,10 @@ private:
 	int frequency; // pitch?
 	int __lastUpdate;
 	int updateFrameCtr;
-	int unk[4];
+	
+	zVEC3 __lastFramePos;
+
+	float __lastFrameTime; // unk[3]
 
 	zCVob *sourceVob;
 	zCSndFrame *frame;
@@ -328,7 +333,7 @@ zCActiveSnd* zCActiveSnd::AllocNextFreeSnd()
 	return result;
 }
 
-void zCActiveSnd::CalcListenerVolume(zCActiveSnd *this)
+void zCActiveSnd::CalcListenerVolume()
 {
 	if ( bitfield & 4 )
 		volume = GetVolume() * 127.0;
@@ -336,4 +341,38 @@ void zCActiveSnd::CalcListenerVolume(zCActiveSnd *this)
 		volume = frame->volume;
 
 	volume *= __master_volume;
+}
+
+double zCActiveSnd::GetVolume()
+{
+	if ( !(bitfield & 0xC) )
+		return frame->volume / 127.0;
+
+	if ( !listener )
+		return 0.0;
+	if ( !sourceVob )
+		return 0.0;
+
+	auto srcPos = sourceVob->GetPositionWorld();
+	auto lisDir = listener->GetAtVectorWorld();
+	auto lisPos = listener->GetPositionWorld();
+
+	auto innerRadius = 0.3 * radius;
+
+	auto distApprox = (srcPos - lisPos).lengthApprox();
+
+	if ( distApprox > radius )
+		return 0.0;
+
+	double attenuation = innerRadius;
+	if ( distApprox > innerRadius )
+		attenuation *= 1.0 - (distApprox - innerRadius) / (radius - innerRadius);
+
+	double volume = frame->volume / 127.0;
+
+	if ( distApprox != 0.0 )
+		volume *= (attenuation / distApprox);
+
+	zClamp( volume, 0.0, 1.0 );
+	return volume;
 }

@@ -191,7 +191,7 @@ void zCSndSys_MSS::~zCSndSys_MSS()
 //------------------------------------------------------------------------------
 void zCSndSys_MSS::SetListener(zCVob* listenerVob)
 {
-	Release(listener);
+	listener->Release();
 	if ( listenerVob ) {
 		listener = listenerVob;
 		listener->AddRef();
@@ -877,4 +877,173 @@ void zCSndSys_MSS::UpdateSoundProps(const int& sfxHandle, int freq, float vol, f
 			AIL_stop_sample(snd->sampleHandle);
 		}
 	}
+}
+
+int zCSndSys_MSS::UpdateSound3D(int const& sfxHandle, zTSound3DParams* params)
+{
+	if ( sfxHandle == -1 )
+		return 0;
+	auto idx = zCActiveSnd::GetHandleIndex(*sfxHandle);
+	if ( idx == -1 )
+		return 0;
+	auto actSnd = zCActiveSnd::activeSndList.GetSafe(idx);
+	if ( !actSnd )
+		return 0;
+	if ( !listener )
+		return 0;
+
+	if ( !actSnd->HasBeenUpdatedThisFrame() ) // was inlined
+		return 0;
+
+	actSnd->sndFx->CacheIn(); // was inlined
+
+	// can't find a function, but possibly was inlined too
+	if ( listener && listener->homeWorld )
+		actSnd->updateFrameCtr = listener->homeWorld->masterFrameCtr;
+
+	if ( actSnd->sndFx->cacheState != CACHED_IN )
+		return 1;
+	if ( !actSnd->sourceVob )
+		return 0;
+	if ( actSnd->bitfield & 4 ) {
+		UpdateSoundPropsAmbient(actSnd, params);
+		return 1;
+	}
+
+	if ( params ) {
+		if ( params->radius == -1.0 )
+			actSnd->radius = _this->defaultRadius_3d;
+		else
+			actSnd->radius = params->radius;
+
+		if ( params->volume == -1.0 )
+			actSnd->__master_volume = 1.0;
+		else
+			actSnd->__master_volume = params->volume;
+
+		if ( actSnd->__master_volume > 1.0 )
+			actSnd->__master_volume = 1.0;
+
+		actSnd->isLooped = params->__isLooped;
+	}
+
+	if (!params || params->__obstruction)
+		zCActiveSnd::AutoCalcObstruction(actSnd, 0);
+
+	if ( (actSnd.GetVolume() * actSnd->__master_volume * 127.0) <= 0 ) {
+		if ( actSnd->bitfield.playing ) {
+			actSnd->bitfield.playing = 0;
+			AIL_stop_3D_sample(actSnd->sampleHandle3d);
+		}
+		return 1;
+	}
+
+	zBOOL isStarted = 1;
+	if ( !actSnd->sampleHandle3d ) {
+		if ( !actSnd.RequestChannel() )
+			return 0;
+		if ( !actSnd->sampleHandle3d ) {
+			zWARNING("C: could not allocate sample") // 1861,
+			return 0;
+		}
+		AIL_set_3D_sample_file(actSnd->sampleHandle3d, actSnd->frame->waveData->soundData);
+		actSnd->__lastUpdate = 0;
+		isStarted = 0;
+	}
+	if ( params ) {
+		auto inner = ( params->coneAngle == 0.0 ) ? 360.0 : params->coneAngle;
+		auto outer = 360.0 - inner;
+		AIL_set_3D_sample_cone(actSnd->sampleHandle3d, inner, outer, 0);
+		auto obstruction = 0.7 * params->__obstruction;
+		AIL_set_3D_sample_obstruction(actSnd->sampleHandle3d, obstruction);
+		auto reverb =  GetReverbEnabled() ? params->reverbLevel : 0.0;
+		actSnd->reverbLevel = reverb;
+	}
+
+	actSnd.CalcListenerVolume(); // was inlined
+
+	AIL_set_3D_sample_occlusion(actSnd->sampleHandle3d, s_globalOcclusion);
+	AIL_set_3D_sample_playback_rate(actSnd->sampleHandle3d, actSnd->frequency);
+
+	auto innerRadius = 0.3 * actSnd->radius;
+
+	// code is same as in GetVolume(), but not exactly
+	auto srcPos = sourceVob->GetPositionWorld();
+	auto lisPos = listener->GetPositionWorld();
+
+	auto distApprox = (srcPos - lisPos).LengthApprox();
+
+	// Don't know what to call it,
+	// think thickness of a spherical shell
+	double thickness = actSnd->radius - innerRadius;
+
+	double vol = innerRadius;
+	if ( (distApprox > innerRadius) && ( thickness != 0.0 ) )
+		vol *= 1.0 - (distApprox - innerRadius) / thickness;
+
+	auto minDist = RANGE_SCALE * vol;
+	auto maxDist = RANGE_SCALE * actSnd->radius;
+	AIL_set_3D_sample_distances(actSnd->sampleHandle3d, maxDist, minDist);
+	AIL_set_3D_sample_volume(actSnd->sampleHandle3d, actSnd->volume * 127.0);
+
+	if ( globalReverbWeight == 0.0 ) {
+		AIL_set_3D_sample_effects_level(actSnd->sampleHandle3d, 0);
+	} else {
+		AIL_set_3D_sample_effects_level(actSnd->sampleHandle3d, globalReverbWeight * actSnd->reverbLevel);
+	}
+
+	AIL_set_3D_sample_loop_block( actSnd->sampleHandle3d, actSnd->frame->loopStartOffset, actSnd->frame->loopEndOffset);
+
+	if ( actSnd->isLooped )
+		actSnd->bitfield.loop = actSnd->isLooped;
+	else
+		actSnd->bitfield.loop = actSnd->frame->loop;
+
+	// loop == true => 0 => infinite, false => 1 => one loop
+	AIL_set_3D_sample_loop_count(actSnd->sampleHandle3d, !actSnd->bitfield.loop);
+
+	auto srcWS = actSnd->sourceVob->trafoObjToWorld;
+	auto srcLS = trafoWStoLS * srcWS;
+
+	v110 = zVEC4::zVEC4((int)&v196, v109, v108, v107, v106);
+	zMAT4::zMAT4(&mul, v110, v105, v100, v95);
+
+	auto curTime   = ztimer.totalTimeFloat;
+	auto timeDelta = ztimer.totalTimeFloat - actSnd->__lastFrameTime;
+
+	// local space
+	auto pos = srcLS->GetTranslation();
+	auto at = srcLS->GetAtVector();
+	auto up = srcLS->GetUpVector();
+
+	// possibly inlined
+	auto srcPos = actSnd->sourceVob->GetPositionWorld();
+	zVEC3 vel;
+	if ( timeDelta <= 0.0 ) {
+		vel = srcPos;
+	} else {
+		auto dt = timeDelta * 100.0;
+		vel = (srcPos - actSnd->__lastFramePos) / dt;
+	}
+
+	actSnd->__lastFramePos = srcPos;
+	actSnd->__lastFrameTime = curTime;
+
+	if ( listener == actSnd->sourceVob )
+		AIL_set_3D_position(actSnd->sampleHandle3d, 0.0, 10.0, 0.0);
+	else
+		AIL_set_3D_position(actSnd->sampleHandle3d, pos.x, pos.y, pos.z);
+
+	AIL_set_3D_orientation(actSnd->sampleHandle3d, at.x, at.y, at.z, up.x, up.y, up.z);
+	AIL_set_3D_velocity_vector(actSnd->sampleHandle3d, vel.x, vel.y, vel.z);
+
+	if ( actSnd->bitfield.playing & 1 )
+		return 1;
+	actSnd->bitfield.playing = 1;
+	actSnd->__lastUpdate = 0;
+	if ( isStarted )
+		AIL_resume_3D_sample(actSnd->sampleHandle3d);
+	else
+		AIL_start_3D_sample(actSnd->sampleHandle3d);
+	return 1;
 }

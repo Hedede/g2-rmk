@@ -26,7 +26,7 @@ libraries=
 includes=\
 -I../../libGothic/include \
 -I../../libRemake/include \
--I$(awlib_path)/include   \
+-I$(awlib_path)/include \
 -I../../dependencies/filesystem/include
 
 lib_path=../../dependencies/lib
@@ -50,7 +50,7 @@ static_gcc=-lstdc++ -lpthread
 else
 static_gcc=-static-libgcc -static-libstdc++ -static -lwinpthread
 endif
-libs= -lgdi32 -lSDL2_image -lSDL2main -lSDL2 $(lib_path)/libawaudio.a $(lib_path)/libawio.a $(lib_path)/libfs.a
+libs= -L$(lib_path) -lgdi32 -lSDL2_image -lSDL2main -lSDL2 -lawaudio -lawio -lfs
 
 %.o: %.cpp
 	@ echo [Build] Compiling $@

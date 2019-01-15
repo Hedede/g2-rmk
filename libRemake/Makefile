@@ -1,35 +1,34 @@
-include ../../config.mk
+include ../config.mk
 
 sources=\
-Log.cpp \
-Main.cpp \
-Win32.cpp \
-Clobber.cpp \
-Game/CGameManager.cpp \
-Game/GameSession.cpp \
-Game/World.cpp \
-Graphics/SplashWindow.cpp \
-Graphics/FontMan.cpp \
-Sound/zCSndSys_OpenAL.cpp \
-Sound/zCSndFX_OpenAL.cpp \
-Sound/SoundOpenAL.cpp \
-Sound/SourcePool.cpp \
-System/zResource.cpp \
-Filesystem/filesystem.cpp \
-Filesystem/find_files.cpp \
-Menu/zMenu.cpp \
-Input/InputCallback.cpp
+src/Log.cpp \
+src/Main.cpp \
+src/Win32.cpp \
+src/Clobber.cpp \
+src/Game/CGameManager.cpp \
+src/Game/GameSession.cpp \
+src/Game/World.cpp \
+src/Graphics/SplashWindow.cpp \
+src/Graphics/FontMan.cpp \
+src/Sound/zCSndSys_OpenAL.cpp \
+src/Sound/zCSndFX_OpenAL.cpp \
+src/Sound/SoundOpenAL.cpp \
+src/Sound/SourcePool.cpp \
+src/System/zResource.cpp \
+src/Filesystem/filesystem.cpp \
+src/Filesystem/find_files.cpp \
+src/Menu/zMenu.cpp \
+src/Input/InputCallback.cpp
 
-objects=$(patsubst %.cpp, %.o, $(sources))
+objects=$(patsubst src/%.cpp, build/%.o, $(sources))
 
 libraries=
 includes=\
--I../../libGothic/include \
--I../../libRemake/include \
+-I./src \
 -I$(awlib_path)/include \
--I../../dependencies/filesystem/include
+-I../dependencies/filesystem/include
 
-lib_path=../../dependencies/lib
+lib_path=../dependencies/lib
 #USE_WINE=true
 ifeq ($(USE_WINE), true)
 CXX = winegcc -m32
@@ -52,14 +51,15 @@ static_gcc=-static-libgcc -static-libstdc++ -static -lwinpthread
 endif
 libs= -L$(lib_path) -lgdi32 -lSDL2_image -lSDL2main -lSDL2 -lawaudio -lawio -lfs
 
-%.o: %.cpp
+build/%.o: src/%.cpp
+	@ mkdir -p $(dir $@)
 	@ echo [Build] Compiling $@
 	@ $(CXX) $(includes) $(cxx_flags) $(pp_flags) -c $< -o $@
 
 hook: $(objects)
 	@ echo [Build] Linking:
-	$(CXX) $(static_gcc) $(objects) $(linker_flags) $(libs) -shared -o testlib.dll
-	cp -f testlib.dll ../../../System
+	$(CXX) $(static_gcc) $(objects) $(linker_flags) $(libs) -shared -o build/testlib.dll
+	cp -f build/testlib.dll $(gothic_path)/System
 
 rebuild:
 	touch $(sources)

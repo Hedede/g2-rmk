@@ -1,6 +1,7 @@
 #pragma once
 #include <Gothic/Types/zTree.h>
 #include <Gothic/Types/zMAT4.h>
+#include <Gothic/Types/zBBox.h>
 struct zCWorld;
 struct zCVob : zCObject {
 	static void InitVobSystem()
@@ -9,6 +10,12 @@ struct zCVob : zCObject {
 		func();
 	}
 
+	void DoFrameActivity()
+	{
+		Thiscall<void(zCVob*)> call{0x602C60};
+		call(this);
+	}
+		
 	zVEC3 GetPositionWorld() const
 	{
 		return trafoObjToWorld.GetTranslation();
@@ -26,7 +33,8 @@ struct zCVob : zCObject {
 
 	char data[0x18];
 	zMAT4 trafoObjToWorld;
-	char data1[0x3C];
+	zTBBox3D bbox3D;
+	char data1[0x24];
 	zCWorld *homeWorld;
 	char data2[0x64];
 };

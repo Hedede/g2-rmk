@@ -83,10 +83,12 @@ struct zCWorld : zCObject {
 		return activeSkyControler;
 	}
 
-	void MoveVobs()
+	void MoveVobs();
+
+	void ProcessZones()
 	{
-		Thiscall<void(zCWorld*)> call{0x626050};
-		call(this);
+		Thiscall<void(zCWorld*)> ProcessZones{0x6207F0};
+		ProcessZones(this);
 	}
 
 	zCTree<zCVob> globalVobTree;

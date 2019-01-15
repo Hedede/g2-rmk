@@ -1,18 +1,26 @@
 #include <Logging/Log.h>
 #include <Gothic/Game/zWorld.h>
+#include <Gothic/Game/zVob.h>
 
 bool oCWorld::HasLevelName( )
 {
-	/*if (std::string_view{levelName} != std::string_view{worldFilename}) {
-		std::string a(levelName);
-		std::string b(worldFilename);
-		g2::Log("World", "World names aren't equal: " + a + " | " + b);
-	}*/
 	if (levelName)
 		return true;
 	if (worldFilename)
 		return true;
 	return false;
+}
+
+void zCWorld::MoveVobs()
+{
+	walkList = activeVobList;
+
+	for (auto vob : walkList) {
+		if (vob)
+			vob->DoFrameActivity();
+	}
+
+	walkList.DeleteList();
 }
 
 #include <Gothic/System/zResourceManager.h>
@@ -28,7 +36,6 @@ bool oCWorld::HasLevelName( )
 #include <Gothic/Menu/zView.h>
 #include <Gothic/Cutscene/zCSPlayer.h>
 #include <Gothic/Game/zEventManager.h>
-#include <Gothic/Game/zVob.h>
 struct zCWorldPerFrameCallback {
 	void (__thiscall **vtab)(void*,zCWorld*, zCCamera*);
 	void operator()(zCWorld* world, zCCamera* cam)
@@ -81,8 +88,7 @@ void oCWorld::Render(zCCamera *cam)
 
 	if ( hasLevelName ) {
 		zsound->SetListener(zCCamera::activeCam->connectedVob);
-		Thiscall<void(oCWorld*)> ProcessZones{0x6207F0};
-		ProcessZones(this);
+		ProcessZones();
 		zsound->DoSoundUpdate();
 	}
 

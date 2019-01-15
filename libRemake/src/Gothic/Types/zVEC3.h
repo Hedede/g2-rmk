@@ -10,7 +10,7 @@ struct zVEC3 {
 	float x,y,z;
 };
 
-zVEC3 operator-(zVEC3 const& a, zVEC3 const& b)
+inline zVEC3 operator-(zVEC3 const& a, zVEC3 const& b)
 {
 	return {a.x-b.x,a.y-b.y,a.z-b.z};
 }

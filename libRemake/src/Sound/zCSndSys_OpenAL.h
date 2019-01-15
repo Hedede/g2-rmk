@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <memory>
+#include <vector>
 
 //#include <Gothic/Audio/zSound.h>
 #include <Gothic/Audio/zSoundSystemDummy.h>
@@ -8,7 +9,9 @@
 namespace g2 {
 struct SoundOpenAL;
 } // namespace
+
 struct zCParser;
+struct zCSndFX_OpenAL;
 struct zCSndSys_OpenAL : zCSoundSystemDummy {
 	zCSndSys_OpenAL();
 	~zCSndSys_OpenAL();
@@ -107,12 +110,20 @@ protected:
 	}
 
 	void UpdateListener();
+	zTSndHandle AllocateHandle(zCSndFX_OpenAL& sfx);
+	void SetSoundParams(zTSndHandle handle);
+	void SetSound3DParams(zTSndHandle handle, zTSound3DParams& params);
+	void SetSoundDefault3DParams(zTSndHandle handle);
 
 private:
 	float snd3D_defaultRadius;
 
 	std::unique_ptr<zCParser> sfx_parser;
 	zCVob* listener = nullptr;
+
+	// FIXME: kinda messy...
+	std::vector<zCVob*> origin_vob;
+
 
 	using storage = std::aligned_storage< impl_size >::type;
 	storage data;

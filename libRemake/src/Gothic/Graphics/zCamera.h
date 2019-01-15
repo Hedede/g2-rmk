@@ -1,7 +1,10 @@
 #pragma once
 #include <Hook/Externals.h>
+struct zCVob;
 struct zCView;
 struct zCCamera {
+	static zCCamera*& activeCam;
+
 	void Activate()
 	{
 		Thiscall<void(zCCamera*)> call{0x54A700};
@@ -23,7 +26,6 @@ struct zCCamera {
 		call(this);
 	}
 
-
 	char data1[0xA0];
 	zCView *targetView;
 	char data2[0x87C];
@@ -33,3 +35,6 @@ struct zCCamera {
 	float  leftRightSin;
 	float  leftRightCos;
 };
+
+#include <Hook/size_checker.h>
+CHECK_SIZE(zCCamera, 0x934);

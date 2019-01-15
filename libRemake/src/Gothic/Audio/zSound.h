@@ -60,10 +60,9 @@ struct zCSoundSystem_vt {
 
 
 struct zCSoundSystem {
-	void SetMasterVolume(float vol)
-	{
-		vtab->SetMasterVolume(this, vol);
-	}
+	void SetMasterVolume(float vol) { vtab->SetMasterVolume(this, vol); }
+	void DoSoundUpdate() { vtab->DoSoundUpdate(this); }
+	void SetListener(zCVob* vob) { vtab->SetListener(this,vob); }
 
 protected:
 	zCSoundSystem_vt const* vtab;

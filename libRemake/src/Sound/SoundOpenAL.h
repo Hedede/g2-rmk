@@ -24,8 +24,7 @@ struct SoundOpenAL {
 
 	SourcePool  pool;
 
-	// FIXME: kinda messy...
-	std::vector<zCVob*> origin_vob;
+	Attributes attributes() const { return attrib; }
 
 protected:
 	bool MakeContextCurrent();

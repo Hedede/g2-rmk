@@ -5,6 +5,8 @@
 
 //------------------------------------------------------------------------------
 namespace g2 {
+constexpr double speed_of_sound = 343.3;
+constexpr double cm = 100.0;
 SoundOpenAL::SoundOpenAL()
 {
 	Log("OpenAL", "Creating audio device");
@@ -23,8 +25,9 @@ SoundOpenAL::SoundOpenAL()
 
 	pool = SourcePool( attrib.max_sources );
 
-	// FIXME
-	origin_vob.resize( attrib.max_sources );
+	//alDistanceModel( AL_LINEAR_DISTANCE_CLAMPED );
+	alDistanceModel( AL_LINEAR_DISTANCE );
+	alSpeedOfSound( speed_of_sound * cm );
 
 	Log("OpenAL", "OpenAL is initialized");
 }

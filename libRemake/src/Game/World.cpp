@@ -24,6 +24,7 @@ bool oCWorld::HasLevelName( )
 #include <Gothic/Graphics/zLineCache.h>
 #include <Gothic/Graphics/zCamera.h>
 #include <Gothic/Graphics/zFFT.h>
+#include <Gothic/Audio/zSound.h>
 #include <Gothic/Menu/zView.h>
 #include <Gothic/Cutscene/zCSPlayer.h>
 #include <Gothic/Game/zEventManager.h>
@@ -79,10 +80,10 @@ void oCWorld::Render(zCCamera *cam)
 	}
 
 	if ( hasLevelName ) {
-		//zsound->SetListener(zCCamera::activeCam->connectedVob);
+		zsound->SetListener(zCCamera::activeCam->connectedVob);
 		Thiscall<void(oCWorld*)> ProcessZones{0x6207F0};
 		ProcessZones(this);
-		//zsound->DoSoundUpdate();
+		zsound->DoSoundUpdate();
 	}
 
 	zCPolygon::PrepareRendering();

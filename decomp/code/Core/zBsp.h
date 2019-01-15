@@ -38,6 +38,28 @@ struct zCBspBase {
 		return result;
 	}
 
+	void RenderIndoor()
+	{
+		// note: I've omitted static casts for brevity
+		auto clipFlags = 63;
+		auto inFrustum = zCCamera::activeCam->BBox3DInFrustum(bbox3D, clipFlags);
+		if ( inFrustum ) {
+			auto wtf = inFrustum - 1;
+			if ( wtf && wtf == 1 ) {
+				if ( IsLeaf() ) {
+					RenderLeafIndoor(clipFlags);
+				} else {
+					if ( left )
+						left->RenderIndoor(clipFlags);
+					if ( right )
+						right->RenderIndoor(clipFlags);
+				}
+			}
+		} else {
+			RenderTrivInIndoor();
+		}
+	}
+
 	void RenderTrivInIndoor()
 	{
 		if ( IsLeaf() ) {
@@ -118,7 +140,7 @@ private:
 	zCArray<zCVob*>      leafVobList;
 	zCArray<zCVobLight*> leafLightList;
 
-	int unk0 = -1;
+	int __frameCtr = -1; // unk0
 	short sectorNum = 0;
 	short unk2 = 0;
 	int   unk3 = 0;

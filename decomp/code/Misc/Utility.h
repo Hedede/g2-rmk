@@ -16,3 +16,9 @@ void zMin(float a, float b)
 {
 	return (a >= b) ? a : b;
 }
+
+template<typename T>
+void Alg_Swap(T& a, T& b)
+{
+	T c = b; b = a; a = c;
+}

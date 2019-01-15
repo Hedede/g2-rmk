@@ -79,6 +79,25 @@ struct TypeInfo {
 			oal(ss)->StopSound( handle );
 		};
 
+		vt.UpdateSound3D =
+		[] (zCSoundSystem* ss, const zTSndHandle& handle, zTSound3DParams* params) __thiscall
+		{
+			oal(ss)->UpdateSound3D(handle, params);
+		};
+
+		vt.SetListener = 
+		[] (zCSoundSystem* ss, zCVob* vob) __thiscall
+		{
+			oal(ss)->SetListener(vob);
+		};
+
+		vt.DoSoundUpdate = 
+		[] (zCSoundSystem* ss) __thiscall
+		{
+			oal(ss)->DoSoundUpdate();
+		};
+
+
 		g2::Log("OpenAL", "vtable initialized");
 	}
 	RTTICompleteObjectLocator* rtti = &oal_rtti;
@@ -118,6 +137,8 @@ zCSndSys_OpenAL::zCSndSys_OpenAL()
 	sfx_parser->CreatePCode();
 	sfx_parser->CheckClassSize( "C_SFX", sizeof(C_SFX) );
 	sfx_parser->CheckClassSize( "C_SNDSYS_CFG", 40 );
+
+	alDistanceModel( AL_LINEAR_DISTANCE_CLAMPED );
 }
 
 zCSndSys_OpenAL::~zCSndSys_OpenAL()
@@ -206,8 +227,11 @@ zTSndHandle zCSndSys_OpenAL::PlaySound3D(zCSoundFX* sfx, zCVob* source, int slot
 {
 	if (sfx) {
 		auto& osfx = static_cast<zCSndFX_OpenAL&>(*sfx);
-		g2::Log("SFX", "Playing sfx "s + osfx.sound.file.Data());
-		return PlaySound(*sfx, slot);
+		g2::Log("SFX", "Playing sfx (3D) "s + osfx.sound.file.Data());
+		auto handle = PlaySound(*sfx, slot);
+		if (handle != invalid_snd_handle)
+			impl().origin_vob[ size_t(handle) ] = source;
+		return handle;
 	}
 
 	return invalid_snd_handle;
@@ -216,4 +240,60 @@ zTSndHandle zCSndSys_OpenAL::PlaySound3D(zCSoundFX* sfx, zCVob* source, int slot
 void zCSndSys_OpenAL::StopSound(zTSndHandle handle)
 {
 	alSourceStop( ALuint(handle) );
+}
+
+#include <Gothic/Game/zVob.h>
+void zCSndSys_OpenAL::UpdateSound3D(zTSndHandle handle, zTSound3DParams*)
+{
+	auto vob = impl().origin_vob[ size_t(handle) ];
+	if (vob) {
+		auto on = vob->GetObjectName();
+		if (!on) return;
+		g2::Log("SFX", "UpdateSound3D by vob: "s + on.Data());
+		auto pos = vob->trafoObjToWorld.GetTranslation();
+
+		auto src = ALuint(handle);
+		alSource3f(src,AL_POSITION,pos.x,pos.y,pos.z);
+		//alSourcei( src, AL_SOURCE_RELATIVE, AL_TRUE );
+
+		g2::Log("SFX", "UpdateSound3D pos: ", pos.x,',',pos.y,',',pos.z );
+	}
+}
+
+// TODO: move to listener
+void zCSndSys_OpenAL::UpdateListener()
+{
+	if (!listener)
+		return;
+
+	auto pos = listener->GetPositionWorld();
+	alListener3f(AL_POSITION,  pos.x, pos.y, pos.z );
+
+	auto at = listener->GetAtVectorWorld();
+	auto up = listener->GetUpVectorWorld();
+	ALfloat ori[] = { at.x, at.y, at.z, up.x, up.y, up.z };
+	alListenerfv(AL_ORIENTATION, ori);
+}
+
+void zCSndSys_OpenAL::SetListener(zCVob* vob)
+{
+	if (!vob) return;
+	auto nameb = vob->GetObjectName();
+	if (listener) {
+		auto namea = listener->GetObjectName();
+		g2::Log("SFX", "Overriding listener. Original: "s + namea, " New: "s + nameb);
+	} else {
+		g2::Log("SFX", "New listener: "s + nameb);
+	}
+
+	// TODO: release and stuff
+	listener = vob;
+	UpdateListener();
+
+}
+
+void zCSndSys_OpenAL::DoSoundUpdate()
+{
+	g2::Log("SFX", "Doing sound update...");
+	UpdateListener();
 }

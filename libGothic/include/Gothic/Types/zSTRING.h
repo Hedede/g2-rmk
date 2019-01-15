@@ -38,12 +38,14 @@ struct zSTRING {
 	explicit operator std::string() const
 	{
 		if (!ptr) return {};
+		if (len <= 0) return {};
 		return std::string{ptr};
 	}
 
 	operator std::string_view() const
 	{
 		if (!ptr) return {};
+		if (len <= 0) return {};
 		return std::string_view{ptr};
 	}
 
@@ -65,7 +67,7 @@ private:
 
 	int alloc;
 	char *ptr;
-	size_t len;
+	int len;
 	int res;
 };
 

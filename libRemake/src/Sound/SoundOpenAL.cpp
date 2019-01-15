@@ -23,6 +23,9 @@ SoundOpenAL::SoundOpenAL()
 
 	pool = SourcePool( attrib.max_sources );
 
+	// FIXME
+	origin_vob.resize( attrib.max_sources );
+
 	Log("OpenAL", "OpenAL is initialized");
 }
 

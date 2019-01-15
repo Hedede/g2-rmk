@@ -10,6 +10,11 @@ struct zCObject {
 			delete this;
 	}
 
+	zSTRING const& GetObjectName() const
+	{
+		return objectName;
+	}
+
 	int SetObjectName(std::string const& name)
 	{
 		Thiscall<int(zCObject*, zSTRING const&)> call{0x5A9CE0};

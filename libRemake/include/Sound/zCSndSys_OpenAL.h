@@ -52,14 +52,17 @@ struct zCSndSys_OpenAL : zCSoundSystemDummy {
 	void StopAllSounds() {}
 
 	void GetSound3DProps(int const &,zTSound3DParams &) {}
-	void UpdateSound3D(int const &,zTSound3DParams *) {}
+
+	void DoSoundUpdate();
+	void UpdateSound3D(zTSndHandle handle, zTSound3DParams* params);
+
 	void GetSoundProps(int const &,int &,float &,float &) {}
 	void UpdateSoundProps(int const &,int,float,float) {}
 	bool IsSoundActive(int const &)
 	{
 		return false;
 	}
-	void SetListener(zCVob *) {}
+	void SetListener(zCVob *);
 	void SetGlobalReverbPreset(int,float) { }
 	void SetReverbEnabled(int) {}
 	bool GetReverbEnabled()
@@ -103,10 +106,13 @@ protected:
 		return Value<g2::SoundOpenAL>(&data);
 	}
 
+	void UpdateListener();
+
 private:
 	float snd3D_defaultRadius;
 
 	std::unique_ptr<zCParser> sfx_parser;
+	zCVob* listener = nullptr;
 
 	using storage = std::aligned_storage< impl_size >::type;
 	storage data;

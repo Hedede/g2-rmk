@@ -8,6 +8,8 @@
 #include "OpenALHeaders.h"
 #include "SourcePool.h"
 
+struct zCVob;
+
 namespace g2 {
 struct Attributes {
 	int max_sources;
@@ -21,6 +23,9 @@ struct SoundOpenAL {
 	void play( Source& src );
 
 	SourcePool  pool;
+
+	// FIXME: kinda messy...
+	std::vector<zCVob*> origin_vob;
 
 protected:
 	bool MakeContextCurrent();

@@ -5,7 +5,18 @@
 struct zCSoundSystem;
 struct zCSoundFX;
 struct zCActiveSnd;
-struct zTSound3DParams;
+
+struct zTSound3DParams {
+	float __obstruction;
+	float volume;
+	float radius;
+	int __isLooped;
+	float coneAngle;
+	float reverbLevel;
+	int __isAmbient;
+	float pitchOff;
+};
+
 struct zCVob;
 
 enum zTSpeakerType {};
@@ -29,7 +40,7 @@ struct zCSoundSystem_vt {
 	void (__thiscall *StopSound)(zCSoundSystem *, const zTSndHandle&);
 	void (__thiscall *StopAllSounds)(zCSoundSystem *);
 	int (__thiscall *GetSound3DProps)(zCSoundSystem *, const int *, zTSound3DParams *);
-	void (__thiscall *UpdateSound3D)(zCSoundSystem *, const int *, zTSound3DParams *);
+	void (__thiscall *UpdateSound3D)(zCSoundSystem *, const zTSndHandle&, zTSound3DParams *);
 	void (__thiscall *GetSoundProps)(zCSoundSystem *, const int *, int *, float *, float *);
 	void (__thiscall *UpdateSoundProps)(zCSoundSystem *, const int *, int, float, float);
 	int (__thiscall *IsSoundActive)(zCSoundSystem *, const int *);

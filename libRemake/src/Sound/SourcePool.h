@@ -14,7 +14,7 @@ private:
 	std::vector<unsigned> free_sources;
 
 	std::vector<unsigned> used_sources;
-	std::vector<int>    priorities;
+	std::vector<int>      priorities;
 	//std::vector<int>  version;
 };
 

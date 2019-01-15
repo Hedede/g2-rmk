@@ -48,9 +48,10 @@ linker_flags=$(libraries)
 ifeq ($(USE_WINE), true)
 static_gcc=-lstdc++ -lpthread
 else
-static_gcc=-static-libgcc -static-libstdc++ -static -lwinpthread
+#static_gcc=-static-libgcc -static-libstdc++ -static -lwinpthread
+#static_gcc=-lstdc++ -lpthread
 endif
-libs= -L$(lib_path) -lgdi32 -lSDL2_image -lSDL2main -lSDL2 -lawaudio -lawio -lfs
+libs= -L$(lib_path) -lOpenAL32 -lgdi32 -lSDL2_image -lSDL2main -lSDL2 -lawaudio -lawio -lfs
 
 build/%.o: src/%.cpp
 	@ mkdir -p $(dir $@)

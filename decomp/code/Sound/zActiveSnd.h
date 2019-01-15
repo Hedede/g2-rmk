@@ -1,4 +1,5 @@
 struct zCActiveSnd {
+	static zBOOL zCActiveSnd::autoUpdate3D;
 	static unsigned lastHandle = 0;
 	static unsigned GetNextFreeHandle()
 	{
@@ -198,7 +199,7 @@ private:
 		uint8_t volOverride : 1; // 4
 		uint8_t is3d        : 1; // 8
 		uint8_t in_use      : 1; // 16
-		uint8_t slot        : 3;
+		uint8_t slot        : 5; // 32
 	} bitfield;
 	char pan;
 	char volume;

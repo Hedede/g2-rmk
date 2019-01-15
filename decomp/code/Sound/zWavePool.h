@@ -82,6 +82,13 @@ private:
 	zCArray<zCWaveData*> waveList2;
 };
 
+//------------------------------------------------------------------------------
+//_carsten/zSndMss.cpp
+int CompareWaves(zCWaveData* const& a, zCWaveData* const& b)
+{
+	// basically strcmp
+	return a->GetName().Compare(b->GetName());
+}
 
 int zCWavePool::NewFrame()
 {
@@ -98,4 +105,21 @@ int zCWavePool::NewFrame()
 			waveList2.Insert(wave);
 	}
 	return num;
+}
+
+void zCWavePool::DebugInfo()
+{
+	zINFO(1, "C: Actual loaded waves:" ); // 3816
+
+	int bytes = 0;
+	for (auto wave : waveList) {
+		auto state = (wave->refCtr == 0) ? "out)" : "in)";
+		zINFO(1,  "C: " + wave->objectName + " (cached " + state ); // 3823
+		if (wave->soundData) {
+			if ( !wave->sizeBytes )
+				wave->CacheIn();
+			bytes += wave->sizeBytes;
+		}
+	}
+	zINFO( 1,  "C: total memory used by all wave files : " + bytes ); //3827
 }

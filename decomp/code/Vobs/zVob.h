@@ -1774,3 +1774,72 @@ bool zCVob::IsColliding()
 
 	return colliding;
 }
+
+
+void zCVob::DoFrameActivity()
+{
+	if ( sleepingMode == 0 )
+		return;
+
+	++refCtr;
+	bool deleteVob = 0;
+	if ( sleepingMode == 2 ) {
+		BeginMovement();
+		if ( callback_ai )
+			callback_ai->DoAI(this, deleteVob);
+		if ( !deleteVob ) {
+			OnTick();
+			if ( ztimer.totalTimeFloat >= nextOnTimer ) {
+				nextOnTimer = 3.4028235e38;
+				OnTimer();
+			}
+		}
+		EndMovement(0);
+	} else {
+		BeginMovement();
+		UpdatePhysics();
+		if (auto model = zDYNAMIC_CAST<zCModel>(visual)) {
+			model->AdvanceAnis();
+			zVec3 movement = model->__movement;
+
+			if ( movement != 0.0 && ztimer.frameTimeFloat > 0.0 )
+				MoveLocal(movement.x, movement.y, movement.z);
+
+			if ( model->flags.yawOnly ) {
+				zCQuat = model->quat;
+				// ZX == 0
+				quat[2] = 0;
+				quat[0] = 0;
+				quat.Unit();
+
+				zMAT4 mat;
+				Alg_Identity3D(mat);
+				quat.QuatToMatrix4(mat);
+
+				SetNewTrafoObjToWorld( GetNewTrafoObjToWorld() * mat );
+			}
+
+			if ( visual->IsBBox3DLocal() )
+				SetBBox3DWorld( visual->GetBBox3D() );
+			else
+				SetBBox3DLocal( visual->GetBBox3D() );
+		}
+
+		if ( callback_ai )
+			callback_ai->DoAI(this, deleteVob);
+
+		if ( !deleteVob ) {
+			OnTick();
+			if ( ztimer.totalTimeFloat >= nextOnTimer ) {
+				nextOnTimer = 3.4028235e38;
+				OnTimer();
+			}
+		}
+		EndMovement(1);
+	}
+	if ( deleteVob ) {
+		if ( homeWorld )
+			homeWorld->vtbl->RemoveVob(homeWorld, this);
+	}
+	Release();
+}

@@ -150,7 +150,7 @@ private:
 	int unknownffs;
 	zVEC3 __vecY;
 	zVEC3 __vecZ;
-	zVEC3 __vecA;
+	zVEC3 __movement; // __vecA
 	zVEC3 __vecB;
 	int pat;
 	int direction;
@@ -160,7 +160,14 @@ private:
 	zVEC3 __vecC;
 	int dunno;
 	zVEC3 velocities[8];
-	char flags;
+	struct {
+		uint8_t unk : 1; // 1
+		uint8_t unk : 1; // 2
+		uint8_t unk : 1; // 4
+		uint8_t unk : 1; // 8
+		uint8_t unk : 1; // 0x10
+		uint8_t yawOnly : 1; // 0x20
+	} flags;
 	int unkno;
 
 	zCModelAni **showAniList;

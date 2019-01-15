@@ -754,15 +754,10 @@ int zCWorld::TraverseBspAddVobsToMesh(zCCBspTree* bspTree, zCTree<zCVob>* node)
 
 void MoveVobs()
 {
-	/* walkList.Resize(activeVobList.GetNumInList());
-	for (unsigned i = 0; i < activeVobList.GetNumInList(); ++i)
-		walkList[i] = activeVobList[i];*/
 	walkList = activeVobList;
 
-	for (auto vob : walkList) {
-		if (vob)
-			vob->DoFrameActivity();
-	}
+	for (auto vob : walkList)
+		if (vob) vob->DoFrameActivity();
 
 	walkList.DeleteList();
 }

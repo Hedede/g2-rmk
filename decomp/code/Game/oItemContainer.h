@@ -43,14 +43,8 @@ public:
 	static oCItemContainer* GetNextContainerLeft(oCItemContainer* self);
 	static oCItemContainer* GetNextContainerRight(oCItemContainer* self);
 
-	static int GetCurrencyInstance()
-	{
-		static int currencyInstance = -1;
-		if (currencyInstance == -1) {
-			auto name = GetCurrencyInstanceName();
-			currencyInstance = zparser.GetIndex(name);
-		}
-	}
+	static int GetCurrencyInstanceName();
+	static int GetCurrencyInstance();
 
 	static oCItem* CreateCurrencyItem(int amount);
 
@@ -82,7 +76,10 @@ public:
 	{
 		return titleText;
 	}
-	virtual void SetName(zSTRING &);
+	virtual void SetName(zSTRING& name)
+	{
+		titleText = name;
+	}
 
 	virtual int GetMode()
 	{
@@ -289,40 +286,6 @@ protected:
 	zBOOL     canTransferMoreThanOneItem;
 };
 
-void oCItemContainer::Archive(zCArchiver& arc)
-{
-	if ( !arc.InSaveGame() )
-		return;
-
-	int numItems = contents.GetNumInList();
-
-	arc.WriteGroupBegin( "contents");
-	arc.WriteInt("itemNr", numItems);
-
-	int id = 0;
-	for (auto j = contents->next; j; j = j->next, ++id) {
-		zSTRING name = "item" + id;
-		arc.WriteObject(name, j->data);
-	}
-
-	arc->WriteGroupEnd("contents");
-}
-
-void oCItemContainer::Unarchive(zCArchiver& arc)
-{
-	if ( !arc.InSaveGame() )
-		return;
-
-	int numItems = 0;
-	arc.ReadInt("itemNr", &numItems);
-
-	for (int i = 0; i < numItems; ++i) {
-		zSTRING name = "item" + i;
-
-		auto object = arc.ReadObject(name, 0);
-		Insert(object);
-	}
-}
 
 int oCItemContainer::HandleEvent(int key)
 {
@@ -538,6 +501,41 @@ oCItem* oCItemContainer::Insert(oCItem *item)
 	return item;
 }
 
+double oCItemContainer::GetValueMultiplier()
+{
+	static valueMultiplier = 0.0;
+	if ( valueMultiplier == 0.0 ) {
+		auto sym = zparser.GetSymbol("TRADE_VALUE_MULTIPLIER");
+		if ( sym )
+			zparser.GetValue(&valueMultiplier, 0);
+		if ( valueMultiplier == 0.0 )
+			valueMultiplier = 0.3;
+	}
+	return result;
+}
+
+zSTRING oCItemContainer::GetCurrencyInstanceName()
+{
+	static zSTRING instanceName;
+	if ( !instanceName ) {
+		auto sym = zparser.GetSymbol("TRADE_CURRENCY_INSTANCE");
+		if ( sym )
+			zparser.GetValue(&instanceName, 0);
+		if ( !instanceName )
+			instanceName = "ITMI_GOLD";
+	}
+	return instanceName;
+}
+
+int oCItemContainer::GetCurrencyInstance()
+{
+	static int currencyInstance = -1;
+	if (currencyInstance == -1) {
+		auto name = GetCurrencyInstanceName();
+		currencyInstance = zparser.GetIndex(name);
+	}
+}
+
 oCItem* oCItemContainer::CreateCurrencyItem(int amount)
 {
 	if ( ogame && ogame->GetWorld() ) {
@@ -665,6 +663,49 @@ void oCItemContainer::OpenPassive(int x, int y, int max_items)
 	passive = 1;
 }
 
+void oCItemContainer::Open(int x, int y, int maxItems)
+{
+	zINFO( 4,  "B: Open Container" ); // 1457
+
+	OpenPassive(x, y, maxItems);
+	Activate();
+	passive = 0;
+
+	if ( !IsOpen() )
+		s_openContainers.Insert(this);
+}
+
+void oCItemContainer::Close(oCItemContainer *this)
+{
+	if ( IsOpen() ) {
+		zINFO(4,"B: Close Container"); // 1602,
+
+		DELETE( viewTitle );
+		DELETE( viewBack );
+		DELETE( viewItem );
+		DELETE( viewItemActive );
+		DELETE( viewItemHightlighted );
+		DELETE( viewItemActiveHighlighted );
+		DELETE( viewItemInfo );
+		DELETE( viewItemInfoItem );
+		DELETE( textView );
+		RELEASE( rndWorld );
+
+		if ( zsndMan ) {
+			auto snd = zsound->LoadSoundFXScript("INV_CLOSE");
+			zsound->PlaySound( snd, 0 );
+			snd->Release();
+		}
+	}
+
+	prepared = 0;
+
+	s_openContainers.Remove( this );
+
+	Deactivate();
+	invMode = 0;
+}
+
 void oCItemContainer::DrawCategory()
 {
 	if ( !IsPassive() && titleText ) {
@@ -728,5 +769,123 @@ void oCItemContainer::DrawCategory()
 		viewTitle->Blit();
 
 		screen->RemoveItem(viewTitle);
+	}
+}
+
+void oCItemContainer::~oCItemContainer()
+{
+	Close();
+	DeleteContents(); // was inlined
+
+	oCItemContainer::contList.Remove(this);
+
+	contents = 0;
+	npc = 0;
+}
+
+int oCItemContainer::TransferItem(int dir, int amount)
+{
+	if ( manipulateItemsDisabled ) {
+		auto selItem = GetSelectedItem();
+		if ( selItem->HasFlag(ITEM_ACTIVE) )
+			return 0;
+	}
+
+	// was inlined
+	oCItemContainer* container = (dir < 0) ?
+		GetNextContainerLeft(this) :
+		GetNextContainerRight(this);
+
+	if ( !container )
+		return 0;
+
+	auto selItem = GetSelectedItem();
+	if ( !selItem )
+		return 0;
+
+	int count = 1;
+	if ( CanTransferMoreThanOneItem() ) {
+		count = amount;
+		if ( selItem->amount < amount )
+			count = selItem->amount;
+	}
+
+	++selItem->refCtr;
+	while (count-->0) {
+		auto nc = dynamic_cast<oCNpcContainer*>( container );
+		if (nc && selItem->amount == 1 && nc->GetOwner() && !ownList)
+			nc->GetOwner()->inventory.RemoveByPtr( inventory, selItem, 1 );
+
+		if ( auto item = Remove( selItem, 1 ) )
+			container->Insert( item );
+	}
+
+	selItem->Release();
+	return 1;
+}
+
+bool oCItemContainer::ActivateNextContainer(int dir)
+{
+	oCItemContainer* container = nullptr;
+	if (this)
+		// was inlined
+		container = (dir < 0) ? GetNextContainerLeft(this) : GetNextContainerRight(this);
+	if (container)
+		container->Activate();
+	return container;
+}
+
+void oCItemContainer::Archive(zCArchiver& arc)
+{
+	if ( !arc.InSaveGame() )
+		return;
+
+	int numItems = contents.GetNumInList();
+
+	arc.WriteGroupBegin( "contents");
+	arc.WriteInt("itemNr", numItems);
+
+	int id = 0;
+	for (auto j = contents->next; j; j = j->next, ++id) {
+		zSTRING name = "item" + id;
+		arc.WriteObject(name, j->data);
+	}
+
+	arc->WriteGroupEnd("contents");
+}
+
+void oCItemContainer::Unarchive(zCArchiver& arc)
+{
+	if ( !arc.InSaveGame() )
+		return;
+
+	int numItems = 0;
+	arc.ReadInt("itemNr", &numItems);
+
+	for (int i = 0; i < numItems; ++i) {
+		zSTRING name = "item" + i;
+
+		auto object = arc.ReadObject(name, 0);
+		Insert(object);
+	}
+}
+
+//--------------------------------------------------------------------------------------------------
+//dontcare (unused code)
+void oCItemContainer::LoadGrafix()
+{
+	zoptions->ChangeDir(DIR_TEX_DESKTOP);
+
+	if ( !oCItemContainer::gfx_loaded ) {
+		oCItemContainer::gfx_cat = new zCGfx("invchest.tga");
+		oCItemContainer::gfx_equip = new zCGfx("equip.tga");
+		oCItemContainer::gfx_cursor = new zCGfx("cursor.tga");
+		oCItemContainer::gfx_cursor_equip = new zCGfx("cursor_equip.tga");
+		oCItemContainer::gfx_arrow = new zCGfx("arroleft.tga");
+		// names tor tese thee varw wernt in excutabvle
+		oCItemContainer::gfx_arrow_right = new zCGfx("arrorite.tga");
+		oCItemContainer::gfx_arrow_up = new zCGfx("arroup.tga");
+		oCItemContainer::gfx_arrow_down = new zCGfx("arrodown.tga");
+		oCItemContainer::gfx_loaded = 1;
 	}
 }

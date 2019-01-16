@@ -246,13 +246,8 @@ void oCNpcInventory::Open(int x, int y, int max_items)
 		}
 	}
 
-	zINFO( 4,  "B: Open Container" ); // 1457
+	oCItemContainer::Open(x,y,max_items); //was inlined
 
-	OpenPassive(x, y, max_items);
-	Activate();
-	passive = 0;
-	if ( !IsOpen() )
-		s_openContainers.Insert(this);
 	if ( owner )
 		owner->SetBodyState(BS_INVENTORY);
 	zinput->ClearKeyBuffer();
@@ -276,9 +271,8 @@ int currencyInstance = -1;
 void oCNpcInventory::DrawCategory()
 {
 	if ( owner && owner->IsSelfPlayer() ) {
-		if ( currencyInstance == -1 )
-			currencyInstance = zparser.GetIndex(GetCurrencyInstanceName());
-		auto num = GetAmount(currencyInstance);
+		// GetCurrencyInstance was inlined
+		auto num = GetAmount(GetCurrencyInstance());
 		auto prefix = _GetCategorySelfPlayerPrefix();
 		SetName(prefix + num);
 	}

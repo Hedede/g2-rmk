@@ -169,7 +169,8 @@ private:
 	zCArray<zTPortalInfo> sectorPortalInfo;
 
 	zBOOL activated;
-	zBOOL rendered;
+	int frameCtr;
+
 	zTBBox2D activePortal;
 
 	zVEC3 sectorCenter;
@@ -236,5 +237,34 @@ void zCBspLeaf::RenderLeafIndoor(int clipFlags)
 		}
 
 		++drawnLeafs;
+	}
+}
+
+void zCBspSector::RenderSector()
+{
+	if ( frameCtr != bspFrameCtr ) {
+		frameCtr = bspFrameCtr;
+		++zCBspSector::s_sectorsRendered;
+		for (auto* node : sectorNodes) {
+			auto clipFlags = 63;
+			if ( zCCamera::activeCam->BBox3DInFrustum(node->bbox3D, clipFlags) != 1 ) {
+				node->CollectNodeLights();
+				for (auto* poly : reverse(node->polyList)) {
+					if ( poly->flags & 3 || !(poly->flags & 8) )
+						break;
+					if ( poly->material->bspSectorFront == this )
+						poly->RenderPoly(clipFlags);
+				}
+			}
+		}
+		for ( int i = 0; i < sectorPortals.numInArray; ++i )
+		{
+			auto alpha = sectorPortalInfo[i].alpha;
+			auto poly = sectorPortals[i];
+			if ( alpha > 1u ) {
+				poly->material->color[3] = alpha;
+				zrenderer->DrawPoly(poly);
+			}
+		}
 	}
 }

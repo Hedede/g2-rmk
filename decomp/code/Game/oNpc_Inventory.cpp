@@ -120,3 +120,33 @@ void oCNpc::EquipBestWeapon(int mode)
 	if (item && !item->HasFlag(ITEM_ACTIVE))
 		EquipWeapon(item);
 }
+
+void oCNpc::OpenInventory(int mode)
+{
+	if ( ztimer.frameTimeFloat != 0.0 ) {
+		if ( !IsBodyStateInterruptable() )
+			return;
+
+		inventory.SetMode(mode);
+		if ( !inventory.IsOpen(y) && !IsMonster() ) {
+			auto aniCtrl = GetAnictrl()
+			if ( !aniCtrl ||  !aniCtrl->IsInWeaponChoose() )
+			{
+				if ( GetWeaponMode() ) {
+					auto msg = new oCMsgWeapon(EV_REMOVEWEAPON, 0, 0);
+					GetEM()->OnMessage( this, msg );
+				}
+
+				if ( GetAnictrl() )
+					GetAnictrl()->StopTurnAnis();
+
+				inventory.DisableManipulateItems(0);
+				inventory.DisableTransferMoreThanOneItem(0);
+
+				inventory.SetName(this->GetName());
+
+				inventory.Open(&this->, IsSelfPlayer() ? 0x1000 : 0, 0, v16);
+			}
+		}
+	}
+}

@@ -550,3 +550,117 @@ oCItem* oCItemContainer::CreateCurrencyItem(int amount)
 	return item;
 }
 
+
+void oCItemContainer::OpenPassive(int x, int y, int max_items)
+{
+	auto xdim = zrenderer->view_xdim / 800.0;
+	auto ydim = zrenderer->view_ydim / 600.0;
+	if ( xdim > 1.0 ) xdim = 1.0;
+	if ( ydim > 1.0 ) ydim = 1.0;
+	inv_inf_sizex   = screen->anx(300) * xdim;
+	inv_inf_sizey   = screen->any(32)  * ydim;
+	inv_item_dx     = screen->anx(10)  * xdim;
+	inv_item_sizex  = screen->anx(70)  * xdim;
+	inv_item_sizey  = screen->any(70)  * ydim;
+	inv_item_width  = screen->anx(70)  * xdim;
+	inv_item_height = screen->any(70)  * ydim;
+
+	RELEASE( rndWorld );
+
+	rndWorld = new zCWorld();
+	rndWorld->isInventoryWorld = true;
+
+	if ( inv_item_width + x > 0x2000 )
+		x = 0x2000 - inv_item_width;
+
+	posy = y;
+	posx = x;
+
+	right = x > 4095;
+
+	Init(x, y, max_items);
+
+	viewArrowAtTop = new zCView( 0, 0, screen->anx(16), screen->any(16), 2 );
+	screen->InsertItem( viewArrowAtTop, 0 );
+	viewArrowAtTop->InsertBack(TEX_INV_ARROW_TOP);
+	viewArrowAtTop->SetAlphaBlendFunc(2);
+	viewArrowAtTop->SetTransparency(96);
+	screen->RemoveItem(viewArrowAtTop);
+
+	viewArrowAtBottom = new zCView( 0, 0, screen->anx(16), screen->any(16), 2 );
+	screen->InsertItem( viewArrowAtBottom, 0 );
+	viewArrowAtBottom->InsertBack(TEX_INV_ARROW_BOTTOM);
+	viewArrowAtBottom->SetAlphaBlendFunc(2);
+	viewArrowAtBottom->SetTransparency(96);
+	screen->RemoveItem(viewArrowAtBottom);
+
+	
+	viewTitle = new zCView(0, 0, 10, 10, 2);
+	screen->InsertItem( viewTitle, 0 );
+	viewTitle->InsertBack(TEX_INV_TITLE);
+	viewTitle->SetAlphaBlendFunc(TEX_INV_TITLE_BLEND);
+	screen->RemoveItem(viewTitle);
+
+
+
+	viewBack = new zCView(0, 0, 10, 10, 2);
+	screen->InsertItem( viewBack, 0 );
+	viewBack->InsertBack(TEX_INV_BACK);
+	viewBack->SetAlphaBlendFunc(TEX_INV_BACK_BLEND);
+	screen->RemoveItem(viewBack);
+
+
+	viewItem = new zCView(0, 0, inv_item_sizex, inv_item_sizey, 2);
+	screen->InsertItem( viewItem, 0 );
+	viewItem->InsertBack(TEX_INV_ITEM);
+	viewItem->SetAlphaBlendFunc(TEX_INV_ITEM_BLEND);
+	viewItem->SetTransparency(255);
+	screen->RemoveItem(viewItem);
+
+
+	viewItemActive = new zCView(0, 0, inv_item_sizex, inv_item_sizey, 2);
+	screen->InsertItem( viewItemActive, 0 );
+	viewItemActive->InsertBack(TEX_INV_ITEM_ACTIVATED);
+	viewItemActive->SetAlphaBlendFunc(TEX_INV_ITEM_ACTIVATED_BLEND);
+	viewItemActive->SetTransparency(255);
+	screen->RemoveItem(viewItemActive);
+
+	viewItemHightlighted = new zCView(0, 0, inv_item_sizex, inv_item_sizey, 2);
+	screen->InsertItem( viewItemHightlighted, 0 );
+	viewItemHightlighted->InsertBack(TEX_INV_ITEM_HIGHLIGHTED);
+	viewItemHightlighted->SetAlphaBlendFunc(TEX_INV_ITEM_HIGHLIGHTED_BLEND);
+	viewItemHightlighted->SetTransparency(255);
+	screen->RemoveItem(viewItemHightlighted);
+
+	viewItemActiveHighlighted = new zCView(0, 0, inv_item_sizex, inv_item_sizey, 2);
+	screen->InsertItem( viewItemActiveHighlighted, 0 );
+	viewItemActiveHighlighted->InsertBack(TEX_INV_ITEM_ACTIVATED_HIGHLIGHTED);
+	viewItemActiveHighlighted->SetAlphaBlendFunc(TEX_INV_ITEM_ACTIVATED_HIGHLIGHTED_BLEND);
+	viewItemActiveHighlighted->SetTransparency(255);
+	screen->RemoveItem(viewItemActiveHighlighted);
+
+	textView = new zCView(0, 0, inv_item_sizex, inv_item_sizey, 2);
+	screen->InsertItem( screen, textView, 0 );
+	textView->SetAlphaBlendFunc(TEX_INV_ITEM_ACTIVATED_BLEND);
+	textView->SetTransparency(255);
+	screen->RemoveItem(textView);
+
+	viewItemInfo = new zCView(0, 0, inv_inf_sizex, inv_inf_sizey, 2);
+	screen->InsertItem( viewItemInfo, 0 );
+	viewItemInfo->InsertBack(INV_ITEM_DESC);
+	viewItemInfo->SetAlphaBlendFunc(INV_ITEM_DESC_BLEND);
+	viewItemInfo->SetTransparency(255);
+	screen->RemoveItem(viewItemInfo);
+
+	viewItemInfoItem = new zCView(0, 0, inv_inf_sizex, inv_inf_sizey, 2);
+	viewItemInfo->InsertItem( viewItemInfoItem, 0 );
+	viewItemInfoItem->SetAlphaBlendFunc(INV_ITEM_DESC_BLEND);
+	viewItemInfoItem->SetTransparency(255);
+	viewItemInfo->RemoveItem(viewItemInfo);
+
+	if ( !IsOpen() )
+		s_openContainers.Insert( this );
+	if ( m_bManipulateItemsDisabled )
+		CheckSelectedItem();
+	passive = 1;
+}

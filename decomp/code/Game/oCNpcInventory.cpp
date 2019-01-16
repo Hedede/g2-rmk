@@ -54,6 +54,8 @@ private:
 	int     maxSlots;
 };
 
+//------------------------------------------------------------------------------
+//_ulf\\oInventory.cpp
 void oCNpcInventory::Archive(zCArchiver& arc)
 {
 	PackItemsInCategory(0);
@@ -216,4 +218,43 @@ oCItem* oCNpcInventory::Remove(int instanceId, int amount)
 	}
 
 	return 0;
+}
+
+void oCNpcInventory::Open(int x, int y, int max_items)
+{
+	UnpackItemsInCategory();
+
+	auto item = dynamic_cast<oCItem*>( owner->GetRightHand() );
+	if ( item && item->HasFlag(ITEM_THROW) ) {
+		if ( item->GetInstanceName() == "ITLSTORCHBURNING" ) {
+			owner->SetTorchAni(0, 1);
+			auto torch = ogame->GetGameWorld()->CreateVob(VOB_TYPE_ITEM, "ITLSTORCH");
+			owner->RemoveFromSlot(NPC_NODE_RIGHTHAND, 0, 1);
+			owner->PutInInv( torch );
+			item->Release();
+		} else {
+			owner->RemoveFromSlot(NPC_NODE_RIGHTHAND, 0, 1);
+			owner->PutInInv(handItem);
+		}
+	}
+
+	item = dynamic_cast<oCItem*>( owner->GetLeftHand() );
+	if ( item && item->HasFlag(ITEM_THROW) ) {
+		if ( item->GetInstanceName() == "ITLSTORCHBURNING" ) { 
+			owner->RemoveFromSlot(NPC_NODE_LEFTHAND, 0, 1);
+			owner->PutInInv(handItem);
+		}
+	}
+
+	zINFO( 4,  "B: Open Container" ); // 1457
+
+	OpenPassive(x, y, max_items);
+	Activate();
+	passive = 0;
+	if ( !IsOpen() )
+		s_openContainers.Insert(this);
+	if ( owner )
+		owner->SetBodyState(BS_INVENTORY);
+	zinput->ClearKeyBuffer();
+	zinput->ResetRepeatKey(1);
 }

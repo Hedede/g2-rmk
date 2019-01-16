@@ -412,7 +412,7 @@ oCItemContainer* oCItemContainer::GetNextContainerLeft(oCItemContainer *self)
 		self->GetPosition(x, y);
 
 		for (auto& cont : s_openContainers) {
-			if (cont == this)
+			if (cont == self)
 				continue;
 			if (!cont->IsPassive() && cont->IsOpen()) {
 				int x2, y2;
@@ -437,7 +437,7 @@ oCItemContainer* oCItemContainer::GetNextContainerRight(oCItemContainer *self)
 		self->GetPosition(x, y);
 
 		for (auto& cont : s_openContainers) {
-			if (cont == this)
+			if (cont == self)
 				continue;
 			if (!cont->IsPassive() && cont->IsOpen()) {
 				int x2, y2;
@@ -663,4 +663,70 @@ void oCItemContainer::OpenPassive(int x, int y, int max_items)
 	if ( m_bManipulateItemsDisabled )
 		CheckSelectedItem();
 	passive = 1;
+}
+
+void oCItemContainer::DrawCategory()
+{
+	if ( !IsPassive() && titleText ) {
+		oCItemContainer* left = GetNextContainerLeft( this ); // was inlined
+
+		if ( left ) {
+			auto mode = left->GetMode();
+			if (mode == 2 || mode == 3)
+				return;
+		}
+
+		screen->InsertItem(viewTitle, 0);
+
+		auto text = titleText + "\n";
+
+		auto posX = marginLeft - screen->anx(10);
+		auto posY = posX + inv_item_height / 2;
+
+		auto textSize = screen->FontSize(text) + 2 * screen->anx(10);
+		auto sizeX = max( 2 * inv_item_width, fontSize );
+		auto sizeY = inv_item_height / 2;
+		if ( right )
+			posX = 0x2000 - sizeX - posX;
+		switch ( invMode ) {
+		case 1:
+			viewTitle->InsertBack(TEX_INV_BACK_CONTAINER);
+			viewTitle->SetAlphaBlendFunc(TEX_INV_BACK_CONTAINER_BLEND);
+			break;
+		case 2:
+			viewTitle->InsertBack(TEX_INV_BACK_PLUNDER);
+			viewTitle->SetAlphaBlendFunc(TEX_INV_BACK_PLUNDER_BLEND);
+			break;
+		case 3:
+			viewTitle->InsertBack(TEX_INV_BACK_STEAL);
+			viewTitle->SetAlphaBlendFunc(TEX_INV_BACK_STEAL_BLEND);
+			break;
+		case 4:
+			viewTitle->InsertBack(TEX_INV_BACK_BUY);
+			viewTitle->SetAlphaBlendFunc(TEX_INV_BACK_BUY_BLEND);
+			break;
+		case 5:
+			viewTitle->InsertBack(TEX_INV_BACK_SELL);
+			viewTitle->SetAlphaBlendFunc(TEX_INV_BACK_SELL_BLEND);
+			break;
+		default:
+			viewTitle->InsertBack(TEX_INV_BACK);
+			viewTitle->SetAlphaBlendFunc(TEX_INV_BACK_BLEND);
+			break;
+		}
+
+		viewTitle->SetFontColor(INV_FONT_COLOR);
+		viewTitle->SetTransparency(255);
+		viewTitle->SetPos(posX, posY);
+		viewTitle->SetSize(sizeX, sizeY);
+		viewTitle->ClrPrintwin();
+		viewTitle->Blit();
+
+		viewTitle->InsertBack(TEX_INV_TITLE);
+		viewTitle->SetAlphaBlendFunc(TEX_INV_TITLE_BLEND);
+		viewTitle->PrintCXY(font);
+		viewTitle->Blit();
+
+		screen->RemoveItem(viewTitle);
+	}
 }

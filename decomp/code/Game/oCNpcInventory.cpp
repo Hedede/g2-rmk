@@ -258,3 +258,29 @@ void oCNpcInventory::Open(int x, int y, int max_items)
 	zinput->ClearKeyBuffer();
 	zinput->ResetRepeatKey(1);
 }
+
+zSTRING _GetCategorySelfPlayerPrefix()
+{
+	static zSTRING currencyName;
+	if ( currencyName.IsEmpty() ) {
+		auto sym = zparser.GetSymbol("NAME_Currency");
+		if ( sym )
+			sym->GetValue( &currencyName, 0 );
+		if ( currencyName.IsEmpty() )
+			currencyName = "Gold: ";
+	}
+	return currencyName;
+}
+
+int currencyInstance = -1;
+void oCNpcInventory::DrawCategory()
+{
+	if ( owner && owner->IsSelfPlayer() ) {
+		if ( currencyInstance == -1 )
+			currencyInstance = zparser.GetIndex(GetCurrencyInstanceName());
+		auto num = GetAmount(currencyInstance);
+		auto prefix = _GetCategorySelfPlayerPrefix();
+		SetName(prefix + num);
+	}
+	oCItemContainer::DrawCategory();
+}

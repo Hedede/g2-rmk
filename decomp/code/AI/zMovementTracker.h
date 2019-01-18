@@ -54,63 +54,33 @@ private:
 zVEC3& zCMovementTracker::GetLastValidWayPoint(zTWayPoint const& type)
 {
 	// very repetitive, I suspect compiler might've unrolled this
-	int idx;
+	int index;
 	switch ( type ) {
 	case 0:
 	case 2:
-		idx = __wp_pos_idx[0];
-		if ( 0.3 * 0.5 >= __wp_0305[0] ) {
-			if ( idx > 1 )
-				return waypointPosition[idx-2];
-			if ( idx == 1 )
-				return waypointPosition[2];
-			return waypointPosition[1];
-		} else {
-			if ( idx > 0 ) {
-				return waypointPosition[idx-1];
-			return waypointPosition[2];
-		}
+		index = 0;
+		break;
 	case 3:
-		idx = __wp_pos_idx[1];
-		if ( 0.3 * 0.5 >= __wp_0305[1] ) {
-			if ( idx > 1 )
-				return waypointPosition[idx+1];
-			if ( idx == 1 )
-				return waypointPosition[5];
-			return waypointPosition[4];
-		} else {
-			if ( idx > 0 ) {
-				return waypointPosition[idx+2];
-			return waypointPosition[5];
-		}
+		index = 1;
+		break;
 	case 4:
-		idx = __wp_pos_idx[2];
-		if ( 0.3 * 0.5 >= __wp_0305[2] ) {
-			if ( idx > 1 )
-				return waypointPosition[idx+4];
-			if ( idx == 1 )
-				return waypointPosition[8];
-			return waypointPosition[7];
-		} else {
-			if ( idx > 0 ) {
-				return waypointPosition[idx+5];
-			return waypointPosition[8];
-		}
+		index = 2;
 		break;
 	case 1:
-		idx = __wp_pos_idx[3];
-		if ( 0.3 * 0.5 >= __wp_0305[3] ) {
-			if ( idx > 1 )
-				return waypointPosition[idx+7];
-			if ( v2 == 1 )
-				return waypointPosition[11];
-			return waypointPosition[10];
-		} else {
-			if ( idx > 0 ) {
-				return waypointPosition[idx+8];
-			return waypointPosition[11];
-		}
+		index = 3;
+		break;
 	default:
 		return { 0, 0, 0 };
 	}
+
+	int i = __wp_pos_idx[0];
+	if ( 0.3 * 0.5 >= __wp_0305[0] ) {
+		if ( i > 1 )
+			return waypointPosition[i-2 + 3*index];
+		return waypointPosition[i+1 + 3*index];
+	}
+
+	if ( i > 0 )
+		return waypointPosition[i-1 + 3*index];
+	return waypointPosition[2 + 3*index];
 }

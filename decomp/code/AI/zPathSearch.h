@@ -1,5 +1,27 @@
 struct zSPathSearchState_Internal {
 	zSPathSearchState_Internal() = default;
+	
+	char unk[120];
+};
+
+struct zSPathSearchState {
+	float __aziStart;
+	float __elevStart;
+	float unk0;
+	float __aziEnd;
+	float __elevEnd;
+	float __rotRange;
+	float __aziDeg;
+	float __fsin;
+	float __fcos;
+	char unk[76];
+	zSTRING str1;
+	zSTRING str;
+};
+
+struct zSPathSearchResult
+{
+	char unk[96];
 };
 
 struct zCPathSearch {
@@ -7,6 +29,12 @@ struct zCPathSearch {
 	{
 		static zCPathSearch theSearch;
 		return theSearch;
+	}
+
+	struct zSPathSearchResult& GetReport()
+	{
+		static zSPathSearchResult theReport;
+		return theReport;
 	}
 
 	struct zSEvasionSearchOptions {
@@ -20,6 +48,8 @@ struct zCPathSearch {
 		float __range;
 		char aa[16];
 	};
+
+	void SetAICamera(zCAICamera *camera) { aicam = camera; }
 	
 
 private:
@@ -29,15 +59,27 @@ private:
 
 	int unk[6];
 	float azi, elev, range;
-	zMAT4 __mat;
-	int unk0[52];
+	zMAT4 __mat1;
+	int unk0[3];
+	zSTRING __str1;
+	zSTRING __str2;
+	int unk1[9];
+	zMAT4 __mat2;
+	int unk2[3];
+	zSTRING __str3;
+	zSTRING __str4;
+	int unk3;
 	zCAICamera *aicam;
-	int unk1[3];
+	zCVob *__camVob;
+	zCVob *__target;
+	zCWorld *__homeWorld;
 	int __collisionEnabled;
 	zSEvasionSearchOptions __searchOptions;
 	int more[24]; // also a struct?
 	zCMovementTracker *movTracker;
 	zCSphereCoordsCache __scoordCache;
+	zVEC3 __vec;
+	int unk4[7];
 };
 
 //------------------------------------------------------------------------------
@@ -59,6 +101,7 @@ int AI_FindEvasionShoulderCam(zSEvasionSearchDesc& desc)
 
 
 
+//------------------------------------------------------------------------------
 int zCPathSearch::FES_NoEvasionFound(zCArray<zSEvasionSearchDesc>& evasion)
 {
 	zSEvasionSearchDesc desc;
@@ -80,4 +123,24 @@ int zCPathSearch::FES_PlayerInvisible_Standing(zCArray<zSEvasionSearchDesc>& eva
 	D_Print("FES Player Invisible (standing)", 2);
 	__searchOptions.__flags |= 0x400u;
 	return FES_PlayerTargetInvisible(evasion);
+}
+
+
+
+//------------------------------------------------------------------------------
+//_carsten/zAiCamera_Core.cpp
+void zCPathSearch::CamVobChanged()
+{
+	this->__camVob = aicam->__csVob;
+	if ( __camVob ) {
+		this->__homeWorld = __camVob->homeWorld;
+		if ( !__homeWorld ) {
+			zFAULT("C: zCPathSearch::CamVobChanged(). HomeWorld == 0"); //  180
+		}
+	}
+}
+
+void zCPathSearch::TargetChanged()
+{
+	this->__target = aicam->__target;
 }

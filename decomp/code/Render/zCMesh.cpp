@@ -1,6 +1,8 @@
 class zCMesh : public zCVisual {
 	Z_OBJECT(zCMesh);
 public:
+	static zCMesh* SearchName(const zSTRING& name);
+
 	virtual ~zCMesh();
 	virtual void Render(zTRenderContext &);
 	virtual void GetBBox3D();
@@ -56,6 +58,16 @@ private:
 	int    numVertAlloc;
 	int    numPolyAlloc;
 };
+
+zCMesh* zCMesh::SearchName(const zSTRING& name)
+{
+	auto mesh = zCMesh::s_meshRoot;
+	for ( ; mesh; mesh = mesh->next ) {
+		if (mesh->meshName == name)
+			break;
+	}
+	return mesh;
+}
 
 void zCMesh::LightMesh(zCVobLight *light, zMAT4 *meshTrafoObjToWorld, zCWorld *world)
 {

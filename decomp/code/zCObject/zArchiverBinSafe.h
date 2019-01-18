@@ -67,7 +67,7 @@ public:
 		return checksumEnabled;
 	}
 	virtual void SetChecksumEnabled(int);
-	virtual void SetNoReadSearchCycles(int);
+	void SetNoReadSearchCycles(int b) override { noReadSearchCycles = b }
 	virtual void InProperties();
 	virtual bool InSaveGame() const
 	{

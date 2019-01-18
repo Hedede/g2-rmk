@@ -3,6 +3,13 @@ struct zTMdl_StartedVobFX {
 	int unk;
 };
 
+struct zTAniAttachment {
+	int aniId;
+	zCArray unk;
+	float freq;
+	int b;
+};
+
 
 class zCModel : public zCVisualAnimate {
 	Z_OBEJCT(zCModel);
@@ -59,6 +66,8 @@ public:
 		return node->trafoWorld->GetTranslation();
 	}
 
+	zCModelNodeInst* SearchNode(const zSTRING& nodeName);
+
 	int GetAniIDFromAniName(zSTRING const& name)
 	{
 		auto ani = _prototypes[0]->SearchAni(name);
@@ -102,18 +111,15 @@ public:
 	}
 
 private:
+	zTAniAttachment* SearchAniAttachList(int aniID);
+	static int AniAttachmentCompare(zTAniAttachment** a1, zTAniAttachment** a2);
+
+private:
 	struct zTMdl_NodeVobAttachment {
 		zCVob *Vob;
 		zCModelNodeInst *NodeInst;
 	};
 
-	struct zTAniAttachment {
-		int a;
-		zCArray unk;
-		float freq;
-		int b;
-	};
-	
 	struct zTMeshLibEntry {
 		zCModelTexAniState TexAniState;
 		zCModelMeshLib *MeshLibPtr;
@@ -130,7 +136,7 @@ private:
 	zCArray<zCModelPrototype*> _prototypes;
 	zCArray<zCModelNodeInst*> modelNodeInstArray;
 	zCArray<zCMeshSoftSkin*> _skins;
-	zCArraySort<> aniAttachments;
+	zCArraySort<zTAniAttachment*> aniAttachments;
 	zCArray<zTMdl_NodeVobAttachment> modelNodeVobAttachments;
 	zCArray<zTMdl_StartedVobFX> vobFxList;
 	zCArray<> unknown_ar2;
@@ -172,6 +178,38 @@ private:
 
 	zCModelAni **showAniList;
 };
+
+zCModelNodeInst* zCModel::SearchNode(const zSTRING& nodeName)
+{
+	for (auto* node : modelNodeInstArray) {
+		if (nodeName == node->protoNode->name)
+			return node;
+	}
+	return nullptr;
+}
+
+
+zTAniAttachment* zCModel::SearchAniAttachList(int aniID)
+{
+	static zTAniAttachment aniAttachSearchDummy;
+	aniAttachSearchDummy.aniId = aniID;
+	int index = aniAttachments.Search(&aniAttachSearchDummy);
+	if (index < 0)
+		return nullptr;
+	return aniAttachments[index];
+}
+
+int zCModel::AniAttachmentCompare(zTAniAttachment** a1, zTAniAttachment** a2)
+{
+	int id1 = (*a1)->aniId;
+	int id2 = (*a2)->aniId;
+	if ( id1 > id2 )
+		return 1;
+	if ( id1 == id2 )
+		return 0;
+	return -1;
+}
+
 
 zCModelAniActive* zCModel::GetActiveAni(int aniId)
 {

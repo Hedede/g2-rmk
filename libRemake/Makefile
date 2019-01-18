@@ -11,6 +11,7 @@ src/Game/World.cpp \
 src/Graphics/SplashWindow.cpp \
 src/Graphics/FontMan.cpp \
 src/Graphics/Camera.cpp \
+src/Camera/zMovementTracker.cpp \
 src/Sound/zCSndSys_OpenAL.cpp \
 src/Sound/zCSndFX_OpenAL.cpp \
 src/Sound/SoundOpenAL.cpp \

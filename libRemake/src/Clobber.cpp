@@ -1,3 +1,4 @@
+#include <cassert>
 #include <Logging/Log.h>
 
 /*
@@ -37,6 +38,7 @@ int sysGetTime()
 }
 
 #include <Hook/clobber.h>
+
 
 #define _WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -117,7 +119,6 @@ void InitThread()
 	as::retn((char*)0x5F91E0);
 }
 
-#include <stdlib.h>
 void InitStdc()
 {
 	as::jump_rel((char*)0x7B4460, (uintptr_t)malloc);
@@ -127,11 +128,38 @@ void InitStdc()
 	as::jump_rel((char*)0x7CFF47, (uintptr_t)atexit);
 }
 
+#include <Gothic/Camera/zMovementTracker.h>
+
+uintptr_t copy_function(uintptr_t begin, uintptr_t end);
+uintptr_t original_GetLastValidWayPoint;
+bool yabzur = 0;
+zVEC3& __thiscall thunk_GetLastValidWayPoint(zCMovementTracker* tracker, int const& type)
+{
+	using T = zCMovementTracker::zTWayPoint;
+	Thiscall<zVEC3&(zCMovementTracker*, T const&)> orig{original_GetLastValidWayPoint};
+	auto& v1 = orig( tracker, T(type) );
+	auto& v2 = tracker->GetLastValidWayPoint( T(type) );
+	if (&v1 != &v2){
+		yabzur = 1;
+		g2::Log("ZMOVTRAC", "Type: ", type, " Adresses: ", uintptr_t(&v1),' ',uintptr_t(&v2));
+	}
+	auto look1 = orig( tracker, T(type) );
+	auto look2 = tracker->GetLastValidWayPoint( T(type) );
+	yabzur = 0;
+	return v2;
+}
 void InitMisc()
 {
 	as::jump_rel((char*)0x44C8D0, (uintptr_t)zERROR_Report);
+
+	g2::Log("Clobber", "Clobbering GetLastValidWayPoint" );
+	original_GetLastValidWayPoint = copy_function(0x4B81B0, 0x4B8389);
+	as::jump_rel((char*)0x4B81B0, (uintptr_t)thunk_GetLastValidWayPoint);
 }
 
+#include <algorithm>
+#include <Gothic/Graphics/zSkyControler.h>
+#include <stdlib.h>
 void InitFunctions()
 {
 	using namespace g2;
@@ -161,4 +189,25 @@ void InitFunctions()
 	ret = VirtualProtect((void*)text_start, text_length, prot, &prot);
 	if (!ret)
 		Error("Clobber", "Could not change memory protection! Error:", GetLastError());
+}
+
+uintptr_t copy_function(uintptr_t begin, uintptr_t end)
+{
+	assert( begin < end );
+
+	size_t count = end-begin;
+
+	SYSTEM_INFO system_info;
+	GetSystemInfo(&system_info);
+	auto const page_size = system_info.dwPageSize;
+
+	g2::Log("Clobber", "Copying function ", begin );
+	auto const memory = VirtualAlloc(nullptr, page_size, MEM_COMMIT, PAGE_READWRITE);
+	std::memcpy(memory, (const char*)begin, count);
+
+	g2::Log("Clobber", "Making function executable" );
+	DWORD prot = PAGE_EXECUTE_READ;
+	VirtualProtect(memory, count, prot, &prot);
+
+	return uintptr_t(memory);
 }

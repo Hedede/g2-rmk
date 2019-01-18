@@ -53,7 +53,6 @@ private:
 
 zVEC3& zCMovementTracker::GetLastValidWayPoint(zTWayPoint const& type)
 {
-	// very repetitive, I suspect compiler might've unrolled this
 	int index;
 	switch ( type ) {
 	case 0:
@@ -77,7 +76,9 @@ zVEC3& zCMovementTracker::GetLastValidWayPoint(zTWayPoint const& type)
 	if ( 0.3 * 0.5 >= __wp_0305[0] ) {
 		if ( i > 1 )
 			return waypointPosition[i-2 + 3*index];
-		return waypointPosition[i+1 + 3*index];
+		if ( i > 0 )
+			return waypointPosition[2 + 3*index];
+		return waypointPosition[1 + 3*index];
 	}
 
 	if ( i > 0 )

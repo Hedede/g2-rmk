@@ -7,6 +7,7 @@
  */
 
 #include <cstdint>
+#include <cstring>
 
 namespace x86 {
 enum Opcode {

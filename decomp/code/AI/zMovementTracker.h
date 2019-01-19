@@ -1,5 +1,17 @@
 struct zCPose {
 	~zCPose() = default;
+
+	zCQuat __inertiaRot[100];
+	zVEC3 __inertiaPos[50];
+	int __inertiaPosIdx;
+	int __inertiaRotIdx;
+	zCQuat __rotAbs;
+	zVEC3 __pos2;
+	zCQuat __rot;
+	zVEC3 __pos;
+	int wat;
+	int __inertiaSamplesPos;
+	int __inertiaSamplesRot;
 };
 
 struct zCMovementTracker {

@@ -9,31 +9,62 @@ struct zCMovementTracker {
 private:
 	void CheckKeys() {}
 
+	bool IsIdealOrientation();
+
 private:
 	zTAICamMsg __msg;
-	float unk0[4];
+	zCArray<zCPositionKey*> __positionKeys;
+	float __timeSec;
 	zVEC3 __sampledPos;
-	float unk00[3];
+	zVEC3 __unkPos;
 	zVEC3 playerPos;
 	zVEC3 playerPos2;
 	zVEC3 __startPos;
-	zVEC3 __testPos;
-	zVEC3 __camPos2;
-	int unk2[13];
+	zVEC3 camPos;
+	zVEC3 camPos2;
+
+	int unk1[9];
+
+	zVEC3 __vobPos;
+
+	float __someVal0;
 	int __targetInertia;
 	int unkx1;
 	int unkx2;
 	zCPose __pose1;
 	zCPose __pose2;
-	zCPose __pose3;
+	zCPose playerPose;
+
 	zVEC3 waypointPosition[12];
 	int __wp_pos_idx[4];
 	float __wp_0305[4];
-	int unk3[32];
+
+
+	zVEC3 __vec1;
+	zVEC3 __vec2;
+	zVEC3 __vec3;
+	zVEC3 __vec4;
+	zVEC3 __vec5;
+	zVEC4 __vec6;
+	zVEC3 __vec7;
+	int unk3[3];
+	zVEC3 __vec9;
+	int unk33[4];
+
+	float __ringWhat;
 	float __ringRot[4];
-	int unk3_[22];
-	zMAT4 __mat;
-	int unko4[32];
+
+	float __azi;
+	float __elev;
+	float __range;
+
+	int unk3_[3];
+
+	zMAT4 __mat0inverse;
+	zMAT4 __mat0;
+
+	zMAT4 __mat1;
+	int unko4[16];
 	zMAT4 __mat2;
 	zMAT4 __mat3;
 	zMAT4 __mat4;
@@ -41,13 +72,17 @@ private:
 	zMAT4 __mat6;
 	zMAT4 __mat7;
 	zMAT4 __mat8;
+
 	int unk4[3];
 	int rotateEnabled;
-	int unk5[3];
+	int unk5;
+	float __someVal1;
+	float __someVal2;
+
 	oCNpc *player;
-	zCPathSearch *pathSearch;
+	zCVob *__vob;
 	zCAICamera *aiCam;
-	zCPathSearch *unkoooo;
+	zCPathSearch *pathSearch;
 };
 
 
@@ -84,4 +119,10 @@ zVEC3& zCMovementTracker::GetLastValidWayPoint(zTWayPoint const& type)
 	if ( i > 0 )
 		return waypointPosition[i-1 + 3*index];
 	return waypointPosition[2 + 3*index];
+}
+
+bool zCMovementTracker::IsIdealOrientation()
+{
+	return fabs(GetAzimuth(camPos) - bestAzimuth) < 1.5 &&
+	       fabs(GetElevation(camPos) - bestElevation) < 1.5;
 }

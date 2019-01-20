@@ -290,7 +290,7 @@ zBOOL oCSpawnManager::UseDeadNpcRoutinePos(oCNpc *npc)
 
 	if (usePos)
 		return true;
-	return npc->GetPositionWorld() == ZERO_VEC;
+	return npc->GetPositionWorld() == zVEC3::ZERO;
 }
 
 //------------------------------------------------------------------------------

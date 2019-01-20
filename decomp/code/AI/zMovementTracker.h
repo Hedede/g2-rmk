@@ -1,4 +1,5 @@
 struct zCPose {
+	zCPose() = default;
 	~zCPose() = default;
 
 	zCQuat __inertiaRot[100];
@@ -7,96 +8,242 @@ struct zCPose {
 	int __inertiaRotIdx;
 	zCQuat __rotAbs;
 	zVEC3 __pos2;
-	zCQuat __rot;
-	zVEC3 __pos;
-	int wat;
-	int __inertiaSamplesPos;
-	int __inertiaSamplesRot;
+	zCQuat __rot{0, 0, 0, 1};
+	zVEC3 __pos = zVEC3::ZERO;
+	int wat = 0;
+	int __inertiaSamplesPos = 1;
+	int __inertiaSamplesRot = 1;
 };
 
 struct zCMovementTracker {
+	// looks like it deletes only the aray itself
+	// and not pointers to position keys
+	~zCMovementTracker() = default;
+	static zCMovementTracker* GetTracker()
+	{
+		zCMovementTracker theTracker;
+		return theTracker;
+	}
+
+	zCMovementTracker();
 
 	zVEC3& GetLastValidWayPoint(zTWayPoint const& type);
+
+	zREAL GetAzimuth() const { return GetAzimuth(camPos); }
+	zREAL GetElevation() const { return GetElevation(camPos); }
+	zREAL GetRange() const { return GetRange(camPos); }
+
+	zREAL GetAzimuth(zVEC3 const& testPos) const;
+	zREAL GetElevation(zVEC3 const& testPos) const;
+	zREAL GetRange(zVEC3 const& testPos) const;
+
+	zVC3 ApplyAziToPoint(float const& angleDeg,  zVEC3 const& p);
+	zVC3 ApplyElevToPoint(float const& angleDeg, zVEC3 const& p);
+	zVC3 ApplyRangeToPoint(float const& dist, zVEC3 const& p);
+
+	zVEC3 GetRangePos(float const& dist) const;
+	zVEC3 GetIdealRangePos() const;
+
+	void SetAzimuth(float const& angleDeg);
+	void SetElevation(float const& angleDeg);
+	void SetRange(float const& dist);
+
+	void SetCamPos(zVEC3 const& newPos);
 
 private:
 	void CheckKeys() {}
 
+	zREAL GetDistToIdealRange() const;
 	bool IsIdealOrientation();
+	bool IsIdealRange() const;
+
+	void SetSampledPlayerPos(const zVEC3& newTarget)
+	{
+		// it is like this in the excutable
+		__sampledPos = newTarget;
+		__sampledPos = newTarget;
+	}
 
 private:
 	zTAICamMsg __msg;
 	zCArray<zCPositionKey*> __positionKeys;
-	float __timeSec;
-	zVEC3 __sampledPos;
-	zVEC3 __unkPos;
-	zVEC3 playerPos;
-	zVEC3 playerPos2;
-	zVEC3 __startPos;
-	zVEC3 camPos;
-	zVEC3 camPos2;
+	float __timeSec = 0.0;
+	zVEC3 __sampledPos = zVEC3::ZERO;
+	zVEC3 __unkPos     = zVEC3::ZERO;
+	zVEC3 playerPos  = zVEC3::ZERO;
+	zVEC3 playerPos2 = zVEC3::ZERO;
+	zVEC3 __startPos = zVEC3::ZERO;
+	zVEC3 camPos  = zVEC3::ZERO;
+	zVEC3 camPos2 = zVEC3::ZERO;
+	zVEC3 __vec_a1 = zVEC3::ZERO;
+	zVEC3 __vec_a2 = zVEC3::ZERO;
+	int unk1[3];
 
-	int unk1[9];
+	zVEC3 __vobPos = zVEC3::ZERO;
 
-	zVEC3 __vobPos;
-
-	float __someVal0;
+	float __someVal0 = 0.5;
 	int __targetInertia;
-	int unkx1;
-	int unkx2;
+	int unkx1 = 2;
+	int unkx2 = 2;
 	zCPose __pose1;
 	zCPose __pose2;
 	zCPose playerPose;
 
 	zVEC3 waypointPosition[12];
-	int __wp_pos_idx[4];
-	float __wp_0305[4];
+	int __wp_pos_idx[4] = { 0, 0, 0, 0 };
+	float __wp_0305[4]  = { 0.0, 0.0, 0.0, 0.0 };
 
 
-	zVEC3 __vec1;
-	zVEC3 __vec2;
-	zVEC3 __vec3;
-	zVEC3 __vec4;
-	zVEC3 __vec5;
-	zVEC4 __vec6;
-	zVEC3 __vec7;
-	int unk3[3];
-	zVEC3 __vec9;
-	int unk33[4];
+	zVEC3 __vec1 = zVEC3::ZERO;
+	zVEC3 __vec2 = zVEC3::ZERO;
+	zVEC3 __vec3 = zVEC3::ZERO;
+	zVEC3 __vec4 = zVEC3::ZERO;
+	zVEC3 __vec5 = zVEC3::ZERO; // possibly player movement vector
+	zVEC4 __vec6 = zVEC3::ZERO;
+	zVEC3 __vec7 = zVEC3::ZERO;
+	zVEC3 __vec8 = zVEC3::ZERO;
+	zVEC3 __vec9 = zVEC3::ZERO;
+	zVEC3 __vec10 = zVEC3::ZERO;
+	int unk3 = 0;
 
-	float __ringWhat;
-	float __ringRot[4];
+	float __ringWhat = 0.1;
+	float __ringRot[4] = { 0.2, 0.1, 0.04 };
 
-	float __azi;
-	float __elev;
-	float __range;
+	float __azi   = 0.0;
+	float __elev  = 0.0;
+	float __range = 0.0;
 
-	int unk3_[3];
+	int unk4 = 0;
+	int unk4_1 = 0;
+	int unk4_2 = 0;
 
 	zMAT4 __mat0inverse;
 	zMAT4 __mat0;
 
 	zMAT4 __mat1;
 	int unko4[16];
-	zMAT4 __mat2;
-	zMAT4 __mat3;
-	zMAT4 __mat4;
-	zMAT4 __mat5;
+	zMAT4 __mat2 = zMAT4::s_identity;
+	zMAT4 __mat3 = zMAT4::s_identity;
+	zMAT4 __mat4 = zMAT4::s_identity;
+	zMAT4 __mat5 = zMAT4::s_identity;
 	zMAT4 __mat6;
 	zMAT4 __mat7;
-	zMAT4 __mat8;
+	zMAT4 __mat8 = zMAT4::s_identity;
 
-	int unk4[3];
+	float unk5 = 100000.0;
+	int unk5_1 = 0;
+	int unk5_2 = 0;
 	int rotateEnabled;
-	int unk5;
-	float __someVal1;
-	float __someVal2;
+	int unk6 = 0;
+	float __someVal1 = 0.0;
+	float __someVal2 = 0.0;
 
-	oCNpc *player;
-	zCVob *__vob;
+	oCNpc *player   = nullptr;
+	zCVob *__camVob = nullptr;
 	zCAICamera *aiCam;
-	zCPathSearch *pathSearch;
+	zCPathSearch *pathSearch = zCPathSearch::GetSearch();
 };
 
+//------------------------------------------------------------------------------
+zCMovementTracker::zCMovementTracker()
+{
+	ClearMessages();
+
+	zMAT4 mat;
+	mat[0][0] = 0.0;
+	mat[0][1] = 0.0;
+	mat[0][2] = 0.0;
+	mat[0][3] = 1.0;
+	mat[1][0] = 0.0;
+	mat[1][1] = 0.0;
+	mat[1][2] = 0.0;
+	mat[1][3] = 1.0;
+	mat[2][0] = 0.0;
+	mat[2][1] = 0.0;
+	mat[2][2] = 0.0;
+	mat[2][3] = 1.0;
+	mat[3][0] = 0.0;
+	mat[3][1] = 0.0;
+	mat[3][2] = 0.0;
+	mat[3][3] = 1.0;
+
+	__mat6 = mat;
+	__mat7 = mat;
+
+	zVEC3 fillPos = zVEC3::ZERO;
+	ResetWayPoints( fillPos, 0 );
+	ResetWayPoints( fillPos, 1 );
+}
+
+zVEC3 zCMovementTracker::GetRangePos(float const& dist, zVEC3 const& point) const
+{
+	auto dir = (point - playerPos); // was inlined
+	dir.NormalizeSafe(); // was inlined
+	return playerPos + dir * dist; // ws inlined
+}
+
+zREAL zCMovementTracker::GetRange(zVEC3 const& testPos)
+{
+	return (playerPos - testPos).Length(); // was inlined
+}
+
+zVEC3 zCMovementTracker::GetRangePos(float const& dist) const
+{
+	return ApplyRangeToPoint( dist, camPos );
+}
+
+zVEC3 zCMovementTracker::GetIdealRangePos() const
+{
+	auto dist = aicam->GetBestRange() * 100.0;
+	return GetRangePos( dist ); // was inlined
+}
+
+zREAL zCMovementTracker::GetDistToIdealRange() const
+{
+	return GetIdealRangePos().Length(); // was inlined
+}
+
+bool zCMovementTracker::IsIdealRange() const
+{
+	return GetDistToIdealRange() < 0.1; // was inlined
+}
+
+void zCMovementTracker::SetRange(float const& dist)
+{
+	camPos = ApplyRangeToPoint( dist, camPos ); // was inlined
+}
+
+void zCMovementTracker::SetAzimuth(float const& angleDeg)
+{
+	camPos = ApplyAziToPoint( angleDeg, camPos );
+}
+
+void zCMovementTracker::SetElevation(float const& angleDeg)
+{
+	camPos = ApplyElevToPoint( angleDeg, camPos );
+}
+
+void zCMovementTracker::SetCamPos(zVEC3 const& newPos)
+{
+	camPos = newPos;
+	if ( __msg & 0x8000 ) // sbyte1 < 0
+		ResetWayPoints(newPos, 1);
+}
+
+void zCMovementTracker::ClearMessages()
+{
+	__msg = 0x4000|0x1000;
+}
+
+void zCMovementTracker::UpdateMessages()
+{
+	zTAICamMsg v1; // eax
+
+	if ( __msg & 0x7E )
+		__msg = __msg & ~0x1000u | 0x800;
+	if ( (__msg & 0x80u) || (__msg & 0x100) )
+		__msg = __msg & ~0x4000u | 0x2000;
+}
 
 zVEC3& zCMovementTracker::GetLastValidWayPoint(zTWayPoint const& type)
 {

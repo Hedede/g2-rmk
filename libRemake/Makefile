@@ -57,7 +57,7 @@ libs= -L$(lib_path) -lOpenAL32 -lgdi32 -lSDL2_image -lSDL2main -lSDL2 -lawaudio 
 build/%.o: src/%.cpp
 	@ mkdir -p $(dir $@)
 	@ echo [Build] Compiling $@
-	@ $(CXX) $(includes) $(cxx_flags) $(pp_flags) -c $< -o $@
+	@ $(CXX) $(includes) -masm=intel $(cxx_flags) $(pp_flags) -c $< -o $@
 
 hook: $(objects)
 	@ echo [Build] Linking:

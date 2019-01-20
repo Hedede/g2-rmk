@@ -2,10 +2,13 @@ class zCAICamera : public zCAIBase {
 	Z_OBJECT(zCAICamera);
 
 public:
+	static void GlobalStartUp() {}
+
 	virtual ~zCAICamera();
 	virtual void DoAI(zCVob *,int &);
 
-	static void GlobalStartUp() {}
+	int CreateInstance(zSTRING &instName);
+
 
 private
 	int __showControlDots;
@@ -44,11 +47,11 @@ private
 	zCVob *__target;
 
 	float __ghostAlpha;
-	int unki1;
+	int __focusCount; // unki1
 	zSTRING __prevMode;
 	char unkc3[12];
 	float dialogCamDuration;
-	int __dialogCam[6];
+	zCCSCamera* __dialogCam[6];
 	zSTRING unkstr1;
 	int __num_checkunderwater;
 
@@ -129,20 +132,7 @@ int zCAICamera::Console_EvalFunc(const zSTRING& in, zSTRING& msg)
 			camCon->SetParser(camParser);
 			camCon->SetChangedFunc(CamConsole_ParameterChanged);
 			camCon->EditInstance(__instanceName, &scripted);
-			v12 = (struct zSTRING *)operator new(0xDCu);
-			msg = v12;
-			LOBYTE(v47) = 5;
-			if ( v12 )
-				v13 = zCConsole::zCConsole((zCConsole *)v12);
-			else
-				v13 = 0;
-			LOBYTE(v47) = 0;
-			camCon = v13;
-			zCConsole::SetPos(v13, 0, 0);
-			zCConsole::SetParser(camCon, camParser);
-			zCConsole::SetChangedFunc(camCon, CamConsole_ParameterChanged);
-			zCConsole::EditInstance(camCon, &_this->__instanceName, &_this->bestRange);
-			zCConsole::SetFocus(camCon);
+			camCon->SetFocus();
 			return 1;
 		}
 		return 0;
@@ -197,4 +187,9 @@ int zCAICamera::Console_EvalFunc(const zSTRING& in, zSTRING& msg)
 		return 0;
 	}
 	return 0;
+}
+
+int zCAICamera::CreateInstance(zSTRING &instName)
+{
+	return camParser->CreateInstance(instName, &scripted);
 }

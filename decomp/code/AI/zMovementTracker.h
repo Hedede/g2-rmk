@@ -15,7 +15,25 @@ struct zCPose {
 	int __inertiaSamplesRot = 1;
 };
 
+enum zTAICamMsg {
+	TARGET_MOVED_FORWARD  = 0x02,
+	TARGET_MOVED_BACKWARD = 0x04,
+	TARGET_MOVED_LEFT     = 0x08,
+	TARGET_MOVED_RIGHT    = 0x10,
+	TARGET_MOVED_UP       = 0x20,
+	TARGET_MOVED_DOWN     = 0x40,
+	TARGET_MOVED_ANY      = 0x7E,
+	TARGET_ROTATED_LEFT   = 0x80,
+	TARGET_ROTATED_RIGHT  = 0x100,
+	//TARGET_MOVED    = 0x800,
+	TARGET_STAND    = 0x1000,
+	//TARGET_ROTATED  = 0x2000
+	TARGET_ROT_NONE = 0x4000,
+};
+
 struct zCMovementTracker {
+
+
 	// looks like it deletes only the aray itself
 	// and not pointers to position keys
 	~zCMovementTracker() = default;
@@ -113,9 +131,10 @@ private:
 	float __elev  = 0.0;
 	float __range = 0.0;
 
-	int unk4 = 0;
-	int unk4_1 = 0;
-	int unk4_2 = 0;
+	float __targetVelo = 0.0;
+
+	float __savedAzi   = 0.0;
+	float __savedElev  = 0.0;
 
 	zMAT4 __mat0inverse;
 	zMAT4 __mat0;
@@ -232,17 +251,17 @@ void zCMovementTracker::SetCamPos(zVEC3 const& newPos)
 
 void zCMovementTracker::ClearMessages()
 {
-	__msg = 0x4000|0x1000;
+	__msg = TARGET_ROT_NONE|TARGET_STAND;
 }
 
 void zCMovementTracker::UpdateMessages()
 {
 	zTAICamMsg v1; // eax
 
-	if ( __msg & 0x7E )
-		__msg = __msg & ~0x1000u | 0x800;
-	if ( (__msg & 0x80u) || (__msg & 0x100) )
-		__msg = __msg & ~0x4000u | 0x2000;
+	if ( __msg & TARGET_MOVED_ANY )
+		__msg = __msg & ~TARGET_STAND | 0x800;
+	if ( (__msg & TARGET_ROTATED_LEFT) || (__msg & TARGET_ROTATED_RIGHT) )
+		__msg = __msg & ~TARGET_ROT_NONE | 0x2000;
 }
 
 zVEC3& zCMovementTracker::GetLastValidWayPoint(zTWayPoint const& type)

@@ -1057,8 +1057,8 @@ void oCNpc::SetAsPlayer()
 		}
 
 		zCArray<zCVob*> vobs;
-		aicam->SetMode(&CamModNormal, &vobs);
-		aicam->ReceiveMsg(0x8000);
+		aicam->SetMode( CamModNormal, &vobs );
+		aicam->ReceiveMsg( TARGET_CHANGED );
 		auto atvec = GetHeadingAtWorld() * 200;
 		camvob->SetPositionWorld( GetPositionWorld() - atvec );
 		camvob->SetHeadingAtWorld( GetHeadingAtWorld() );

@@ -1,5 +1,5 @@
 struct zCCSCamera : zCVob {
-	int camTrhFOR;
+	int camTrjFOR;
 	int targetTrjFor;
 	int loopMode;
 	int splLerpMode;
@@ -13,8 +13,9 @@ struct zCCSCamera : zCVob {
 	zBOOL autoCamPlayerMovable;
 	zBOOL autoCamUntriggerOnLastKey;
 	float autoCamUntriggerOnLastKeyDelay;
-	int WHAT[5];
-	zCArray keys;
+	zCVob* __unkVob;
+	int WHAT[4];
+	zCArray<zCCamTrj_KeyFrame *> keys;
 	zCArray targets;
 	zBOOL paused;
 	int WHUT[5];

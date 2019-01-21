@@ -3,12 +3,37 @@ class zCAICamera : public zCAIBase {
 
 public:
 	static void GlobalStartUp() {}
+	static zCAICamera* GetCurrent();
 
 	virtual ~zCAICamera();
 	virtual void DoAI(zCVob *,int &);
 
+	void CleanUp();
+
 	int CreateInstance(zSTRING &instName);
 
+	void ReceiveMsg( zTAICamMsg const& msg );
+
+	zSTRING GetMode() const { return __modeInstance; }
+	zSTRING GetPreviousMode() const { return __prevMode; }
+	zBOOL IsModeAvailable(const zSTRING& modeInst) const
+	{
+		return return camParser->GetIndex(modeInst) >= 0;
+	}
+	zBOOL IsModeActive(const zSTRING& modeInst) const
+	{
+		return GetMode() == modeInst;
+	}
+
+	void SetRotateEnabled(int enabled)
+	{
+		__tracker->SetRotateEnabled(enabled);
+	}
+
+	void SetDialogCamDuration(float dur)
+	{
+		dialogCamDuration = dur;
+	}
 
 private
 	int __showControlDots;
@@ -53,7 +78,7 @@ private
 	float dialogCamDuration;
 	zCCSCamera* __dialogCam[6];
 	zSTRING unkstr1;
-	int __num_checkunderwater;
+	int __raysCount;
 
 	zBOOL underwaterFX;
 
@@ -65,14 +90,38 @@ private
 	zCPathSearch *__pathSearch;
 	zCMovementTracker *__tracker;
 	zSPathSearchResult *__psreport;
-	zSTRING __instanceName;
-	float unkf1[2];
+	zSTRING __modeInstance;
+	float __minRange;
+	float __maxRange;
 	zVEC3 __point;
-	char unkc7[8];
+	int __unkBool;
+	int hintTargetInPortalRoom;
 };
 
 //------------------------------------------------------------------------------
 //_Carsten/zAICamera.cpp
+zCAICamera* zCAICamera::GetCurrent()
+{
+	return zCAICamera::current;
+}
+
+int zCAICamera::CreateInstance(zSTRING &instName)
+{
+	return camParser->CreateInstance(instName, &scripted);
+}
+
+void zCAICamera::ReceiveMsg(const zTAICamMsg& msg)
+{
+	// I have no idea why it would check for 0x4 (moved backward)
+	// maybe it has more then one meaning?
+	if ( msg == TARGET_CHANGED || msg == TARGET_MOVED_BACKWARD )
+		__tracker->ReceiveMsg(msg);
+}
+
+void zCAICamera::CleanUp(zCAICamera *this)
+{
+	RELEASE(__helper);
+}
 
 char const* camsys_ver = "v0.5";
 
@@ -131,7 +180,7 @@ int zCAICamera::Console_EvalFunc(const zSTRING& in, zSTRING& msg)
 			camCon->SetPos(0, 0);
 			camCon->SetParser(camParser);
 			camCon->SetChangedFunc(CamConsole_ParameterChanged);
-			camCon->EditInstance(__instanceName, &scripted);
+			camCon->EditInstance(__modeInstance, &scripted);
 			camCon->SetFocus();
 			return 1;
 		}
@@ -189,7 +238,92 @@ int zCAICamera::Console_EvalFunc(const zSTRING& in, zSTRING& msg)
 	return 0;
 }
 
-int zCAICamera::CreateInstance(zSTRING &instName)
+void zCAICamera::ShowDebug()
 {
-	return camParser->CreateInstance(instName, &scripted);
+	__helper->SetTrafo( __tracker->__mat0 );
+
+	__hlp_array[0]->SetPositionWorld(__tracker->__vec2);
+	__hlp_array[1]->SetPositionWorld(__tracker->__vec3);
+	__hlp_array[2]->SetPositionWorld(__tracker->__vec1);
+
+	auto lastWp = __tracker->GetLastValidWayPoint( 0 );
+
+	__hlp_array[3]->SetPositionWorld( lastWp );
+
+	auto playerPos     = "PlayerPos: " + __tracker->playerPos.GetString() + "\n"; // was inlined
+	auto targetVelo    = "target velo     : " + __tracker->__targetVelo + "\n";
+	auto rangeToPlayer = "Range To Player : " + __tracker->GetRange() + "\n";
+
+	auto msg = __tracker->__msg;
+
+	zSTRING movement;
+	if (msg & TARGET_STAND) {
+		movement = "TARGET_STAND";
+	} else {
+		if ( msg & TARGET_MOVED_LEFT) {
+			movement = "TARGET_MOVED_LEFT";
+		} else if ( msg & TARGET_MOVED_RIGHT ) {
+			movement = "TARGET_MOVED_RIGHT";
+		}
+		if ( msg & TARGET_MOVED_FORWARD ) {
+			movement += " | " + "TARGET_MOVED_FORWARD";
+		} else if ( msg & TARGET_MOVED_BACKWARD ) {
+			movement += " | " + "TARGET_MOVED_BACKWARD";
+		}
+
+		if ( msg & TARGET_MOVED_UP ) {
+			movement += " | " + "TARGET_MOVED_UP";
+		} else if ( msg & TARGET_MOVED_DOWN ) {
+			movement += " | " + "TARGET_MOVED_DOWN";
+		}
+	}
+	movement += "\n";
+
+	zSTRING rotation;
+	if ( msg & target_rot_none ) {
+		rotation = "TARGET_ROT_NONE";
+	} else if ( msg & TARGET_ROTATED_LEFT ) {
+		rotation = "TARGET_ROTATED_LEFT";
+	} else if ( msg & "TARGET_ROTATED_RIGHT" ) {
+		rotation = "TARGET_ROTATED_RIGHT";
+	}
+	rotation += "\n";
+
+	auto azi  =  " Azimuth   : " + __tracker->GetAzimuth();
+	auto elev =  " Elevation : " + __tracker->GetElevation();
+
+	zSTRING range;
+	if ( GetMaxRange() * 100.0 < __tracker->GetRange() ) {
+		range = "Player out of maxRange\n";
+	} else if ( GetMaxRange() * 100.0 > __tracker->GetRange() ) {
+		range = "Player out of minRange\n";
+	} else {
+		range = "Player in Range\n";
+	}
+
+	zSTRING camPos;
+	auto pos = __csVob->GetPositionWorld();
+	if ( __pathSearch->IsPointValid( pos, 4, failReasonDummy) ) {
+		camPos = "CamPos valid\n";
+	} else {
+		camPos = "CamPos not valid\n";
+	}
+
+	zSTRING npcs = "NPC/focus count:\n" + __focusCount;
+	zSTRING mode = "ModeName:" + GetMode();
+	zSTRING rays = "Rays casted:" + __raysCount;
+
+	screen->Print(0, 3000, playerPos);
+	screen->Print(0, 3300, targetVelo);
+	screen->Print(0, 4200, rangeToPlayer);
+	screen->Print(0, 4500, movement);
+	screen->Print(0, 4800, rotation);
+	screen->Print(0, 5100, "");
+	screen->Print(0, 5400, azi);
+	screen->Print(0, 5700, elev);
+	screen->Print(0, 6000, range);
+	screen->Print(0, 6300, camPos);
+	screen->Print(0, 6600, npcs);
+	screen->Print(0, 6900, mode);
+	screen->Print(0, 2700, rays);
 }

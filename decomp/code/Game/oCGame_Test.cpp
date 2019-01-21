@@ -43,7 +43,7 @@ int oCGame::TestKeys(int key)
 	case KEY_F8:
 		if ( zinput->KeyPressed(KEY_LSHIFT) ) {
 			oCNpc::player->ResetPos(this->startpos);
-			zTAICamMsg msg = 0x8000;
+			zTAICamMsg msg = TARGET_CHANGED;
 			GetCameraAI()->ReceiveMsg(msg);
 		} else {
 			zVEC3 playerPos;

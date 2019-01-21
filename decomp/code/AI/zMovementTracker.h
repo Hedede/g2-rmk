@@ -29,6 +29,8 @@ enum zTAICamMsg {
 	TARGET_STAND    = 0x1000,
 	//TARGET_ROTATED  = 0x2000
 	TARGET_ROT_NONE = 0x4000,
+	//or TARGET_POSITION_CHANGED?
+	TARGET_CHANGED = 0x8000
 };
 
 struct zCMovementTracker {
@@ -124,8 +126,11 @@ private:
 	zVEC3 __vec10 = zVEC3::ZERO;
 	int unk3 = 0;
 
-	float __ringWhat = 0.1;
-	float __ringRot[4] = { 0.2, 0.1, 0.04 };
+	float inertiaTrans = 0.1;
+	float inertiaHead = 0.0;
+	float inertiaWhat = 0.1;
+	float inertiaWhat1 = 0.2;
+	float inertiaTargetRot = 0.04;
 
 	float __azi   = 0.0;
 	float __elev  = 0.0;

@@ -1354,7 +1354,7 @@ void oCGame::SwitchCamToNextNpc()
 	if ( watchn && (watchn->variousFlags & 4) == 4)
 		GetCameraAI()->__ghostAlpha = zoptions->ReadReal("INTERNAL", "GhostAlpha", 0.3);
 
-	GetCameraAI()->ReceiveMsg(0x8000);
+	GetCameraAI()->ReceiveMsg( TARGET_CHANGED );
 
 	auto tmp = oCNpc::player;
 	if ( oCNpc::player->flags2.sleepingMode )

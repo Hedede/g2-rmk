@@ -229,6 +229,16 @@ private:
 };
 
 //------------------------------------------------------------------------------
+void zCSkyLayerData::zCSkyLayerData()
+{
+	skyMode = zoptions->ReadBool("SKY_OUTDOOR", skyDome, true);
+}
+
+void zCSkyLayerData::~zCSkyLayerData()
+{
+	DELETE( tex );
+}
+
 void zCSkyState::PresetDawn()
 {
 	time = 0.7;

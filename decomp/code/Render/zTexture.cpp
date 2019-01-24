@@ -172,3 +172,23 @@ bool zCTexture::IsTextureTileBaseSlice()
 	}
 	return 0;
 }
+
+int zCTexture::Exists(zSTRING& fileName)
+{
+	fileName.Upper();
+
+	if ( zCTexture::classDef.SearchHashTable(fileName) )
+		return 1;
+
+	auto dir = zoptions->GetDirString(DIR_COMPILED_TEXTURES);
+	auto file = zfactory->CreateZFile( dir + fileName + "-C.TEX");
+
+	if ( file->Exists2(v6) )
+		return 1;
+
+	zPATH path;
+
+	dir = zoptions->GGetDirString(DIR_TEX);
+
+	return path->SearchFile( fileName + ".*", dir, 1 );
+}

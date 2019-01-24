@@ -4,6 +4,7 @@ class zCAICamera : public zCAIBase {
 public:
 	static void GlobalStartUp() {}
 	static zCAICamera* GetCurrent();
+	static zCAICamera* Create();
 
 	virtual ~zCAICamera();
 	virtual void DoAI(zCVob *,int &);
@@ -105,6 +106,16 @@ zCAICamera* zCAICamera::GetCurrent()
 	return zCAICamera::current;
 }
 
+zCAICamera* zCAICamera::Create()
+{
+	if ( !zCAICamera::bCreated ) {
+		zCAICamera::current  = new zCAICamera();
+		zCAICamera::bCreated = 1;
+	}
+	return GetCurrent();
+}
+
+
 int zCAICamera::CreateInstance(zSTRING &instName)
 {
 	return camParser->CreateInstance(instName, &scripted);
@@ -118,9 +129,15 @@ void zCAICamera::ReceiveMsg(const zTAICamMsg& msg)
 		__tracker->ReceiveMsg(msg);
 }
 
-void zCAICamera::CleanUp(zCAICamera *this)
+void zCAICamera::CleanUp()
 {
 	RELEASE(__helper);
+}
+
+void zCAICamera::SetTarget(zCVob *t)
+{
+	zASSERT( t, "C: zAICamera (zCAICamera :: SetTarget) : No target specified" ); // 508
+	//TODO
 }
 
 char const* camsys_ver = "v0.5";

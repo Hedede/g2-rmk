@@ -1,15 +1,34 @@
 const int zSKY_NUM_LAYER = 2;
 
+enum zESkyLayerMode {
+	zSKY_MODE_POLY,
+	zSKY_MODE_BOX
+};
+
 struct zCSkyLayerData {
+	zCSkyLayerData();
+	~zCSkyLayerData();
+
 	zESkyLayerMode skyMode;
-	zCTexture *tex;
+	zCTexture *tex  = nullptr;
 	zSTRING texName;
-	zREAL texAlpha;
-	zREAL texScale;
-	zVEC2 texSpeed;
+	zREAL texAlpha = 1.0;
+	zREAL texScale = 0.0;
+	zVEC2 texSpeed = { 1.0, 0.0 };
 };
 
 class zCSkyLayer {
+	void RenderSkyLayer(zCSkyState *skyLayerState)
+	{
+		if ( skyPoly->material->color.Alpha() == 0.0 )
+			return;
+		if ( skyMode == zSKY_MODE_POLY )
+			RenderSkyPoly(skyLayerState);
+		else
+			//RenderSkyBox(skyLayerState); // in g1
+			RenderSkyDome(skyLayerState);
+	}
+
 	zCMesh*        skyPolyMesh;
 	zCPolygon*     skyPoly;
 	zVEC2          skyTexOffs;
@@ -18,14 +37,27 @@ class zCSkyLayer {
 };
 
 class zCSkyState {
+	zCSkyState() = default;
+	~zCSkyState() = default;
+
+	void PresetDay0();
+	void PresetDay1();
+	void PresetDay2();
+	void PresetEvening();
+	void PresetNight0();
+	void PresetNight1();
+	void PresetNight2();
+	void PresetDawn();
+
+
 	zREAL time;
 	zVEC3 polyColor;
 	zVEC3 fogColor;
 	zVEC3 domeColor1;
 	zVEC3 domeColor0;
-	zREAL fogDist;
-	zBOOL sunOn;
-	int   cloudShadowOn;
+	zREAL fogDist = 0.0;
+	zBOOL sunOn   = true;
+	int   cloudShadowOn = 0;
 
 	zCSkyLayerData layer[zSKY_NUM_LAYER];
 };
@@ -116,10 +148,6 @@ private:
 	zREAL masterTime;         // //Outdoorsky hat eine Zeit
 	zREAL masterTimeLast;     //
 
-	enum zESkyLayerMode {
-		zSKY_MODE_POLY,
-		zSKY_MODE_BOX
-	};
 
 	zCSkyState masterState;
 	zCSkyState* state[zSKY_NUM_LAYER];
@@ -200,6 +228,142 @@ private:
 	} rainfx;
 };
 
+//------------------------------------------------------------------------------
+void zCSkyState::PresetDawn()
+{
+	time = 0.7;
+	polyColor = { 190.0, 160.0, 255.0 };
+	fogColor  = { 80.0, 60.0, 105.0 };
+	domeColor0 = { 80.0, 60.0, 105.0 };
+	domeColor1 = { 255.0, 255.0, 255.0 };
+	layer[0].texAlpha = 128.0;
+	layer[1].texAlpha = 128.0;
+	fogDist = 0.5;
+	sunOn = 1;
+}
+
+void zCSkyState::PresetDay0()
+{
+	time = 0.75;
+	polyColor = { 255.0, 250.0, 235.0 };
+	fogColor  = { 120.0, 140.0, 180.0 };
+	domeColor1 = { 255.0, 255.0,  255.0 };
+	domeColor0 = fogColor;
+	fogDist = 0.2;
+	sunOn = 1;
+
+	// confusing
+	layer[0].texName = "SKYDAY_LAYER1_A0.TGA";
+	layer[1].texName = "SKYDAY_LAYER0_A0.TGA";
+	layer[0].texAlpha = 0.0;
+	layer[1].texAlpha = 255.0;
+	layer[1].texSpeed.x *= 0.2;
+	layer[1].texSpeed.y *= 0.2;
+}
+
+int zCSkyState::PresetDay1()
+{
+	time = 0.0;
+	polyColor = { 255.0, 250.0, 235.0 };
+	fogColor  = { 120.0, 140.0, 180.0 };
+	domeColor1 = { 255.0, 255.0, 255.0 };
+	domeColor0 = fogColor;
+	fogDist = 0.05;
+	sunOn = 1;
+
+	layer[0].texName = "SKYDAY_LAYER1_A0.TGA";
+	layer[0].texAlpha = 215.0;
+	layer[1].texAlpha = 255.0;
+}
+
+void __thiscall zCSkyState::PresetDay2(zCSkyState *this)
+{
+	zVEC3 *v1; // edx
+	zVEC3 *v2; // edi
+	zVEC3 *v3; // edi
+	zVEC3 *v4; // ecx
+
+	time = 0.25;
+	polyColor = { 255.0, 250.0, 235.0 };
+	fogColor  = { 120.0, 140.0, 180.0 };
+	domeColor1 = { 255.0, 255.0, 255.0 };
+	domeColor0 = { 120.0, 140.0, 180.0 };
+	fogDist = 0.05;
+	sunOn = 1;
+	layer[0].texAlpha = 0.0;
+	layer[1].texAlpha = 255.0;
+}
+
+void zCSkyState::PresetEvening()
+{
+	time = 0.30000001;
+	polyColor  = { 255.0, 185.0, 170.0 };
+	fogColor   = { 170.0, 70.0, 50.0 };
+	domeColor1 = { 255.0, 255.0, 255.0 };
+	domeColor0 = { 170.0, 70.0, 50.0 };
+	layer[0].texAlpha = 128.0;
+	layer[1].texAlpha = 128.0;
+	sunOn = 1;
+	fogDist = 0.2;
+}
+
+void zCSkyState::PresetNight0()
+{
+	time = 0.35;
+	polyColor  = { 105.0, 105.0, 195.0 };
+	fogColor   = { 20.0, 20.0, 60.0 };
+	domeColor1 = { 55.0, 55.0, 155.0 };
+
+	sunOn = 0;
+	fogDist = 0.1;
+
+	layer[0].texName = "SKYNIGHT_LAYER0_A0.TGA";
+	layer[1].texName = "SKYNIGHT_LAYER1_A0.TGA";
+
+	layer[0].texScale *= 4.0;
+	layer[0].texSpeed.y = 0.0;
+	layer[0].texSpeed.x = 0.0;
+	layer[0].texAlpha = 255.0;
+	layer[1].texAlpha = 0.0;
+
+	domeColor0 = fogColor;
+	cloudShadowOn = 0;
+}
+
+void zCSkyState::PresetNight1()
+{
+	time = 0.5;
+	polyColor  = { 40.0, 60.0, 210.0 };
+	fogColor   = { 5.0, 5.0, 20.0 };
+	domeColor1 = { 55.0, 55.0, 155.0 };
+
+	fogDist = 0.05;
+	sunOn = 0;
+
+	layer[0].texAlpha = 255.0;
+	layer[1].texName = "SKYNIGHT_LAYER1_A0.TGA"1;
+	layer[1].texAlpha = 215.0;
+
+	domeColor0 = fogColor;
+}
+
+void zCSkyState::PresetNight2()
+{
+	time = 0.65;
+	polyColor = {40.0, 60.0, 210.0 };
+	fogColor = {5.0, 5.0, 20.0 };
+	domeColor1 = {55.0, 55.0, 155.0 };
+	fogDist = 0.2;
+	sunOn = 0;
+	layer[0].texAlpha = 255.0;
+	layer[1].texName = "SKYDAY_LAYER0_A0.TGA";
+	layer[1].texAlpha = 0.0;
+	domeColor0 = fogColor;
+}
+
+
+
+//------------------------------------------------------------------------------
 void zCSkyControler_Outdoor::Archive(zCArchiver& archiver)
 {
 	if (archiver.InSaveGame()) {

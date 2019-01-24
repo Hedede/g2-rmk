@@ -7,5 +7,5 @@ struct zCUnderwaterPFX : zCParticleFX {
 	}
 
 private:
-	zVEC3 unk;
+	zVEC3 __camPos;
 };

@@ -1,5 +1,12 @@
 struct zSParticle {
 	zSParticle() = default;
+
+	zSParticle *next;
+	zVEC3 position;
+	char unk[36];
+	zVEC2 __pos;
+	char data[32];
+	zCPolyStrip *polyStrip;
 };
 
 struct zCParticleEmitter {

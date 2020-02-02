@@ -60,6 +60,20 @@ oCItem* oCNpc::GetTradeItem()
 	return nullptr;
 }
 
+int oCNpc::CanCarry(oCItem *item)
+{
+	if ( inventory.CanCarry(item) )
+		return 1;
+	if ( item->MultiSlot() ) {
+		auto inst = item->GetInstance();
+		if ( inventory.IsIn(inst, 1) )
+			return 1;
+	}
+
+	human_ai->model->StartAni("T_CANNOTTAKE");
+	return 0;
+}
+
 void oCNpc::CloseDeadNpc()
 {
 	if ( npccontainer ) {

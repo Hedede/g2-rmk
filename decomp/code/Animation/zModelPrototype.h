@@ -1,4 +1,12 @@
 class zCModelPrototype {
+	static NumInList()
+	{
+		auto node =  zCModelPrototype::s_modelRoot;
+		for (int i = 0; node; ++i)
+			node = node->next;
+		return i;
+	}
+
 	zCModelAni* SearchAni(zSTRING const& aniName);
 	
 	zSTRING& GetModelProtoFileName()
@@ -54,18 +62,15 @@ private:
 
 	zCArray<zCMeshSoftSkin*> softSkins;
 
-	zSTRING unk2;
+	zSTRING __str;
 
-	zVEC3 unk3;
-	zVEC3 unk4;
-	zVEC3 unk5;
-	zVEC3 unk6;
-	int unk7;
-	zVEC3 unk8;
-	int unk9;
-	zVEC3 unk10;
+	zTBBox3D __bbox;
+	zVEC3 __vec2;
+	zVEC3 __vec3;
+	int hor;
+	zVEC3 __vec4;
 	int fileType;
-	int unk12[3];
+	zCArray har;
 };
 
 zCModelAni* zCModelPrototype::SearchAni(zSTRING const& aniName)

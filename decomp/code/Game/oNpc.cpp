@@ -1,3 +1,4 @@
+// g2addon/release/Gothic/_ulf/oNpc.cpp
 oCNpc::oCNpc()
 {
 	invSlots.InsertEnd(new TNpcSlot(NPC_MODE_RIGHTHAND));
@@ -252,7 +253,7 @@ void oCNpc::Unarchive(zCArchiver& arc)
 		              GetObjectName() +  "/ Scriptinstance:" +
 		              instName + ". Correct instancename or remove Npc !";
 
-		zFAULT(msg);
+		zFAULT(msg); // 9443
 	} else {
 		InitByScript(index, arc.InSaveGame());
 	}
@@ -291,9 +292,9 @@ void oCNpc::Unarchive(zCArchiver& arc)
 	arc.ReadInt("numTalents", numTalents);
 
 	if (numTalents > talents.GetNumInList())
-		zWARNING("U: NPC: Found more talents in archive than used in game!");
+		zWARNING("U: NPC: Found more talents in archive than used in game!"); //9493
 	else if (numTalents < talents.GetNumInList())
-		zWARNING("U: NPC: Found less talents in archive than used in game!");
+		zWARNING("U: NPC: Found less talents in archive than used in game!"); //9494
 
 	if (numTalents > talents.GetNumInList())
 		numTalents = talents.GetNumInList();
@@ -311,7 +312,7 @@ void oCNpc::Unarchive(zCArchiver& arc)
 			if ( talent->skill > 100 ) {
 				zSTRING msg = "C: corrupt archive found: npc " + GetName() +
 				              " has an illegal talent skill for index: " + i;
-				zWARNING(msg);
+				zWARNING(msg); // 9508
 				talent->skill = 1;
 			}
 
@@ -353,7 +354,7 @@ void oCNpc::Unarchive(zCArchiver& arc)
 		if (idx < 0) {
 			zSTRING msg = "U: NPC: Cannot reinitialize AI-State :" +
 			              startState + " / " + GetInstanceName();
-			zFAULT(msg);
+			zFAULT(msg); // 9567
 		}
 	}
 	arc.ReadRaw("scriptVars", aiscripts, 400);
@@ -402,16 +403,18 @@ void oCNpc::Unarchive(zCArchiver& arc)
 
 			arc.ReadBool("inInv", slot->inInv);
 			if ( slot->inInv ) {
-				auto item = zDYNAMIC_CAST<oCItem>(slot->object);
-				if (item && !item->HasFlag(0x40000000)) {
-					item->SetFlag(0x40000000);
-					item->CreateVisual();
+				if (auto item = zDYNAMIC_CAST<oCItem>(slot->object))
+				{
+					if (!item->HasFlag(ITEM_ACTIVE)) {
+						item->SetFlag(ITEM_ACTIVE);
+						item->CreateVisual();
 
-					auto node = GetModel()->SearchNode(name);
-					if ( node )
-						GetModel()->SetNodeVisual(node, item->visual, 0);
-					if (slot->object)
-						SetItemEffectControledByModel(item, node, 1, 0, 0);
+						auto node = GetModel()->SearchNode(name);
+						if ( node )
+							GetModel()->SetNodeVisual(node, item->visual, 0);
+						if (slot->object)
+							SetItemEffectControledByModel(item, node, 1, 0, 0);
+					}
 				}
 			}
 		}
@@ -479,6 +482,45 @@ void oCNpc::InitBodyStates()
 	}
 }
 
+void oCNpc::InitModel()
+{
+	zCModel* model = :GetModel();
+	if ( !model )
+		return;
+
+	auto bodyVisualName = GetVisualBody();
+
+	int armorVarNr = 0;
+
+	if ( oCItem* armor = GetSlotItem(NPC_NODE_TORSO) )
+	{
+		bodyVisualName = armor->GetVisualChange();
+		armorVarNr = armor->GetVisualSkin(); // oCItem::visual_skin
+	}
+
+	if ( bodyVisualName.Length() > 0 )
+	{
+		model->RemoveMeshLibAll();
+		model->ApplyMeshLib(bodyVisualName);
+		// for soem reason it is doing
+		// ((flags_npc) << 2) >> 16
+		// (i.e. shl 2 sar 16)
+		// this probably means my struct description is wrong
+		model->SetMeshLibTexture(bodyVisualName, 0, body_TexVarNr, "BODY");
+		model->SetMeshLibTexture(bodyVisualName, 1, body_TexColorNr, "BODY");
+		model->SetMeshLibTexture(bodyVisualName, 0, armorVarNr, "ARMOR");
+	}
+
+	SetHead();
+	setShowVisual(true); // flags1.showVisual = 1;
+
+	auto prototype = model->_prototypes[0];
+	zTBBox3D bbox = prototype->__bbox;
+
+	selfDist = bbox.maxs[2] - prototype->__vec4.z;
+	if (selfDist <= 0.0)
+		selfDist = 150.0;
+}
 
 zCModel* oCNpc::GetModel()
 {
@@ -489,6 +531,28 @@ zCModel* oCNpc::GetModel()
 	}
 	return model;
 }
+
+void oCNpc::SetHead()
+{
+	zCModel* model = GetModel();
+	if ( !model )
+		return;
+	if ( GetVisualHead().IsEmpty() )
+		return;
+	if ( auto headNode = model->SearchNode(zMDL_NODE_NAME_HEAD) )
+	{
+		zSTRING headVisualName = GetVisualHead();
+		if ( headVisualName.Length() > 0 )
+		{
+			zCMorphMesh* headMesh = zCMorphMesh::Load(headVisualName);
+			model->SetNodeVisual(headNode, headMesh, 0);
+			headMesh->SetTextureVar(0, head_TexVarNr, "HEAD")
+			headMesh->SetTextureVar(1, body_TexColorNr, "HEAD")
+			headMesh->SetTextureVar(0, teeth_TexVarNr, "TEETH")
+		}
+	}
+}
+
 
 zSTRING oCNpc::GetVisualBody() const
 {

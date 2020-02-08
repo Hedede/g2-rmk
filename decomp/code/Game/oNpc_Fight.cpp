@@ -206,6 +206,95 @@ int oCNpc::GetCurrentFightMove()
 	return anictrl->IsInCombo() != 0 ? MOVE_COMBO : MOVE_WAIT;;
 }
 
+//Gothic/_roman/oNpc_Fight.cpp
+void oCNpc::InitFightAI()
+{
+	zMESSAGE("U:AI: Reading Script-fight-ai");
+
+	zSTRING fightAIScript;
+
+	if ( zgameoptions )
+	{
+		fightAIScript = zgameoptions->ReadString(zOPT_SEC_FILES, "FightAI", 0);
+	}
+	if ( fightAIScript.IsEmpty() )
+		fightAIScript = "Content\\Fight";
+
+	zINFO(4,"N: NPC: Loading file " + fightAIScript + ".src or .dat"); // 184
+
+	zoptions->ChangeDir(DIR_SCRIPTS);
+
+	zCParser* fightParser = new zCParser(100);
+
+	fightParser->Parse(fightAIScript + ".src");
+	fightParser->CreatePCode();
+
+	auto sym_MaxFightAI = fightParser->GetSymbol("MAX_FIGHTAI");
+
+	if ( sym_MaxFightAI )
+	{
+		int maxFightAI = 0;
+		sym_MaxFightAI->GetValue(maxFightAI, 0);
+
+		for ( int i = 0; i < maxFightAI; ++i )
+		{
+			fightAI.InsertEnd(new oSFightAI); // 0x214
+			fightAI[i]->Init();
+		}
+
+		if ( fightParser )
+			delete fightParser;
+
+		zMESSAGE("U:AI: Reading Script-fight-ai finished");
+	}
+}
+
+void oCNpc::ExitFightAI()
+{
+	for (auto ptr : fightAI)
+		delete ptr;
+
+	fightAI.DeleteList();
+}
+
+zBOOL oCNpc::IsNpcBetweenMeAndTarget(zCVob *target)
+{
+	if ( !target )
+		return 0;
+	if ( !homeWorld )
+		return 0;
+
+	zCArray<zCVob*> ignoreList;
+
+	ignoreList.InsertEnd(this);
+	// hmm, makes no sense to check, inlined?
+	if ( target )
+		ignoreList.InsertEnd(target);
+
+	zVEC3 thisPos   = this->GetPositionWorld();
+	zVEC3 targetPos = target->GetPositionWorld();
+	zVEC3 direction = targetPos - thisPos;
+
+
+	if ( !homeWorld->TraceRayNearestHit(thisPos, direction, ignoreList, 4|1) )
+	{
+		return 0;
+	}
+
+	auto npc = traceRayReport.foundVob;
+	if ( !npc )
+		return 0;
+
+	if (!CheckInheritance<oCNpc>(npc))
+		return 0;
+
+	auto thisSphere = this->bbox3D->GetSphere3D();
+	auto npcSphere  = npc->bbox3D->GetSphere3D();
+	if ( npcSphere->IsIntersecting(thisSphere) )
+		return 1;
+	return 0;
+}
+
 int oCNpc::FindNextFightAction()
 {
 	if ( !enemy )
@@ -399,12 +488,131 @@ int oCNpc::FindNextFightAction()
 	return myMove;
 }
 
-void oCNpc::ExitFightAI()
+int oCNpc::FightAttackMelee(int myMove)
 {
-	for (auto ptr : fightAI)
-		delete ptr;
+	zCEventMessage* msg = nullptr;
+	switch ( myMove )
+	{
+	case MOVE_ATTACK:
+		if ( anictrl->IsWalking() && anictrl->_t_hitfrun )
+		{
+			msg = new oCMsgAttack(EV_ATTACKRUN, anictrl->_t_hitfrun, 1);
+		}
+		else
+		{
+			// rand was inlined, too much to bother to figure out which function it was
+			// (I already did that in the past, so if I see it, I'll come back to it)
+			if (zRand2() < 0)
+			{
+				msg = new oCMsgAttack(EV_ATTACKFORWARD, anictrl->_t_hitf, 1);
+			}
+			else
+			{
+				msg = new oCMsgAttack(EV_ATTACKLEFT, anictrl->_t_hitl, 1);
+			}
+		}
+		GetEM()->OnMessage(msg, this);
+		return 1;
+	case MOVE_SIDEATTACK:
+		auto msg = new oCMsgAttack(EV_ATTACKLEFT, anictrl->_t_hitl, 1);
+		msg->combo = 1;
+		GetEM()->OnMessage(msg, this);
+		msg = new oCMsgAttack(EV_ATTACKRIGHT, anictrl->_t_hitr, 1);
+		GetEM()->OnMessage(msg, this);
+		return 1;
+	case MOVE_FRONTATTACK:
+		if ( zRand2() < 0 )
+		{
+			msg = new oCMsgAttack(EV_ATTACKLEFT, anictrl->_t_hitl, 1);
+			msg->combo = -1;
+			GetEM()->OnMessage(msg, this);
 
-	fightAI.DeleteList();
+			msg = new oCMsgAttack(EV_ATTACKFORWARD, anictrl->_t_hitf, 1);
+			GetEM()->OnMessage(msg, this);
+		}
+		else 
+		{
+			auto msg = new oCMsgAttack(EV_ATTACKFORWARD, anictrl->_t_hitf, 1);
+			msg->combo = -1;
+			GetEM()->OnMessage(msg, this);
+
+			msg = new oCMsgAttack(EV_ATTACKRIGHT, anictrl->_t_hitr, 1);
+			GetEM()->OnMessage(msg, this);
+		}
+
+		return 1;
+	case MOVE_TRIPLEATTACK:
+		if ( zRand2() < 0 )
+		{
+			msg = new oCMsgAttack(EV_ATTACKFORWARD, anictrl->_t_hitf, 1);
+			msg->combo = -1;
+			GetEM()->OnMessage(msg, this);
+
+			msg = oCMsgAttack(EV_ATTACKRIGHT, anictrl->_t_hitr, 1);
+			msg->combo = -1;
+			GetEM()->OnMessage(msg, this);
+
+			msg = new oCMsgAttack(EV_ATTACKLEFT, anictrl->_t_hitl, 1);
+			GetEM()->OnMessage(msg, this);
+		}
+		else
+		{
+			msg = new oCMsgAttack(EV_ATTACKLEFT, anictrl->_t_hitl, 1);
+			msg->combo = -1;
+			GetEM()->OnMessage(msg, this);
+
+			msg = oCMsgAttack(EV_ATTACKRIGHT, anictrl->_t_hitr, 1);
+			msg->combo = -1;
+			GetEM()->OnMessage(msg, this);
+
+			msg = new oCMsgAttack(EV_ATTACKFORWARD, anictrl->_t_hitf, 1);
+			GetEM()->OnMessage(msg, this);
+		}
+	case MOVE_WHIRLATTACK
+		msg = new oCMsgAttack(EV_ATTACKLEFT, anictrl->_t_hitl, 1);
+		msg->combo = -1;
+		GetEM()->OnMessage(msg, this);
+
+		msg = oCMsgAttack(EV_ATTACKRIGHT, anictrl->_t_hitr, 1);
+		msg->combo = -1;
+		GetEM()->OnMessage(msg, this);
+
+		msg = new oCMsgAttack(EV_ATTACKLEFT, anictrl->_t_hitl, 1);
+		msg->combo = -1;
+		GetEM()->OnMessage(msg, this);
+
+		msg = oCMsgAttack(EV_ATTACKRIGHT, anictrl->_t_hitr, 1);
+		GetEM()->OnMessage(msg, this);
+	case MOVE_MASTERATTACK:
+		msg = new oCMsgAttack(EV_ATTACKLEFT, anictrl->_t_hitl, 1);
+		msg->combo = -1;
+		GetEM()->OnMessage(msg, this);
+
+		msg = oCMsgAttack(EV_ATTACKRIGHT, anictrl->_t_hitr, 1);
+		msg->combo = -1;
+		GetEM()->OnMessage(msg, this);
+
+		msg = new oCMsgAttack(EV_ATTACKFORWARD, anictrl->_t_hitf, 1);
+		msg->combo = 4;
+		GetEM()->OnMessage(msg, this);
+	}
+	return 0;
+}
+
+bool oCNpc::FightAttackBow()
+{
+	if ( !enemy )
+		return false;
+	auto weapon = GetWeapon();
+	if ( !IsMunitionAvailable(weapon) )
+		return false;
+
+	auto msgAttack = new oCMsgAttack(10, enemy, 0.0);
+	msg->SetHighPriority(1);
+	msg->startFrame = 3000.0;
+
+	GetEM()->OnMessage(msgAttack, enemy);
+	return true;
 }
 
 int oCNpc::InitAim(oCMsgAttack* csg, oCNpc** enemy, int* drawn, int* ammo, int killFormerMsg)

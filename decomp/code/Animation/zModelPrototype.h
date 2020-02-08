@@ -41,7 +41,8 @@ class zCModelPrototype {
 private:
 	static void ConvertVec3(zVEC3& vec);
 	static void ConvertAngle(float& angle) {}
-	void ReadComment() {}
+	static void ReadComment() {}
+	static void SkipBlock();
 
 	void AddAni(zCModelAni* ani);
 
@@ -108,4 +109,27 @@ void zCModelPrototype::SetFileSourceType(int sourceType)
 		modelProtoName = ".ASC";
 	else
 		modelProtoName = ".MDS";
+}
+
+zFILE_FILE file;
+zSTRING s_word;
+
+void zCModelPrototype::SkipBlock()
+{
+	int depth = 1;
+
+	while (depth > 0 && !file->Eof())
+	{
+		file->Read(s_word);
+		if ( s_word.Search(0, "{", 1u) != -1 )
+			++v0;
+		else if ( s_word.Search( 0, "}", 1u) != -1 )
+			--v0;
+	}
+}
+
+void zCModelPrototype::SkipBlockCmt()
+{
+	Printm("D: MDL: Skipping Block: " + s_word); // not present in G2
+	SkipBlock(); // inlined
 }

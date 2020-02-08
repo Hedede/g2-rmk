@@ -74,13 +74,26 @@ int oCNpc::CanCarry(oCItem *item)
 	return 0;
 }
 
+void oCNpc::CloseSteal()
+{
+	if (oCNpc::stealcontainer) {
+		oCNpc::stealcontainer->Close();
+		oCNpc::game_mode = 0;
+	}
+}
+
+void oCNpc::CloseInventory()
+{
+	inventory.Close();
+	CloseTradeContainer();
+}
+
 void oCNpc::CloseDeadNpc()
 {
 	if ( npccontainer ) {
-		inventory.Close(inventory);
-		CloseTradeContainer();
+		CloseInventory();
 
-		npccontainer->Close(npccontainer);
+		npccontainer->Close();
 
 		Delete(npccontainer);
 

@@ -534,6 +534,12 @@ public:
 		this->guildTrue = guild;
 	}
 
+	// this is added by me
+	zSTRING GetTrueGuildName() const
+	{
+		return oCGuilds::GetGuildName(this->guild);
+	}
+
 	int GetGuildAttitude(int guild) const;
 	bool IsGuildFriendly(int guild) const
 	{
@@ -583,9 +589,11 @@ public:
 		return human_ai;
 	}
 
+	void SetBodyState(int bs);
+
 	int GetBodyState() const
 	{
-		return bodyState & 0x7F;
+		return bodyState & BS_MAX;
 	}
 
 	int GetFullBodyState() const
@@ -922,19 +930,9 @@ public:
 			RemoveFromSlot(slot, dropIt, 1);
 	}
 
-	void CloseSteal() // static?
-	{
-		if (oCNpc::stealcontainer) {
-			oCNpc::stealcontainer->Close();
-			oCNpc::game_mode = 0;
-		}
-	}
+	void CloseSteal(); // static?
 
-	void CloseInventory()
-	{
-		inventory.Close();
-		CloseTradeContainer();
-	}
+	void CloseInventory();
 
 	oCItem* DetectItem(int flags, int);
 
@@ -1151,6 +1149,11 @@ public:
 	int GetAIStateTime() const
 	{
 		return states.GetStateTime();
+	}
+
+	int GetOldScriptState() const
+	{
+		return old_script_state;
 	}
 
 	int IsAIState(int funcInst) const
@@ -1370,6 +1373,9 @@ private:
 	uint8_t spells     = 0;
 
 	uint32_t bodyState         : 19;
+	//uint32_t bodyState         : 7;
+	//uint32_t bodyStateModifier : 7;
+	//uint32_t bodyStateFlags    : 5;
 	uint32_t aniMessageRunning : 1;
 
 	int    instanz = -1;

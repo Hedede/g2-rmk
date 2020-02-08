@@ -588,6 +588,117 @@ void oCNpc::RemoveEffect(zSTRING const& fxname)
 	}
 }
 
+// this is added by me
+zSTRING GetAttitudeString(int attitude)
+{
+	switch ( attitute )
+	{
+	case ATT_FRIENDLY: return "friendly";
+	case ATT_NEUTRAL:  return "neutral";
+	case ATT_ANGRY:    return "angry";
+	case ATT_HOSTILE:  return "hostile";
+	}
+	return {};
+}
+
+void oCNpc::ShowState(int x, int y)
+{
+	zSTRING str = "Walk : ";
+	switch (human_ai->walkmode)
+	{
+	case 0:
+		str += "Run";
+		break;
+	case 1:
+		str += "Walk";
+		break;
+	case 2:
+		str += "Sneak";
+		break;
+	case 3:
+		str += "Water";
+		break;
+	case 4:
+		str += "Swim";
+		break;
+	case 5:
+		str += "Dive";
+		break;
+	default:
+		break;
+	}
+
+	str += "   State : " + states.GetStateInfo();
+
+	int y1 = y;
+	screen->Print(x, y1, str);
+	int y1 += screen->FontY();
+
+	str = "P.detect : ";
+	if (HasVobDetected(oCNpc::player)) // was inlined
+		str += "yes";
+	else
+		str += "no";
+
+	str += "    BS:" + GetBodyStateName() + "(";
+
+		// these two flags made no sense because were always false
+		// (bodyState & BS_MOD_ALL << 13) <= 0
+	if ( bodyState & BS_FLAG_INTERRUPTABLE)
+		str += "I";
+	if ( bodyState & BS_FLAG_FREEHANDS)
+		str += "F";
+	if ( bodyState & BS_MOD_HIDDEN)
+		str += "H";
+	if ( bodyState & BS_MOD_DRUNK)
+		str += "D";
+	if ( bodyState & BS_MOD_NUTS)
+		str += "N";
+	if ( bodyState & BS_MOD_BURNING)
+		str += "B";
+	if ( bodyState & BS_MOD_CONTROLLED)
+		str += "C";
+	if ( bodyState & BS_MOD_TRANSFORMED)
+		str += "T";
+	str += ")";
+
+	double dist = 0.0;
+	if ( oCNpc::player )
+		dist = GetDistanceToVob(oCNpc::player);
+
+	screen->Print(x, y1, str);
+	y1 += screen->FontY();
+
+	str = "NpcName : " + GetName(0);
+
+	int y2 = y;
+	screen->Print(5800, y2, str);
+	y2 += screen->FontY();
+
+	str =  "TempAttitude : ";
+	str += GetAttitudeString(GetAttitude());
+
+	screen->Print(screen, 5800, y2, str);
+	y2 += screen->FontY();
+
+	str = "PermAttitude : ";
+	str += GetAttitudeString(GetPermAttitude()); // was inlined
+
+	screen->Print(screen, 5800, y2, str);
+	y2 += screen->FontY();
+
+	str = "Guild : ";
+	str += GetGuildName();
+
+	screen->Print(screen, 5800, y2, str);
+	y2 += screen->FontY();
+
+	str = "TrueGuild : ";
+	str += GetTrueGuildName();
+
+	screen->Print(screen, 5800, y2, str);
+}
+
 oCItem* oCNpc::DetectItem(int flags, int)
 {
 	if (IsSelfPlayer())
@@ -674,13 +785,31 @@ int oCNpc::GetAttitude(oCNpc *other)
 		return ATT_NEUTRAL;
 
 	if (other->IsAIPlayer()) {
-		if (tmp_attitude == attitude)
-			return attitude;
-		else
+		if (tmp_attitude != attitude)
 			return tmp_attitude;
 	}
 
-	return GetGuildAttitude(other->guild);
+	return GetPermAttitude(other); // was inlined
+}
+
+bool oCNpc::IsAngry(oCNpc *other)
+{
+	return GetAttitude(other) == ATT_ANGRY;
+}
+
+bool oCNpc::IsNeutral(oCNpc *other)
+{
+	return GetAttitude(other) == ATT_NEUTRAL;
+}
+
+bool oCNpc::IsFriendly(oCNpc *other)
+{
+	return GetAttitude(other) == ATT_FRIENDLY;
+}
+
+bool oCNpc::IsHostile(oCNpc *other)
+{
+	return GetAttitude(other) == ATT_HOSTILE;
 }
 
 int oCNpc::GetPermAttitude(oCNpc *other)
@@ -1199,6 +1328,51 @@ zCVobSpot* oCNpc::FindSpot(zSTRING const& fpName, int strict, float dist)
 	return nullptr;
 }
 
+void oCNpc::SetBodyState(int bs)
+{
+	// _ulf/oNpc.cpp
+	if ( bs < BS_STAND || bs >= BS_MAX )
+	{
+		zWARNING("U:NPC: Unknown BodyState :" + bs); // 15759
+	}
+	else
+	{
+		// BS_MOD  = 0x3F80
+		// BS_FLAG = BS_FLAG_INTERRUPTABLE|BS_FLAG_FREEHANDS
+		auto newFlags = oCNpc::bodyStateList[Value] & BS_FLAG;
+		auto curMod   = bodyState & BS_MOD;
+		bodyState = newFlags | curMod | bs;
+	}
+}
+
+zSTRING oCNpc::GetBodyStateName()
+{
+	int bs = bodyState & 7F;
+	if ( bs < BS_STAND || bs >= BS_MAX )
+		return "unknown";
+	return BS_NAMES[bs];
+}
+
+zSTRING oCNpc::GetBodyStateModifierNames()
+{
+	zSTRING ret;
+
+	if ( bodyState & BS_MOD_BURNING)
+		ret += "BS_MOD_BURNING\n";
+	if ( bodyState & BS_MOD_CONTROLLED )
+		ret += "BS_MOD_CONTROLLED\n";
+	if ( bodyState & BS_MOD_DRUNK)
+		ret += "BS_MOD_DRUNK\n";
+	if ( bodyState & BS_MOD_HIDDEN)
+		ret += "BS_MOD_HIDDEN\n";
+	if ( bodyState & BS_MOD_NUTS)
+		ret += "BS_MOD_NUTS\n";
+	if ( bodyState & BS_MOD_TRANSFORMED)
+		ret += "BS_MOD_TRANSFORMED\n";
+
+	return ret;
+}
+
 void oCNpc::ProcessAITimer()
 {
 	// all vars are oCNpc static vars
@@ -1213,3 +1387,76 @@ void oCNpc::ProcessAITimer()
 		ai_scriptStateSkipTimer += ztimer.frameTimeFloat;
 	}
 }
+
+bool oCNpc::IsVictimAwareOfTheft()
+{
+	if ( !stealnpc )
+		return 0;
+
+	bodyState = oCNpc::GetBodyState(stealnpc);
+
+	bool isDetected = !stealnpc->IsDead() && stealnpc->HasVobDetected(this);
+	bool isUnconscious = !stealnpc->IsDead() && !stealnpc->IsUnconscious();
+	// not sure about this line
+	bool isBusy = oCNpc::game_mode == 2 && (bodyState == BS_STAND || bodyState == BS_ITEMINTERACT);
+	
+	return isDetected || !(isUnconscious || isBusy);
+}
+
+void oCNpc::CheckSpecialSituations()
+{
+	if ( stealnpc && in(oCNpc::game_mode, 2, 1) )
+	{
+		auto focusNpc = GetFocusNpc();
+		auto stealNpc = ::stealnpc;
+
+		// was inlined
+		bool isAware = stealNpc ? stealNpc->IsVictimAwareOfTheft() : false;
+		bool notFocus = focusNpc != stealnpc;
+
+		if ( notFocus || isAware )
+		{
+			// VC98 didn't eliminate if (this) check after inlining...
+			StopTheft(this, isAware); // was inlined
+			// stange, why does it take a separate npc parameter?
+		}
+		else
+		{
+			stealcheck_timer -=  ztimer.frameTimeFloat;
+			if ( stealcheck_timer <= 0.0 )
+			{
+				AssessTheft_S(stealNpc);
+				stealcheck_timer += 3000.0;
+			}
+		}
+	}
+}
+
+void oCNpc::StopTheft(oCNpc *npc, int victimAware)
+{
+	if ( npc )
+	{
+		if ( victimAware )
+		{
+			STOP_MOVEMENT(this); // pseudocode
+
+			stealnpc->CatchThief_S(npc);
+
+			RESTART_MOVEMENT(this);
+		}
+
+		npc->CloseInventory(); // was inlined
+
+		if ( oCNpc::game_mode == 2 )
+		{
+			npc->CloseSteal(); // was inlined
+		}
+		else if ( npccontainer )
+		{
+			npc->CloseDeadNpc(); // was inlined
+		}
+
+		stealnpc = 0;
+	}
+}
+

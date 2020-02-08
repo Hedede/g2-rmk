@@ -12,6 +12,8 @@ public:
 		EV_SHOOTAT = 7,
 		EV_STOPAIM = 8,
 		EV_DEFEND = 9,
+		EV_UNK1 = 10,
+		EV_UNK2 = 11,
 	};
 
 	oCMsgAttack() = default;

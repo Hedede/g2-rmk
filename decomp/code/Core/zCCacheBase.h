@@ -11,7 +11,7 @@ class zCCacheBase {
 	zCCacheBase*  next;
 	zCCacheBase** prev_next;
 
-	size_t size = 100;
+	size_t timeout = 100;
 public:
 	zCCacheBase()
 	{
@@ -22,6 +22,12 @@ public:
 
 		if (next)
 			next->prev_next = &this->next;
+	}
+
+	zCCacheBase(int timeout)
+		: zCCacheBase()
+	{
+		this->timeout = timeout;
 	}
 
 	virtual ~zCCacheBase()
@@ -68,27 +74,4 @@ struct zCCacheIndex {
 
 	uint32_t a;
 	uint32_t b;
-};
-
-template<typename Index, typename Data>
-class zCCacheData {
-	T* data;
-	int curFrame;
-public:
-	void Clear()
-	{
-		if (data) {
-			delete data;
-			data = nullptr;
-		}
-	}
-
-	T* GetData(Index const& ref)
-	{
-		if (!data)
-			data = new Data(ref);
-
-		curFrame = zCCacheData::s_currentFrame;
-		return data;
-	}
 };

@@ -1109,16 +1109,60 @@ void oCNpc::DoSpellBook()
 
 
 // Unused, 100% sure was called by Npc_SetToMad, but was cut out
-void oCNpc::SetToMad(float a3)
+void oCNpc::SetToMad(float ms)
 {
-	mad_heal = a3; // wtf?
-	if ( human_ai->IsStanding() && !(bitfield0 & mad) ) {
+	mad_heal = ms; // wtf?
+	if ( human_ai->IsStanding() && !flags.mad ) {
 		if ( GetOverlay("_mad") ) {
 			ApplyOverlay(this, "_mad");
 			human_ai->InitAnimations();
-			bitfield0 |= mad;
+			flags.mad = true;
 		}
 	}
+}
+
+int oCNpc::GetProtectionByMode(unsigned int protectionMode)
+{
+	int sum = 0;
+	if ( protectionMode & DAM_BARRIER)
+		sum = protection[PROT_BARRIER];
+	if ( protectionMode & DAM_BLUNT)
+		sum += protection[PROT_BLUNT];
+	if ( protectionMode & DAM_EDGE)
+		sum += protection[PROT_EDGE];
+	if ( protectionMode & DAM_FIRE)
+		sum += protection[PROT_FIRE];
+	if ( protectionMode & DAM_FLY)
+		sum += protection[PROT_FLY];
+	if ( protectionMode & DAM_MAGIC)
+		sum += protection[PROT_MAGIC];
+	if ( (protectionMode & DAM_POINT)
+		sum += protection[PROT_POINT];
+	if ( protectionMode & DAM_FALL)
+		sum += protection[PROT_FALL];
+	return sum;
+}
+
+int oCNpc::GetDamageByMode(unsigned int damageMode)
+{
+	int sum = 0;
+	if ( protectionMode & DAM_BARRIER)
+		sum = protection[DAM_INDEX_BARRIER];
+	if ( protectionMode & DAM_BLUNT)
+		sum += protection[DAM_INDEX_BLUNT];
+	if ( protectionMode & DAM_EDGE)
+		sum += protection[DAM_INDEX_EDGE];
+	if ( protectionMode & DAM_FIRE)
+		sum += protection[DAM_INDEX_FIRE];
+	if ( protectionMode & DAM_FLY)
+		sum += protection[DAM_INDEX_FLY];
+	if ( protectionMode & DAM_MAGIC)
+		sum += protection[DAM_INDEX_MAGIC];
+	if ( (protectionMode & DAM_POINT)
+		sum += protection[DAM_INDEX_POINT];
+	if ( protectionMode & DAM_FALL)
+		sum += protection[DAM_INDEX_FALL];
+	return sum;
 }
 
 void oCNpc::AvoidShrink(int timeout)

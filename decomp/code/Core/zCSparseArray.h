@@ -46,11 +46,11 @@ private:
 
 class zCSparseArrayBase {
 public:
-	zCSparseArrayBase::zCSparseArrayBase(uint32_t num)
-		: numEntries_specified(num);
+	zCSparseArrayBase::zCSparseArrayBase(uint32_t size)
+		: numEntries_specified(size);
 	{
-		if ( num )
-			Create(num);
+		if ( size )
+			Create(size);
 	}
 
 	virtual ~zCSparseArrayBase()
@@ -121,7 +121,7 @@ protected:
 		if ( dat->NumRefs() == 0 ) {
 			--numRefs;
 
-			if ( 2 * (3 * numRefs + 6) < numEntries && numEntries > numEntries_specified )
+			if ( 6 * (numRefs + 1) < numEntries && numEntries > numEntries_specified )
 				shouldResize = 1;
 		}
 	}
@@ -180,17 +180,82 @@ protected:
 private:
 	uint32_t numberOfIterators = 0;
 	uint32_t numEntries = 0;
-	uint32_t dataPtr = 0;
+	uint32_t numEntries_specified = 0;
+	void *dataPtr;
 	uint32_t numRefs = 0;
 	uint32_t unk = 10;
 	bool shouldResize = false;
 };
 
+struct zCSparseArrayIterator
+{
+	zCSparseArrayIterator(zCSparseArrayBase *array)
+		: array(array)
+	{
+		Reset(); // was inlined
+	}
+
+	~zCSparseArrayIterator()
+	{
+		DeRegister(); // was inlined
+	}
+
+	void Reset()
+	{
+		position = array->numEntries;
+
+		Next(); // was inlined
+		Register(); // was inlined
+	}
+
+	void Next()
+	{
+		// was inlined
+		for (--position; zBOOL(*this); --position)
+		{
+			if ( array->ManDatPtr(position)->IsOccupied() )
+				return;
+		}
+	}
+
+	void Register()
+	{
+		if ( isRegistered )
+		{
+			isRegistered = 0;
+			--array->numberOfIterators;
+		}
+	}
+
+	void DeRegister()
+	{
+		if ( !isRegistered )
+		{
+			isRegistered = 1;
+			++array->numberOfIterators;
+		}
+	}
+
+	zBOOL operator zBOOL()
+	{
+		if ( position >= 0 )
+			return 1;
+
+		DeRegister(); // was inlined
+
+		return 0;
+	}
+
+	int position;
+	zCSparseArrayBase *array;
+	int isRegistered = false;
+};
+
 template<typename Index, typename Data>
 class zCSparseArray : public zCSparseArrayBase {
 public:
-	zCSparseArray(uint32_t num)
-		: zCSparseArrayBase(num)
+	zCSparseArray(uint32_t size)
+		: zCSparseArrayBase(size)
 	{
 	}
 

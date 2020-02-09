@@ -94,7 +94,8 @@ public:
 			zCCacheData<Index, Data>* data = DataPtr(iter.position);
 
 			// was inlined, no idea how it as called originally
-			if (data->data->Ask())
+			// (no mention is left within the executable)
+			if (!data->data->Ask())
 				continue;
 
 			if ( s_currentFrame - data->curFrame > timeout)

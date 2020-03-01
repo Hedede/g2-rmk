@@ -177,7 +177,13 @@ struct zCParser {
 	{
 		Thiscall<void(zCParser*)> call{0x7900E0};
 		call(this);
+	}
 
+
+	void Reset()
+	{
+		Thiscall<void(zCParser*)> call{0x793100};
+		call(this);
 	}
 
 	bool CheckClassSize(std::string const& className, size_t size)
@@ -186,16 +192,45 @@ struct zCParser {
 		return call(this, className, size);
 	}
 
+	void AddClassOffset(std::string const& name, int newOffset)
+	{
+		zSTRING zName = name;
+		Thiscall<void(zCParser*, zSTRING&, int)> call{0x794730};
+		call(this, zName, newOffset);
+	}
+
 	zCPar_Symbol* GetSymbol(std::string const& name)
 	{
 		Thiscall<zCPar_Symbol*(zCParser*, zSTRING const&)> call{0x7938D0};
 		return call(this, name);
 	}
 
+
+	zCPar_Symbol* GetSymbol(int index)
+	{
+		return symtab.GetSymbol(index);
+	}
+
 	bool CreateInstance(std::string const& name, void* adr)
 	{
 		Thiscall<int(zCParser*, zSTRING const&, void*)> call{0x792F20};
 		return call( this, name, adr );
+	}
+
+
+	void EnableTreeSave(bool enable)
+	{
+		treesave = enable;
+	}
+
+	void EnableTreeLoad(bool enable)
+	{
+		treeload = enable;
+	}
+
+	bool Error() const
+	{
+		return error;
 	}
 
 private:

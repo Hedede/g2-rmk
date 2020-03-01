@@ -54,7 +54,7 @@ struct zCSession_vt : zCInputCallback_vt {
 	void (__thiscall *SetRangesByCommandLine)(oCGame *);
 	void (__thiscall *GetStartPos)(oCGame *);
 	void (__thiscall *SetGameInfo)(oCGame *, oCGameInfo *);
-	void (__thiscall *LoadParserFile)(oCGame *, const zSTRING&);
+	int (__thiscall *LoadParserFile)(oCGame *, const zSTRING&);
 	void (__thiscall *TriggerChangeLevel)(oCGame *, const zSTRING *, const zSTRING *);
 	oCWorld *(__thiscall *GetGameWorld)(oCGame *);
 	void (__thiscall *GetGameInfo)(oCGame *);
@@ -143,6 +143,8 @@ struct oCGame : zCSession {
 	{
 		reinterpret_cast<zCSession_vt*>(_vtab)->SetGameInfo(this, info);
 	}
+
+	bool LoadParserFile(std::string const& script);
 
 	float cliprange;
 	float fogrange;

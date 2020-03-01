@@ -83,6 +83,10 @@ struct oCPortalRoomManager {
 
 
 static void __thiscall Render_thunk(zCSession* ptr) { static_cast<oCGame*>(ptr)->Render(); }
+static int __thiscall LoadParserFile_thunk(oCGame* game, zSTRING const& script)
+{
+	return game->LoadParserFile(std::string(script));
+}
 
 static zCSession_vt oGameVt;
 static zCSession_vt* init_vt(zCSession_vt* from)
@@ -91,6 +95,7 @@ static zCSession_vt* init_vt(zCSession_vt* from)
 		return from;
 	oGameVt = *from;
 	oGameVt.Render = Render_thunk;
+	oGameVt.LoadParserFile = LoadParserFile_thunk;
 	return &oGameVt;
 }
 
@@ -141,7 +146,7 @@ void oCGame::Init()
 
 	Log("Game", "Loading game script: " + script);
 
-	reinterpret_cast<zCSession_vt*>(_vtab)->LoadParserFile(this, script + ".src");
+	LoadParserFile(script + ".src");
 
 	Log("Game", "Initializing misc");
 	sysEvent();
@@ -342,4 +347,28 @@ void oCGame::Render()
 
 	if ( singleStep )
 		timeStep = 0;
+}
+
+bool oCGame::LoadParserFile(std::string const& fileName)
+{
+	g2::Log("Game::Parser", "Loading parser file ", fileName);
+
+	Cdecl<void(zCParser&)> DefineExternals_Ulfi{0x6D4780};
+
+	zparser.Reset();
+	DefineExternals_Ulfi(zparser);
+
+	zparser.EnableTreeLoad(0);
+	zparser.EnableTreeSave(0);
+
+	zparser.Parse(fileName);
+
+	zparser.AddClassOffset("C_NPC", 288);
+	zparser.AddClassOffset("C_ITEM", 288);
+
+	zparser.CreatePCode();
+
+	g2::Log("Game::Parser", "Parsing done");
+
+	return !zparser.Error();
 }

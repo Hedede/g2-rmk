@@ -177,3 +177,59 @@ void oCNpc::OpenInventory(int mode)
 		}
 	}
 }
+
+oCItem* oCNpc::GetWeapon()
+{
+	TNpcSlot* invSlot = nullptr;
+	switch (fmode)
+	{
+	case FMODE_NONE:
+	case FMODE_FIST:
+		break;
+	case FMODE_MELEE:
+	case FMODE_1H:
+	case FMODE_2H:
+	case FMODE_CBOW:
+		invSlot = GetInvSlot(NPC_NODE_RIGHTHAND); // was inlined
+		break;
+	case FMODE_MAGIC:
+	case FMODE_BOW:
+		invSlot = GetInvSlot(NPC_NODE_LEFTHAND); // was inlined
+		break;
+	};
+
+	if (invSlot)
+		return zDYNAMIC_CAST<oCItem*>(invSlot->object);
+
+	return nullptr;
+}
+
+oCItem* oCNpc::HasEquippedStolenItem(oCNpc *owner)
+{
+	if (auto item = GetWeapon()) // was inlined
+	{
+		int ownerInst = owner->GetInstance();
+		if ( item->IsOwned(ownerInst, 0) )
+			return item;
+	}
+
+	// doesn't make a whole lot of sense
+	for (int i = 0; i < invSlots.GetSize(); ++i)
+	{
+		auto invSlot = GetInvSlot(i); // was inlined
+		if (!invSlot)
+			continue;
+		if ( auto item = zDYNAMIC_CAST<oCItem>(invSlot->object) )
+		{
+			int ownerInst = owner->GetInstance();
+			if ( item->IsOwned(ownerInst, 0) )
+				return item;
+		}
+	}
+	return nullptr;
+}
+
+bool oCNpc::IsInvSlotAvailable(zSTRING const& slotName)
+{
+	return GetInvSlot(slotName) != nullptr;
+}

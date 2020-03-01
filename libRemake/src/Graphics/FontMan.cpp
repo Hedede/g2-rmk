@@ -1,4 +1,5 @@
 #include <Graphics/FontMan.h>
+#include <Logging/Log.h>
 
 namespace g2 {
 size_t FontMan::Load(std::string const& name)

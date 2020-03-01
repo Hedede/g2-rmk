@@ -320,7 +320,7 @@ void zCSndSys_OpenAL::UpdateSound3D(zTSndHandle handle, zTSound3DParams* params)
 	if (vob) {
 		auto on = vob->GetObjectName();
 		if (!on) return;
-		g2::Log("SFX", "UpdateSound3D by vob: "s + on.Data());
+		//g2::Log("SFX", "UpdateSound3D by vob: "s + on.Data());
 		auto pos = vob->GetPositionWorld();
 		auto dir = vob->GetAtVectorWorld();
 		if (params) SetSound3DParams( handle, *params );
@@ -329,8 +329,8 @@ void zCSndSys_OpenAL::UpdateSound3D(zTSndHandle handle, zTSound3DParams* params)
 		alSource3f(src,AL_POSITION,pos.x,pos.y,pos.z);
 		alSource3f(src,AL_DIRECTION,dir.x,dir.y,dir.z);
 
-		g2::Log("SFX", "UpdateSound3D pos: ", pos.x,',',pos.y,',',pos.z );
-		g2::Log("SFX", "Distance: ", (pos - listener->GetPositionWorld()).Length() );
+		//g2::Log("SFX", "UpdateSound3D pos: ", pos.x,',',pos.y,',',pos.z );
+		//g2::Log("SFX", "Distance: ", (pos - listener->GetPositionWorld()).Length() );
 	}
 }
 

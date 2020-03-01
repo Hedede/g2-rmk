@@ -148,7 +148,7 @@ zCSndSys_OpenAL::~zCSndSys_OpenAL()
 	impl().~SoundOpenAL();
 }
 
-#include <Types/string_view.h>
+#include <Utility/String.h>
 #include <aw/utility/string/case.h>
 constexpr string_view default_wave      = "default.wav"sv;
 constexpr string_view non_scirpt_prefix = "%"sv;
@@ -194,13 +194,6 @@ zCSoundFX* zCSndSys_OpenAL::LoadSoundFXScript(std::string name)
 	return LoadSoundFX( (std::string)sfx.file );
 }
 
-constexpr bool has_prefix(string_view str, string_view prefix)
-{
-	auto plen = prefix.size();
-	if (str.size() < plen)
-		return false;
-	return str.substr(0, plen) == prefix;
-}
 
 using namespace std::string_literals;
 zTSndHandle zCSndSys_OpenAL::AllocateHandle(zCSndFX_OpenAL& sfx)

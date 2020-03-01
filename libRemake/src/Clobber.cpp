@@ -157,6 +157,14 @@ void InitMisc()
 	as::jump_rel((char*)0x4B81B0, (uintptr_t)thunk_GetLastValidWayPoint);
 }
 
+void InitConsole()
+{
+	void Game_InitConsole();
+
+	g2::Log("Clobber", "Clobbering Game_InitConsole" );
+	as::jump_rel((char*)0x6D01F0, (uintptr_t)Game_InitConsole);
+}
+
 #include <algorithm>
 #include <Gothic/Graphics/zSkyControler.h>
 #include <stdlib.h>
@@ -184,6 +192,7 @@ void InitFunctions()
 	InitThread();
 	InitMisc();
 	InitStdc();
+	InitConsole();
 
 	Log("Clobber", "Restoring memory protection");
 	ret = VirtualProtect((void*)text_start, text_length, prot, &prot);

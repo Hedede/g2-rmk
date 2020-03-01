@@ -8,6 +8,7 @@ src/Clobber.cpp \
 src/Game/CGameManager.cpp \
 src/Game/GameSession.cpp \
 src/Game/World.cpp \
+src/Game/Game.cpp \
 src/Graphics/SplashWindow.cpp \
 src/Graphics/FontMan.cpp \
 src/Graphics/Camera.cpp \

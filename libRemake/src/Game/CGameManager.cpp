@@ -349,7 +349,7 @@ void g2::InitConsole()
 	zcon.Register("TOGGLE CS LIST", "Toggle list of running cutscenes on screen");
 	zcon.Register("TOGGLE CUTSCENES ENABLED", "Enable or disable cutscene-system");
 	zcon.Register("HERO EXPORT", "Exports your hero to the given file.");
-	zcon.Register("Imports your hero from the given file.", "HERO IMPORT");
+	zcon.Register("HERO IMPORT", "Imports your hero from the given file.");
 
 	zcon.Register("ZMARK", "marks outdoor occluder polys");
 	zcon.Register("ZWORLD STATUS", "prints some engine-world data");

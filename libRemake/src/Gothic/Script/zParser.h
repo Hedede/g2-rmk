@@ -6,11 +6,25 @@
 #include <Gothic/Types/Base.h>
 #include <Gothic/Types/zSTRING.h>
 
+enum zPAR_TYPE
+{
+	zPAR_TYPE_VOID      = 0,
+	zPAR_TYPE_FLOAT     = 1,
+	zPAR_TYPE_INT       = 2,
+	zPAR_TYPE_STRING    = 3,
+	zPAR_TYPE_CLASS     = 4,
+	zPAR_TYPE_FUNC      = 5,
+	zPAR_TYPE_PROTOTYPE = 6,
+	zPAR_TYPE_INSTANCE  = 7,
+};
 
 struct zCPar_File;
 struct zCPar_Symbol {
 	template<typename T>
-	T GetValue(int index);
+	T GetValue(int index = 0);
+
+	template<typename T>
+	void SetValue(T value, int index = 0);
 	
 	zSTRING name;
 
@@ -46,8 +60,69 @@ inline float zCPar_Symbol::GetValue(int index)
 {
 	if (ele <= 1)
 		return data_float;
+	if (index >= ele)
+		return 0.0f;
 	return data_pfloat[index];
 }
+
+template<>
+inline int zCPar_Symbol::GetValue(int index)
+{
+	if (ele <= 1)
+		return data_int;
+	if (index >= ele)
+		return 0;
+	return data_pint[index];
+}
+
+template<>
+inline zSTRING zCPar_Symbol::GetValue(int index)
+{
+	if (index >= ele)
+		return "";
+	return data_pstring[index];
+}
+
+template<>
+inline std::string zCPar_Symbol::GetValue(int index)
+{
+	if (index >= ele)
+		return {};
+	return static_cast<std::string>(data_pstring[index]);
+}
+
+template<>
+inline void zCPar_Symbol::SetValue(float value, int index)
+{
+	if (ele <= 1)
+		data_float = value;
+	else if (index < ele)
+		data_pfloat[index] = value;
+}
+
+template<>
+inline void zCPar_Symbol::SetValue(int value, int index)
+{
+	if (ele <= 1)
+		data_int = value;
+	else if (index < ele)
+		data_pint[index] = value;
+}
+
+template<>
+inline void zCPar_Symbol::SetValue(zSTRING value, int index)
+{
+	if (index < ele)
+		data_pstring[index] = value;
+}
+
+template<>
+inline void zCPar_Symbol::SetValue(std::string value, int index)
+{
+	if (index < ele)
+		data_pstring[index] = value;
+}
+
 
 struct zCPar_TreeNode;
 

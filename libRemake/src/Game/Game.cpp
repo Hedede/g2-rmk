@@ -199,6 +199,39 @@ std::string handle_get_var(std::vector<string_view> const& args)
 	return result;
 }
 
+#include <Gothic/Game/oNpc.h>
+#include <Gothic/Game/oItem.h>
+#include <Gothic/Game/zCClassDef.h>
+#include <Hook/size_checker.h>
+#include <Logging/Log.h>
+oCNpc*& oCNpc::player = Value<oCNpc*>(0xAB2684);
+CHECK_SIZE(oCNpc, 0x9BC);
+std::string handle_print_slots()
+{
+	auto npc = oCNpc::player;
+	if (!npc)
+		return result;
+	for (int i = 0; i < npc->invSlots.GetSize(); ++i)
+	{
+		auto invSlot = npc->invSlots[i];
+		if (!invSlot)
+			continue;
+		std::string result;
+		result += invSlot->name;
+		result += ": ";
+		if ( auto item = zSTATIC_CAST<oCItem>(invSlot->object) )
+		{
+			result += item->GetInstanceName();
+		}
+		else
+		{
+			result += "EMPTY";
+		}
+		g2::Log("Debug", result);
+	}
+	return "Printed slots to the debug log.";
+}
+
 int Hedede_ConsoleEvalFunc(zSTRING const& input, zSTRING& msg)
 {
 	string_view space = " ";
@@ -231,8 +264,16 @@ int Hedede_ConsoleEvalFunc(zSTRING const& input, zSTRING& msg)
 		return true;
 	}
 
+	prefix = "print slots";
+	if (has_prefix(cmd, prefix))
+	{
+		msg = handle_print_slots();
+		return true;
+	}
+
 	return false;
 }
+
 
 void Game_InitConsole()
 {
@@ -242,6 +283,7 @@ void Game_InitConsole()
 	zcon.AddEvalFunc(Hedede_ConsoleEvalFunc);
 	zcon.Register("get var", "get a symbol value [name]");
 	zcon.Register("set var", "set a symbol value [name value]");
+	zcon.Register("print slots", "print all inventory slots");
 
 	zcon.AddEvalFunc(oCGame_ConsoleEvalFunc);
 	zcon.Register("insert", "insert a script-instance [name]",2);

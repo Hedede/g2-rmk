@@ -18,4 +18,20 @@ struct zCClassDef {
 	}
 };
 
+#include <Logging/Log.h>
+
+template<typename T>
+T* zSTATIC_CAST(zCObject* object)
+{
+	g2::Log("zSTATIC_CAST", (void*)object);
+	if (!object)
+		return nullptr;
+	g2::Log("zSTATIC_CAST", (void*)object->_vtab);
+	g2::Log("zSTATIC_CAST", (void*)object->GetClassDef());
+	g2::Log("zSTATIC_CAST", (void*)T::classDef);
+	if (object->GetClassDef() == T::classDef)
+		return static_cast<T*>(object);
+	return nullptr;
+}
+
 #endif//Gothic_zCClassDef_H

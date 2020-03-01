@@ -23,7 +23,10 @@ src/System/zResource.cpp \
 src/Filesystem/filesystem.cpp \
 src/Filesystem/find_files.cpp \
 src/Menu/zMenu.cpp \
-src/Input/InputCallback.cpp
+src/Input/InputCallback.cpp \
+src/ZenGin/zVob.cpp \
+src/Gothic/Game/oItem.cpp \
+
 
 objects=$(patsubst src/%.cpp, build/%.o, $(sources))
 

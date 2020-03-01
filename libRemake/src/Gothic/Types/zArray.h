@@ -50,6 +50,11 @@ struct zCArray {
 	T& operator[] (int i) { return array[i]; }
 	T const& operator[] (int i) const { return array[i]; }
 
+	int GetSize() const
+	{
+		return numInArray;
+	}
+
 
 	//Zeiger auf Speicherbereich
 	T* array = nullptr;

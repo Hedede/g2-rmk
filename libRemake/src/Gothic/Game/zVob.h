@@ -1,7 +1,9 @@
-#pragma once
+#ifndef ZenGin_Vob_H
+#define ZenGin_Vob_H
 #include <Gothic/Types/zTree.h>
 #include <Gothic/Types/zMAT4.h>
 #include <Gothic/Types/zBBox.h>
+#include <Gothic/Types/zCObject.h>
 struct zCWorld;
 struct zCRigidBody;
 struct zCVob : zCObject {
@@ -52,8 +54,8 @@ struct zCVob : zCObject {
 	zCWorld *homeWorld;
 	char data2[0x64];
 };
-CHECK_SIZE(zCVob, 0x120);
 
 struct oCVob : zCVob {
 
 };
+#endif//ZenGin_Vob_H

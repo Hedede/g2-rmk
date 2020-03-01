@@ -1,15 +1,15 @@
-#ifndef Gothic_oItem_H
-#define Gothic_oItem_H
+#ifndef Gothic_Item_H
+#define Gothic_Item_H
 #include <Hook/Externals.h>
 #include <Gothic/Game/zVob.h>
 #include <Gothic/Game/zCClassDef.h>
 struct oCItem : public zCVob {
+	static zCClassDef* classDef;
 	void* operator new(size_t size)
 	{
 		void* mem = ::operator new(size);
 
 		auto object   = reinterpret_cast<oCItem*>(mem);
-		auto classDef = reinterpret_cast<zCClassDef*>(0xAB1168);
 		zCClassDef::ObjectCreated(object, classDef);
 
 		return mem;
@@ -34,5 +34,13 @@ struct oCItem : public zCVob {
 			item->InitByScript(instanceId, 1);
 		return item;
 	}
+
+	std::string GetInstanceName() const
+	{
+		zSTRING ret;
+		Thiscall<void(oCItem const*, zSTRING*)> call(0x713D30);
+		call(this, &ret);
+		return std::string(ret);
+	}
 };
-#endif
+#endif//Gothic_Item_H

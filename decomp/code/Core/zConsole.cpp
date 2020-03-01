@@ -614,6 +614,9 @@ int zCConsole::AutoCompletion(zSTRING& cmd)
 		if ( word == "" )
 			break;
 
+		if (!list.root)
+			return 0;
+
 		for (auto node = list.root; node; node = node->next) {
 			for (auto j = 1; j < i; ++j) {
 				auto c1 = node->command.PickWord(j, " ", zSTR_SKIP);

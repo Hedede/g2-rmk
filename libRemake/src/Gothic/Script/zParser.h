@@ -218,6 +218,30 @@ struct zCParser {
 	}
 
 
+	template<typename...Args>
+	void DefineExternal(std::string const& funcName, int (*func)(), zPAR_TYPE type, Args...args)
+	{
+		std::vector<zPAR_TYPE> argList{ args ... };
+		return DefineExternal( funcName, func, type, argList );
+	}
+
+	void DefineExternal(std::string const& name, int (*func)(), zPAR_TYPE ret, std::vector<zPAR_TYPE> args);
+
+	void GetParameter(int& value)
+	{
+		value = PopDataValue();
+	}
+
+	void GetParameter(float& value)
+	{
+		value = PopDataValue();
+	}
+
+	void GetParameter(std::string& value)
+	{
+		value = PopString();
+	}
+
 	void EnableTreeSave(bool enable)
 	{
 		treesave = enable;
@@ -313,8 +337,6 @@ private:
 	int add_created;
 };
 
-#include <Hook/size_checker.h>
-namespace { size_checker<zCParser, 0x21C4>  sc_zparsize; }
 
 inline auto& zparser = Value<zCParser>(0xAB40C0);
 #endif//Gothic_zParser_H

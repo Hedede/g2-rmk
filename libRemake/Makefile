@@ -5,6 +5,7 @@ src/Log.cpp \
 src/Main.cpp \
 src/Win32.cpp \
 src/Clobber.cpp \
+src/Script/Parser.cpp \
 src/Game/CGameManager.cpp \
 src/Game/GameSession.cpp \
 src/Game/World.cpp \

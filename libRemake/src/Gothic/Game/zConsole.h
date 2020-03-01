@@ -33,6 +33,13 @@ struct zCConsole {
 		func(this, cmd, desc);
 	}
 
+	void Register(std::string const& cmd, std::string const& desc, int param)
+	{
+		Thiscall<void(zCConsole*, zSTRING const&, zSTRING const&)> func{0x7829C0};
+
+		func(this, cmd, desc);
+	}
+
 	using EvalFunc = zBOOL( const zSTRING& s, zSTRING& msg );
 	void AddEvalFunc(EvalFunc* func)
 	{

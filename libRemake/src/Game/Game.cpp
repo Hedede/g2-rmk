@@ -244,7 +244,7 @@ void Game_InitConsole()
 	zcon.Register("set var", "set a symbol value [name value]");
 
 	zcon.AddEvalFunc(oCGame_ConsoleEvalFunc);
-	zcon.Register("insert", "insert a script-instance [name]");
+	zcon.Register("insert", "insert a script-instance [name]",2);
 	zcon.Register("goto waypoint", "beam player to waypoint [name]");
 	zcon.Register("toggle desktop", "desktop on/off");
 	zcon.Register("toggle debug", "debug-Messages on/off");

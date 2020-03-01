@@ -35,6 +35,7 @@ int Wld_InsertItem()
 		}
 		vob->SetPositionWorld(pos);
 		world->AddVob(vob);
+		vob->GetRigidBody()->ApplyImpulseCM({0.0, 0.0, -100.0});
 		vob->Release();
 	} else {
 		auto sym = parser.GetSymbol(instanceItem);

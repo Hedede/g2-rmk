@@ -3,6 +3,7 @@
 #include <Gothic/Types/zMAT4.h>
 #include <Gothic/Types/zBBox.h>
 struct zCWorld;
+struct zCRigidBody;
 struct zCVob : zCObject {
 	static void InitVobSystem()
 	{
@@ -37,6 +38,12 @@ struct zCVob : zCObject {
 	{
 		return trafoObjToWorld.GetUpVector();
 	}
+
+	 zCRigidBody* GetRigidBody()
+	 {
+		 Thiscall<zCRigidBody*(zCVob*)> call(0x5FE960);
+		 return call(this);
+	 }
 
 	char data[0x18];
 	zMAT4 trafoObjToWorld;

@@ -1197,12 +1197,7 @@ public:
 	}
 
 	// Robust trace
-	RbtInit(zVEC3& tpos, zCVob* tvob)
-	{
-		RbtReset();
-		RbtUpdate(tpos, tvob);
-	}
-
+	void RbtInit(zVEC3& tpos, zCVob* tvob);
 	zCVob* GetRbtObstacleVob()
 	{
 		return rbt.obstVob;
@@ -1232,6 +1227,9 @@ public:
 	void DropInventory() {}
 	void Activate(int cat, int nr) {}
 	int GetCamp() { return 0; }
+
+private:
+	zBOOL RbtCheckForSolution(zVEC3 curPos, zVEC3 targetPos);
 
 private:
 	// ----------------
@@ -1323,7 +1321,7 @@ private:
 		int    targetPosIndex;
 		int    checkVisibilityTime;
 		int    positionUpdateTime;
-		int    failurePossibility;
+		float  failurePossibility;
 	} rbt;
 
 	zCList<oCNpcTimedOverlay> timedOverlays;

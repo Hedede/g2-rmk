@@ -1,3 +1,4 @@
+// _roman/oNpc_Damage.cpp
 void oCNpc::oSDamageDescriptor::SetFXHit(oCVisualFX* fx)
 {
 	if (fx != fxHit) {
@@ -309,13 +310,59 @@ void oCNpc::OnDamage_Hit(oCNpc::oSDamageDescriptor& dam_desc)
 	manaHeal = GetAttribute(ATR_REGENERATE_MANA) * 1000.0;
 }
 
+void oCNpc::OnDamage_Effects(oSDamageDescriptor& desc)
+{
+	PRINT_DAMAGE_DEBUG("OnDamage_Effects()", "", " Values", "");
+	if ( desc.flags & 2 )
+		OnDamage_Effects_End(desc);
+	if ( desc.flags & 1 )
+		OnDamage_Effects_Start(desc);
+}
+
+
+void oCNpc::OnDamage_Events(oSDamageDescriptor& desc)
+{
+	auto model = GetModel();
+	if ( model )
+	{
+		if ( desc.flags & 8 )
+		{
+			PRINT_DAMAGE_DEBUG("OnDamage_Events()", "Unconsciouseness", "Dropping unconscious", "");
+			DropUnconscious(desc.rest, desc.source_npc);
+		}
+		if ( desc.flags & 4 )
+		{
+			PRINT_DAMAGE_DEBUG("OnDamage_Events()", "Death", "Dieing", "");
+			if ( !desc->source_npc  )
+			{
+				PRINT_DAMAGE_DEBUG("OnDamage_Events()", "Death", "ATTENTION: Attacker is invalid! No XPs will be given!", "");
+			}
+
+			auto aniId = model->GetAniIDFromAniName("S_FIRE_VICTIM");
+			auto ani = model->GetAniFromAniID();
+			model->StopAni(ani);
+			DoDie(desc.source_npc);
+		}
+	
+		if (auto magBook = GetSpellBook())
+		{
+			if (desc.realDamage >= 1.0 && !IsAPlayer() && !bodyStateInterruptableOverride) {
+				magBook->StopSelectedSpell();
+			}
+		}
+	}
+	else
+	{
+		PRINT_DAMAGE_DEBUG("OnDamage_Effects_End()", "No valid Model!", "", "");
+	}
+}
+
 void oCNpc::OnDamage_State(oCNpc::oSDamageDescriptor& desc)
 {
 	auto anictrl = GetAnictrl();
 
 	bool has_fire_dam = desc.type & DAM_FIRE;
 	int  dam_fire = desc.effectiveDamages[DAM_INDEX_FIRE];
-	bool burning
 
 	bool burning = HasBodyStateModifier(BS_MOD_BURNING);
 	bool in_water = anictrl ? anictrl->GetWaterLevel() > 0 : 0;
@@ -477,4 +524,39 @@ void oCNpc::OnDamage(zCVob *source, zCVob *offender, float amount, int type, zVE
 	}
 
 	OnDamage(dam);
+}
+
+// appears to be unused
+void oCNpc::Burn(int damage, float timems)
+{
+	zCParticleFX *pfx = nullptr;
+	if ( damage > 0 && !fireVob )
+	{
+		pfx = new zCParticleFX;
+
+		zCVob* vob = new zCVob;
+		vob->SetVobName("Particle_Test_Vob");
+		vob->SetVisual(pfx);
+		pfx->SetAndStartEmitter("FIRE", 0);
+		pfx->flags.2 = true;
+
+		vob->SetCollDetStat(false);
+		vob->SetCollDetDyn(false);
+
+		vob->SetPositionWorld(this->GetPositionWorld());
+		homeWorld->AddVobAsChild(vob, this);
+		vob->SetPositionWorld(this->GetPositionWorld());
+
+		fireVob = vob;
+
+		pfx->Release();
+	}
+
+	if ( damage > fireDamage )
+	{
+		fireDamageTimer = 0;
+		fireDamage = damage;
+	}
+
+	SetBodyStateModifier(BS_MOD_BURNING);
 }

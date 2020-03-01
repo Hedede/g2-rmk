@@ -144,6 +144,11 @@ struct oCGame : zCSession {
 		reinterpret_cast<zCSession_vt*>(_vtab)->SetGameInfo(this, info);
 	}
 
+	oCWorld* GetGameWorld()
+	{
+		return reinterpret_cast<oCWorld*>(reinterpret_cast<zCSession_vt*>(_vtab)->GetWorld(this));
+	}
+
 	bool LoadParserFile(std::string const& script);
 
 	float cliprange;

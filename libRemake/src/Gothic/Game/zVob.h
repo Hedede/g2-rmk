@@ -21,6 +21,13 @@ struct zCVob : zCObject {
 		return trafoObjToWorld.GetTranslation();
 	}
 
+	void SetPositionWorld(zVEC3 const& position)
+	{
+		Thiscall<void(zCVob*,zVEC3 const&)> call(0x61BB70);
+		call(this,position);
+		//trafoObjToWorld.SetTranslation(position);
+	}
+
 	zVEC3 GetAtVectorWorld() const
 	{
 		return trafoObjToWorld.GetAtVector();
@@ -39,3 +46,7 @@ struct zCVob : zCObject {
 	char data2[0x64];
 };
 CHECK_SIZE(zCVob, 0x120);
+
+struct oCVob : zCVob {
+
+};

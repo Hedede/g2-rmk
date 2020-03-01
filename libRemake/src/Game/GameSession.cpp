@@ -349,6 +349,8 @@ void oCGame::Render()
 		timeStep = 0;
 }
 
+void DefineExternals2(zCParser&);
+
 bool oCGame::LoadParserFile(std::string const& fileName)
 {
 	g2::Log("Game::Parser", "Loading parser file ", fileName);
@@ -356,6 +358,7 @@ bool oCGame::LoadParserFile(std::string const& fileName)
 	Cdecl<void(zCParser&)> DefineExternals_Ulfi{0x6D4780};
 
 	zparser.Reset();
+	DefineExternals2(zparser);
 	DefineExternals_Ulfi(zparser);
 
 	zparser.EnableTreeLoad(0);

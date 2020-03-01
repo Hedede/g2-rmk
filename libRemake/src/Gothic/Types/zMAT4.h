@@ -15,6 +15,13 @@ struct zMAT4 {
 		return {m[0][3], m[1][3], m[2][3]};
 	}
 
+	void SetTranslation(zVEC3 const& vec)
+	{
+		m[0][3] = vec.x;
+		m[1][3] = vec.y;
+		m[2][3] = vec.z;
+	}
+
 	zVEC3 GetAtVector() const
 	{
 		return {m[0][2], m[1][2], m[2][2]};

@@ -1,10 +1,12 @@
 #ifndef Gothic_zParser_H
 #define Gothic_zParser_H
+#include <vector>
 #include <Hook/Externals.h>
 #include <Gothic/Types/zArray.h>
 #include <Gothic/Types/zCList.h>
 #include <Gothic/Types/Base.h>
 #include <Gothic/Types/zSTRING.h>
+#include <aw/types/support/reinterpret.h>
 
 enum zPAR_TYPE
 {
@@ -18,6 +20,21 @@ enum zPAR_TYPE
 	zPAR_TYPE_INSTANCE  = 7,
 };
 
+enum zPAR_FLAG : uint16_t
+{
+	zPAR_FLAG_CONST       = 0x1,
+	zPAR_FLAG_RETURN      = 0x2,
+	zPAR_FLAG_CLASSVAR    = 0x4,
+	zPAR_FLAG_EXTERNAL    = 0x8,
+	zPAR_FLAG_MERGED      = 0x10,
+	zPAR_FLAG_ALLOC_SAPCE = 0x40,
+};
+
+inline zPAR_FLAG operator|(zPAR_FLAG a, zPAR_FLAG b)
+{
+	return zPAR_FLAG(uint16_t(a)|uint16_t(b));
+}
+
 struct zCPar_File;
 struct zCPar_Symbol {
 	template<typename T>
@@ -25,7 +42,42 @@ struct zCPar_Symbol {
 
 	template<typename T>
 	void SetValue(T value, int index = 0);
-	
+
+	std::string GetName() const
+	{
+		return std::string(name);
+	}
+
+	void SetName(std::string const& name)
+	{
+		this->name = name;
+	}
+
+	void SetType(zPAR_TYPE type)
+	{
+		this->type = static_cast<uint16_t>(type);
+	}
+
+	void SetFlag(zPAR_FLAG flag)
+	{
+		this->flags |= static_cast<uint16_t>(flag);
+	}
+
+	void SetOffset(int offset)
+	{
+		this->offset = offset;
+	}
+
+	void SetStackPos(int pos)
+	{
+		data_int = pos;
+	}
+
+	void SetParent(zCPar_Symbol* parent)
+	{
+		this->parent = parent;
+	}
+
 	zSTRING name;
 
 	zCPar_Symbol *next;
@@ -145,6 +197,20 @@ struct zCPar_DataStack {
 };
 
 struct zCPar_SymbolTable {
+	bool Insert(zCPar_Symbol* symbol)
+	{
+		Thiscall<int(zCPar_SymbolTable*,zCPar_Symbol*)> call{0x7A3F00};
+		return call(this, symbol);
+	}
+
+	zCPar_Symbol* GetSymbol(int index)
+	{
+		if ( index < 0 || index >= table.numInArray )
+			return nullptr;
+
+		return table[index];
+	}
+
 	zCPar_Symbol *preAllocatedSymbols;
 	int nextPreAllocated;
 	zCArray<zCPar_Symbol*> table;
@@ -167,6 +233,7 @@ struct zCParser {
 		call(this, symtab_size);
 	}
 
+
 	bool Parse(std::string const& fileName)
 	{
 		Thiscall<int(zCParser*, zSTRING)> call{0x78EBA0};
@@ -179,6 +246,17 @@ struct zCParser {
 		call(this);
 	}
 
+	int PopDataValue()
+	{
+		Thiscall<int(zCParser*)> call{0x7918B0};
+		return call(this);
+	}
+
+	int PopString()
+	{
+		Thiscall<int(zCParser*)> call{0x791940};
+		return call(this);
+	}
 
 	void Reset()
 	{

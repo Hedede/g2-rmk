@@ -77,6 +77,46 @@ struct zCWayNet;
 struct zCSkyControler;
 struct zCWorldPerFrameCallback;
 struct zCViewProgressBar;
+struct zCPlayerGroup;
+
+struct zCWorld_vt
+{
+	zCClassDef *(__thiscall *_GetClassDef)(zCWorld *);
+	void (__thiscall *Archive)(zCWorld *, zCArchiver *);
+	void (__thiscall *Unarchive)(zCWorld *, zCArchiver *);
+	void (__thiscall *dtor)(zCWorld *, unsigned int);
+	zCWorld *(__thiscall *LoadWorld)(zCWorld *, const zSTRING *, unsigned int);
+	void (__thiscall *SaveWorld)(zCWorld *, const zSTRING *, unsigned int, int, int);
+	zCVob *(__thiscall *MergeVobSubtree)(zCWorld *, const zSTRING *, zCVob *, int);
+	void (__thiscall *SaveVobSubtree)(zCWorld *, const zSTRING *, zCVob *, int, int);
+	void (__thiscall *DisposeWorld)(zCWorld *);
+	int (__thiscall *DisposeVobs)(zCWorld *, zCTree<zCVob> *);
+	int (__thiscall *DisposeVobsDbg)(zCWorld *, zCTree<zCVob> *);
+	void (__thiscall *DisposeStaticWorld)(zCWorld *);
+	int (__thiscall *AddVobAsChild)(zCWorld *, zCVob *, zCTree<zCVob> *);
+	void (__thiscall *RemoveVob)(zCWorld *, zCVob *);
+	void (__thiscall *RemoveVobSubtree)(zCWorld *, zCVob *);
+	void (__thiscall *MoveVobSubtreeTo)(zCWorld *, zCVob *, zCTree<zCVob> *);
+	zCPlayerGroup *(__thiscall *GetPlayerGroup)(zCWorld *);
+	zCVob* (__thiscall *SearchVob)(zCWorld *, zCVob *, zCTree<zCVob> *);
+	zCVob* (__thiscall *SearchVobByID)(zCWorld *, unsigned long, zCTree<zCVob> *);
+	zCVob* (__thiscall *SearchVobByName)(zCWorld *, const zSTRING&);
+	void (__thiscall *SearchVobListByName)(zCWorld*, const zSTRING&, zCArray<zCVob*>&);
+	void (__thiscall *SearchVobListByClass)(zCWorld *, zCClassDef *, zCArray<zCVob*>&, zCTree<zCVob>*);
+	void (__thiscall *SearchVobListByBaseClass)(zCWorld *, zCClassDef *, zCArray<zCVob*>&, zCTree<zCVob>*);
+	void (__thiscall *VobAddedToWorld)(zCWorld *, zCVob *);
+	void (__thiscall *VobRemovedFromWorld)(zCWorld *, zCVob *);
+	void (__thiscall *RenderWaynet)(zCWorld *, zCCamera *);
+	zCVob *(__thiscall *CreateVob)(zCWorld *, int, int);
+	void (__thiscall *InsertVobInWorld)(zCWorld *, zCVob *);
+	void (__thiscall *EnableVob)(zCWorld *, zCVob *, zCVob *);
+	void (__thiscall *DisableVob)(zCWorld *, zCVob *);
+	void (__thiscall *TraverseVobList)(zCWorld *, void *, void *);
+	void (__thiscall *DisposeVobs2)(zCWorld *);
+};
+
+
+
 struct zCWorld : zCObject {
 	zCSkyControler* GetActiveSkyControler()
 	{
@@ -89,6 +129,16 @@ struct zCWorld : zCObject {
 	{
 		Thiscall<void(zCWorld*)> ProcessZones{0x6207F0};
 		ProcessZones(this);
+	}
+
+	void AddVob(zCVob* vob)
+	{
+		reinterpret_cast<zCWorld_vt*>(_vtab)->AddVobAsChild(this, vob, &globalVobTree);
+	}
+
+	zCVob* SearchVobByName(std::string const& name)
+	{
+		reinterpret_cast<zCWorld_vt*>(_vtab)->SearchVobByName(this, name);
 	}
 
 	zCTree<zCVob> globalVobTree;

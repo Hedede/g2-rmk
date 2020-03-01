@@ -119,7 +119,8 @@ void CGameManager::PreGraphicsInit()
 	//zCMallocGeneric::Init(memProfiler);
 	zCMemPoolBase::DisablePools(zoptions->Parm("ZNOMEMPOOL"));
 
-	zFILE_VDFS::InitFileSystem();
+	if (false)
+		zFILE_VDFS::InitFileSystem();
 
 	sysEvent();
 
@@ -319,7 +320,8 @@ void CGameManager::Done()
 
 	zDeinitOptions();
 
-	zFILE_VDFS::DeinitFileSystem();
+	if (false)
+		zFILE_VDFS::DeinitFileSystem();
 
 	g2::Log("GameManager", "Game exit done.");
 }

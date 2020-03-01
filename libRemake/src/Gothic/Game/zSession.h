@@ -98,6 +98,7 @@ struct zCSession : zCInputCallback {
 		reinterpret_cast<zCSession_vt*>(_vtab)->RenderBlit(this);
 	}
 
+
 	zCCSManager*  csMan    = 0;
 	oCWorld*      world    = 0;
 	zCCamera*     camera   = 0;

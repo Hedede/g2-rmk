@@ -1,13 +1,3 @@
-class oCSkyControler_Barrier : public zCSkyController_Outdoor {
-public:
-	void ~oCSkyControler_Barrier();
-	void RenderSkyPre() override;
-
-private:
-	oCBarrier* barrier;
-	zBOOL bFadeInOut;
-};
-
 struct myThunder {
 	myThunder() = default;
 	char unk[0x4C];
@@ -70,7 +60,63 @@ private:
 	zVEC2*                 originalTexUVList;
 };
 
+class oCSkyControler_Barrier : public zCSkyController_Outdoor {
+public:
+	oCSkyControler_Barrier()
+		: zCSkyControler_Outdoor(1)
+	{
+		barrier = new oCBarrier;
+		bFadeInOut = true;
+	}
+
+	~oCSkyControler_Barrier()
+	{
+		DELETE(barrier);
+	}
+
+	void RenderSkyPre() override;
+
+private:
+	oCBarrier* barrier;
+	zBOOL bFadeInOut;
+};
+
 //------------------------------------------------------------------------------
+void oCSkyControler_Barrier::RenderSkyPre()
+{
+	zCSkyControler_Outdoor:: RenderSkyPre();
+
+	static bool barrier_initialized = false;
+	if (!barrier_initialized)
+	{
+		barrier_initialized = true;
+		barrier->Init();
+	}
+
+	auto activeCtrl = zDYNAMIC_CAST<zCSkyControler_Outdoor>(s_activeSkyControler);
+	if (!activeCtrl)
+		return;
+
+	if (s_skyEffectsEnabled &&
+	    activeCtrl->rainFX.outdoorRainFXWeight > 0.5 &&
+	    activeCtrl->GetRenderLightning() &&
+	    activeCtrl->GetWeatherType())
+	{
+		zTRenderContext ctx;
+		ctx.clipFlags = -1;
+		ctx.camera = zCCamera::activeCam;
+		ctx.cameraVob= zCCamera::activeCam->connectedVob;
+		ctx.cameraWorld = zCCamera::activeCam->connectedVob->homeWorld;
+		barrier->Render(ctx,0,0);
+	}
+	else
+	{
+		zrenderMan.__skyEffects = 0;
+	}
+}
+
+
+
 void oCBarrier::RenderThunderList(zTRenderContext& renderContext)
 {
 	for (int i = 0; i < numMaxThunders; ++i)

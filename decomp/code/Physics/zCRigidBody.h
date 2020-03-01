@@ -32,17 +32,17 @@ public:
 		ApplyForceCM( forceVec );
 	}
 
+	// Apply impulse to the center of mass
 	void ApplyImpulseCM(const zVEC3& impulse)
 	{
 		this->impulse += impulse;
-		vel = float2 * this->impulse;
+		vel = invMass * this->impulse;
 	}
 
 	void ApplyImpulse(const zVEC3& impulse, const zVEC3& point)
 	{
 		ApplyImpulseCM( impulse );
 	}
-
 
 	void RunSimulation()
 	{
@@ -67,8 +67,8 @@ public:
 	void StopTransRot();
 
 private:
-	float __mass;
-	float float2;
+	float mass;
+	float invMass;
 	zMAT3 mat1;
 	zMAT3 mat2;
 	zVEC3 vec0;

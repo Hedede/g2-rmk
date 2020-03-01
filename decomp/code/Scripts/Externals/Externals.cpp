@@ -4677,7 +4677,7 @@ int Wld_InsertNpcAndRespawn()
 int Wld_InsertItem()
 {
 	int instanceItem;
-	int insertPoint;
+	zSTRING insertPoint;
 
 	auto parser = zCParser::GetParser();
 
@@ -4699,7 +4699,7 @@ int Wld_InsertItem()
 				zMAT4 mat = posVob->trafoObjToWorld;
 				pos = mat->GetTranslation();
 			} else {
-				zWARNING(&v24, "U:WLD: Position-Vob " + insertPoint + " not found.");
+				zWARNING("U:WLD: Position-Vob " + insertPoint + " not found.");
 			}
 		}
 		vob->SetPositionWorld(pos);

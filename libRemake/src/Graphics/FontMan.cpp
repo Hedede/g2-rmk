@@ -1,9 +1,12 @@
 #include <Graphics/FontMan.h>
 #include <Logging/Log.h>
+#include <aw/utility/string/case.h>
 
 namespace g2 {
-size_t FontMan::Load(std::string const& name)
+size_t FontMan::Load(std::string  name)
 {
+	aw::string::tolower(name);
+
 	size_t idx = 0;
 	for (; idx < fontList.size(); ++idx) {
 		if (fontList[idx]->GetFontName() == name)

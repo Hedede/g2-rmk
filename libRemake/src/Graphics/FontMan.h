@@ -17,7 +17,7 @@ struct FontMan {
 	FontMan& operator=(FontMan const&) = delete;
 
 	// TODO: separate font loader
-	size_t Load(std::string const& name);
+	size_t Load(std::string name);
 	zCFont* GetFont(size_t num)
 	{
 		if (num < fontList.size())

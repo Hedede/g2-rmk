@@ -214,6 +214,10 @@ oCItem* oCNpc::HasEquippedStolenItem(oCNpc *owner)
 	}
 
 	// doesn't make a whole lot of sense
+	//
+	// GetInvSlot takes a name, not a number,
+	// looks like developer got burned by his own implicit string conversions
+	// (either that, or GetInvSlot changed between versions)
 	for (int i = 0; i < invSlots.GetSize(); ++i)
 	{
 		auto invSlot = GetInvSlot(i); // was inlined

@@ -75,14 +75,14 @@ private:
 	zMAT3 mat3;
 	zVEC3 impulse;
 	zVEC3 vec2;
-	int unk_1[9];
+	zMAT3 mat4;
 	zVEC3 vel;
 	zVEC3 vec3;
 	zVEC3 force;
 	zVEC3 vec4;
 	float gravScale;
 	zVEC3 slideDir;
-	int unk_4;
+	float slideAngle;
 
 	struct {
 		uint32_t gravOn  : 1; // 1

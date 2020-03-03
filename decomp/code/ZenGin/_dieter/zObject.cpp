@@ -84,7 +84,7 @@ void zCObject::PrintClassHierarchy(int indent, zCClassDef* parentClassDef, int n
 		if ( baseClassDef == parentClassDef )
 		{
 			zSTRING name = baseClassDef ? baseClassDef->className : "NULL";
-			zSTRING msg =  "D: " + Spaces( 4 * currentLevel ) + className->className + " - ";
+			zSTRING msg =  "D: " + Spaces( 4 * currentLevel ) + " - " + className->className;
 			
 			if (classDef->numLiving > 0)
 			{

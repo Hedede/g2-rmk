@@ -104,7 +104,7 @@ private:
 		zBOOL               thirdPersonFallback     :1;
 	} flags;
 
-	zREAL oCAIHuman_createFlyDamage;
+	zREAL createFlyDamage;
 };
 
 void oCAIHuman::~oCAIHuman()

@@ -1,13 +1,16 @@
 class zCEventScreenFX : public zCEventMessage{
 	Z_OBJECT(zCEventScreenFX);
 public:
-	enum Type {
+	enum zTEventScreenFXSubType {
 		BLEND_FADE_IN,
 		BLEND_FADE_OUT,
 		CINEMA_FADE_IN,
 		CINEMA_FADE_OUT,
 		FOV_MORPH,
 	};
+
+	zCEventScreenFX(zTEventScreenFXSubType sub, float duration, zCOLOR color, float fovDeg);
+	virtual ~zCEventScreenFX();
 
 	virtual void Archive(zCArchiver& arc)
 	{
@@ -25,7 +28,6 @@ public:
 		arc.WriteFloat("fovDeg", fovDeg);
 	}
 
-	virtual ~zCEventScreenFX();
 	virtual void MD_GetNumOfSubTypes();
 	virtual zSTRING MD_GetSubTypeString(int type) const
 	{
@@ -43,4 +45,9 @@ public:
 	virtual void MD_GetMinTime();
 	virtual void Pack(zCBuffer &,zCEventManager *);
 	virtual void Unpack(zCBuffer &,zCEventManager *);
+
+private:
+	zREAL duration;
+	zCOLOR color;
+	zREAL fovDeg;
 };

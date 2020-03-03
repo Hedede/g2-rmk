@@ -15,8 +15,6 @@
 #define ABSTRACT(classname, base, version, flags) \
 	CLASSDEF(classname, base, nullptr, version, flags, "")
 
-ABSTRACT(zCObject, NULL, 0, 0);
-CLASS(zCObjectFactory, zCObject, 0, 0);
 CLASS(oCObjectFactory, zCObjectFactory, 0, 0);
 
 CLASS(zCWorld, zCObject, 0, 1);
@@ -136,7 +134,6 @@ CLASS(zCCSRole, zCObject, 0, 3);
 CLASS(zCCSLib, zCObject, 0, 0);
 
 CLASS(zCCSManager, zCObject, 0, 1);
-CLASS(oCCSManager, zCCSManager, 0, 0);
 
 CLASS(zCCSPlayer, zCObject, 0, 1);
 CLASS(oCCSPlayer, zCCSPlayer, 0, 0);

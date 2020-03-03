@@ -1,23 +1,24 @@
 class zCEventCore : public zCEventMessage {
 	Z_OBJECT(zCEventCore);
 public:
-	enum Type {
-		TRIGGER,
-		UNTRIGGER,
-		TOUCH,
-		UNTOUCH,
-		TOUCHLEVEL,
-		DAMAGE,
+	enum zTEventCoreSubType {
+		zEVENT_TRIGGER,
+		zEVENT_UNTRIGGER,
+		zEVENT_TOUCH,
+		zEVENT_UNTOUCH,
+		zEVENT_TOUCHLEVEL,
+		zEVENT_DAMAGE,
 	};
 
 	void Archive(zCArchiver& arc) override;
 	void Unarchive(zCArchiver& arc) override;
 
+	zCEventCore(zTEventCoreSubType sub);
 	~zCEventCore() override = default;
 
 	bool IsNetRelevant() override
 	{
-		return subType < TOUCH || subType > TOUCHLEVEL;
+		return subType < zEVENT_TOUCH || subType > zEVENT_TOUCHLEVEL;
 	}
 	int MD_GetNumOfSubTypes() override
 	{
@@ -46,6 +47,12 @@ private:
 	zCVob *__bov3;
 	zVEC3 hitLocation;
 };
+
+zCEventCore::zCEventCore(zTEventCoreSubType sub)
+{
+	Clear();
+	subType = sub;
+}
 
 zSTRING zCEventCore::MD_GetSubTypeString(int type);
 {

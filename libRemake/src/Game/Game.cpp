@@ -210,7 +210,7 @@ std::string handle_print_slots()
 {
 	auto npc = oCNpc::player;
 	if (!npc)
-		return result;
+		return "";
 	for (int i = 0; i < npc->invSlots.GetSize(); ++i)
 	{
 		auto invSlot = npc->invSlots[i];

@@ -44,4 +44,22 @@ struct zCObject {
 	int hashNext  = 0;
 	zSTRING objectName;
 };
+
+#include <Gothic/Game/zCClassDef.h>
+struct zCObjectAllocator {
+	static void* Allocate(size_t size, zCClassDef* classDef)
+	{
+		void* mem = ::operator new(size);
+
+		auto object = reinterpret_cast<zCObject*>(mem);
+		zCClassDef::ObjectCreated(object, classDef);
+
+		return mem;
+	}
+};
+
+#define zCLASS_DECLARATION(class_name) \
+	static zCClassDef* classDef; \
+	public: \
+	void* operator new(size_t size) { return zCObjectAllocator::Allocate(size, classDef); }
 #endif//ZenGin_Object_H

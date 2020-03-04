@@ -71,6 +71,7 @@ struct zTTraceRayReport {
 };
 
 
+struct zCWorld;
 struct zCSession;
 struct zCCSPlayer;
 struct zCWayNet;
@@ -189,6 +190,14 @@ struct zCWorld : zCObject {
 
 
 struct oCWorld : zCWorld {
+	zCLASS_DECLARATION(oCWorld);
+public:
+	oCWorld()
+	{
+		Thiscall<void(oCWorld*)> ctor{0x77ED80};
+		ctor(this);
+	}
+
 	void Render(zCCamera* cam);
 	bool HasLevelName();
 

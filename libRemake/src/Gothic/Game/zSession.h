@@ -70,7 +70,7 @@ struct zCSession_vt : zCInputCallback_vt {
 	void (__thiscall *InitWorldSavegame)(oCGame *, int *, zSTRING *);
 	int (__thiscall *CheckIfSavegameExists)(oCGame *, const zSTRING *);
 	void (__thiscall *CompileWorld)(oCGame *);
-	void (__thiscall *WorldInit)(oCGame *);
+	void (__thiscall* WorldInit)(oCGame*);
 	void (__thiscall *NpcInit1)(oCGame *, void *); // zCTree<zCVob*>
 	void (__thiscall *NpcInit2)(oCGame *);
 	void (__thiscall *SetAsPlayer)(oCGame *, const zSTRING *);
@@ -138,6 +138,8 @@ struct oCGame : zCSession {
 
 
 	void Init();
+	void WorldInit();
+
 	void Render();
 
 	void SetGameInfo(oCGameInfo* info)
@@ -151,6 +153,7 @@ struct oCGame : zCSession {
 	}
 
 	bool LoadParserFile(std::string const& script);
+
 
 	float cliprange;
 	float fogrange;

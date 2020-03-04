@@ -17,9 +17,6 @@
 
 #include <Logging/Log.h>
 
-// actually thiscall, but 'this' is unused
-Cdecl<oCWorld*()> CreateWorld{0x76FCA0}; // 0x77ED20
-
 constexpr float SPAWN_INSERTTIME_MAX = 1000.0;
 struct oCSpawnManager {
 	static float GetSpawnTime();
@@ -87,6 +84,7 @@ static int __thiscall LoadParserFile_thunk(oCGame* game, zSTRING const& script)
 {
 	return game->LoadParserFile(std::string(script));
 }
+static void __thiscall WorldInit_thunk(oCGame* game) { game->WorldInit(); }
 
 static zCSession_vt oGameVt;
 static zCSession_vt* init_vt(zCSession_vt* from)
@@ -96,6 +94,7 @@ static zCSession_vt* init_vt(zCSession_vt* from)
 	oGameVt = *from;
 	oGameVt.Render = Render_thunk;
 	oGameVt.LoadParserFile = LoadParserFile_thunk;
+	oGameVt.WorldInit = WorldInit_thunk;
 	return &oGameVt;
 }
 
@@ -123,12 +122,12 @@ void oCGame::Init()
 	sysEvent();
 
 	Log("Game", "Creating world");
-	auto* world = CreateWorld();
+	auto* world = new oCWorld;
 	reinterpret_cast<zCSession_vt*>(_vtab)->SetWorld(this, world);
 	zcon.world = world;
 	zcon.parser = &zparser;
 
-	reinterpret_cast<zCSession_vt*>(_vtab)->WorldInit(this);
+	WorldInit();
 
 	savegameManager->ClearCurrent();
 
@@ -213,7 +212,37 @@ void oCGame::Init()
 	Log("Game", "Initializing done");
 }
 
+#include <aw/utility/string/split.h>
 #include <Gothic/Game/oWorldTimer.h>
+#include <Gothic/Game/oRtnManager.h>
+void oCGame::WorldInit()
+{
+	world->bspTree.drawVobBBox3D = 0;
+
+	wldTimer = new oCWorldTimer();
+
+	initial_hour = 8;
+	initial_minute = 0;
+
+
+	if (  zoptions->Parm("TIME") ) {
+		using namespace std::string_view_literals;
+
+		auto time = zoptions->ParmValue("TIME");
+
+		auto parts = aw::string::split_by(time, " :"sv);
+		if ( parts.size() > 1 )
+		try
+		{
+			initial_hour   = std::stol(std::string(parts[0]));
+			initial_minute = std::stol(std::string(parts[1]));
+		}
+		catch(...) {}
+	}
+
+	rtnMan.SetWorld(world);
+}
+
 #include <Gothic/Graphics/zRenderer.h>
 #include <Gothic/Graphics/zSkyControler.h>
 

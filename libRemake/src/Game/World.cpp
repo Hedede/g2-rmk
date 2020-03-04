@@ -2,6 +2,8 @@
 #include <Gothic/Game/zWorld.h>
 #include <Gothic/Game/zVob.h>
 
+zCClassDef* oCWorld::classDef = reinterpret_cast<zCClassDef*>(0xAB37A8);
+
 bool oCWorld::HasLevelName( )
 {
 	if (levelName)

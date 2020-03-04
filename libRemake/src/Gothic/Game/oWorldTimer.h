@@ -7,6 +7,8 @@ struct oCWorldTimer {
 	static constexpr double TicksPerMin   = TicksPerHour / 60;
 	static constexpr double TicksPerSec   = TicksPerMin  / 60;
 
+	oCWorldTimer() = default;
+
 	void Timer()
 	{
 		Thiscall<void(oCWorldTimer *)> call{0x780D80};
@@ -21,8 +23,8 @@ struct oCWorldTimer {
 		return t;
 	}
 
-	float worldTime;
-	int day;
+	float worldTime = 0.0;
+	int day = 0;
 };
 
 #endif//Gothic_oWorldTimer_H

@@ -11,6 +11,11 @@ struct TypeDescriptor {
 	// char name[];
 };
 
+inline const void* type_info_vtab()
+{
+	return reinterpret_cast<const void*>(0x843C68);
+}
+
 struct RTTIBaseClassDescriptor {
 	TypeDescriptor *pTypeDescriptor;
 	unsigned numContainedBases;

@@ -5,6 +5,7 @@ src/Log.cpp \
 src/Main.cpp \
 src/Win32.cpp \
 src/Clobber.cpp \
+src/Hook/statics.cpp \
 src/Script/Parser.cpp \
 src/Game/CGameManager.cpp \
 src/Game/GameSession.cpp \
@@ -26,6 +27,7 @@ src/Menu/zMenu.cpp \
 src/Input/InputCallback.cpp \
 src/ZenGin/zVob.cpp \
 src/Gothic/Game/oItem.cpp \
+src/TypeInfo/oCWorld.cpp \
 
 
 objects=$(patsubst src/%.cpp, build/%.o, $(sources))

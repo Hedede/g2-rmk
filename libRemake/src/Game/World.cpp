@@ -1,8 +1,39 @@
 #include <Logging/Log.h>
 #include <Gothic/Game/zWorld.h>
 #include <Gothic/Game/zVob.h>
-
+#include <Gothic/Game/zOptions.h>
 zCClassDef* oCWorld::classDef = reinterpret_cast<zCClassDef*>(0xAB37A8);
+
+#include <TypeInfo/oCWorld.h>
+
+static void __thiscall Unarchive_thunk(zCWorld* world, zCArchiver& arc)
+{
+	g2::Log("World", "Unarchiving world");
+	
+	Thiscall<void(oCWorld*, zCArchiver&)> call{0x77F860};
+	call(static_cast<oCWorld*>(world), arc);
+
+	g2::Log("World", "Unarchiving world done");
+}
+
+oCWorld_TypeInfo::oCWorld_TypeInfo()
+{
+	vt = *reinterpret_cast<zCWorld_vt*>(0x83E174);
+
+	if (zoptions->ReadBool("REMAKE", "use_default_oworld", false))
+		return;
+
+	vt.Unarchive = Unarchive_thunk;
+}
+
+oCWorld::oCWorld()
+{
+	Thiscall<void(oCWorld*)> ctor{0x77ED80};
+	ctor(this);
+
+	static oCWorld_TypeInfo typeinfo;
+	_vtab = &typeinfo.vt;
+}
 
 bool oCWorld::HasLevelName( )
 {

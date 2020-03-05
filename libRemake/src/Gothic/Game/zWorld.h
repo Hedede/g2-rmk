@@ -72,6 +72,7 @@ struct zTTraceRayReport {
 
 
 struct zCWorld;
+struct oCWorld;
 struct zCSession;
 struct zCCSPlayer;
 struct zCWayNet;
@@ -82,9 +83,10 @@ struct zCPlayerGroup;
 
 struct zCWorld_vt
 {
+	//zCWorld
 	zCClassDef *(__thiscall *_GetClassDef)(zCWorld *);
-	void (__thiscall *Archive)(zCWorld *, zCArchiver *);
-	void (__thiscall *Unarchive)(zCWorld *, zCArchiver *);
+	void (__thiscall *Archive)(zCWorld *, zCArchiver&);
+	void (__thiscall *Unarchive)(zCWorld *, zCArchiver&);
 	void (__thiscall *dtor)(zCWorld *, unsigned int);
 	zCWorld *(__thiscall *LoadWorld)(zCWorld *, const zSTRING *, unsigned int);
 	void (__thiscall *SaveWorld)(zCWorld *, const zSTRING *, unsigned int, int, int);
@@ -108,12 +110,14 @@ struct zCWorld_vt
 	void (__thiscall *VobAddedToWorld)(zCWorld *, zCVob *);
 	void (__thiscall *VobRemovedFromWorld)(zCWorld *, zCVob *);
 	void (__thiscall *RenderWaynet)(zCWorld *, zCCamera *);
-	zCVob *(__thiscall *CreateVob)(zCWorld *, int, int);
-	void (__thiscall *InsertVobInWorld)(zCWorld *, zCVob *);
-	void (__thiscall *EnableVob)(zCWorld *, zCVob *, zCVob *);
-	void (__thiscall *DisableVob)(zCWorld *, zCVob *);
-	void (__thiscall *TraverseVobList)(zCWorld *, void *, void *);
-	void (__thiscall *DisposeVobs2)(zCWorld *);
+
+	//oCWorld:
+	zCVob *(__thiscall *CreateVob)(oCWorld *, int, int);
+	void (__thiscall *InsertVobInWorld)(oCWorld *, zCVob *);
+	void (__thiscall *EnableVob)(oCWorld *, zCVob *, zCVob *);
+	void (__thiscall *DisableVob)(oCWorld *, zCVob *);
+	void (__thiscall *TraverseVobList)(oCWorld *, void *, void *);
+	void (__thiscall *DisposeVobs2)(oCWorld *);
 };
 
 
@@ -192,11 +196,7 @@ struct zCWorld : zCObject {
 struct oCWorld : zCWorld {
 	zCLASS_DECLARATION(oCWorld);
 public:
-	oCWorld()
-	{
-		Thiscall<void(oCWorld*)> ctor{0x77ED80};
-		ctor(this);
-	}
+	oCWorld();
 
 	void Render(zCCamera* cam);
 	bool HasLevelName();

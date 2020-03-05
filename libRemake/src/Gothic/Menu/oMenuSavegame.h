@@ -19,6 +19,11 @@ struct oCMenuSavegame : oCMenuMain {
 		_vtab = (void*)0x82F1EC;
 	}
 
+	int GetSelectedSlot() const
+	{
+		return selectedSlotId;
+	}
+
 	Mode mode;
 	oCSavegameManager* saveMan = nullptr;
 	int selectedSlotId = -1;

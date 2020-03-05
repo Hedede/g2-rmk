@@ -74,10 +74,12 @@ struct CGameManager : zCInputCallback {
 		func(this);
 	}
 
-	void Menu(int a)
+	void Menu(int inGame);
+
+	void PreMenu()
 	{
-		Thiscall<void(CGameManager*, int)> func{0x4292D0};
-		func(this, a);
+		Thiscall<void(CGameManager*)> func{0x427090};
+		func(this);
 	}
 
 	bool MenuEnabled()
@@ -97,6 +99,19 @@ struct CGameManager : zCInputCallback {
 	{
 		Thiscall<void(CGameManager*)> _g_GameSessionDone{0x426F70};
 		_g_GameSessionDone(this);
+	}
+	void GameSessionReset();
+
+	void Read_Savegame(int slot)
+	{
+		Thiscall<int(CGameManager*, int)> func{0x42A040};
+		func(this, slot);
+	}
+
+	void Write_Savegame(int slot)
+	{
+		Thiscall<int(CGameManager*, int)> func{0x42A2D0};
+		func(this, slot);
 	}
 
 	int    oldAlphaBlendFunc;

@@ -22,12 +22,12 @@ struct zCInput_vt {
 	int (__thiscall *GetToggled)(zCInput *, unsigned short);
 	void (__thiscall *SetDeviceEnabled)(zCInput *, zTInputDevice, int);
 	void (__thiscall *GetDeviceEnabled)(zCInput *, zTInputDevice);
-	int (__thiscall *GetDeviceConnected)(zCInput *, zTInputDevice);/*
+	int (__thiscall *GetDeviceConnected)(zCInput *, zTInputDevice);
 	int (__thiscall *KeyPressed)(zCInput *, int);
 	int (__thiscall *KeyToggled)(zCInput *, int);
 	void (__thiscall *AnyKeyPressed)(zCInput *);
 	void (__thiscall *ResetRepeatKey)(zCInput *, int);
-	ushort (__thiscall *GetKey)(zCInput *, int, int);
+	unsigned short (__thiscall *GetKey)(zCInput *, int, int);
 	void (__thiscall *SetKey)(zCInput *, int, int);
 	void (__thiscall *GetChar)(zCInput *);
 	void (__thiscall *ClearKeyBuffer)(zCInput *);
@@ -45,14 +45,14 @@ struct zCInput_vt {
 	void (__thiscall *GetMouseIdle)(zCInput *);
 	void (__thiscall *SetMouseFlipXY)(zCInput *, int, int);
 	void (__thiscall *GetMouseFlipXY)(zCInput *, int *, int *);
-	void (__thiscall *ProcessInputEvents)(zCInput *);*/
+	void (__thiscall *ProcessInputEvents)(zCInput *);
 };
 
 
 struct zCInput {
 	zCInput()
 	{
-		vtab = reinterpret_cast<void*>(0x830AD4);
+		vtab = reinterpret_cast<zCInput_vt*>(0x830AD4);
 		Cdecl<void()>{0x4CC640}();
 		mappings.Compare = +[] (zSKeyMapping* const& a, zSKeyMapping* const& b)
 		{
@@ -62,17 +62,32 @@ struct zCInput {
 
 	bool GetDeviceConnected(zTInputDevice dev)
 	{
-		return reinterpret_cast<zCInput_vt*>(vtab)->GetDeviceConnected(this,dev);
+		return vtab->GetDeviceConnected(this,dev);
 	}
 
 	void SetDeviceEnabled(zTInputDevice dev, int b)
 	{
-		reinterpret_cast<zCInput_vt*>(vtab)->SetDeviceEnabled(this,dev,b);
+		vtab->SetDeviceEnabled(this,dev,b);
+	}
+
+	void ResetRepeatKey(int b)
+	{
+		vtab->ResetRepeatKey(this,b);
+	}
+
+	void ClearKeyBuffer()
+	{
+		vtab->ClearKeyBuffer(this);
+	}
+
+	void ProcessInputEvents()
+	{
+		vtab->ProcessInputEvents(this);
 	}
 
 
 private:
-	void* vtab;
+	zCInput_vt* vtab;
 	zCArraySort<zSKeyMapping*> mappings;
 };
 

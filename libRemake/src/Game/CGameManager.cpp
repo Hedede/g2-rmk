@@ -279,6 +279,7 @@ void CGameManager::Run()
 	}
 }
 
+
 #include <Gothic/System/zCache.h>
 void CGameManager::Done()
 {
@@ -781,4 +782,155 @@ void g2::InitInput(void* hwnd)
 	if ( zinput )
 		delete zinput;
 	zinput = (zCInput*)new zCInput_Win32(hwnd);
+}
+
+void CGameManager::GameSessionReset()
+{
+	if ( !gameSession )
+		g2::Warning("Game", "reset, gameSession == nullptr ???");
+
+	savegameManager->ClearCurrent();
+	gameSession->SetGameInfo(0);
+}
+
+void CGameManager::Menu(int inGame)
+{
+	g2::Log("Game", "Menu called");
+
+	zinput->ResetRepeatKey(1);
+	gameSession->SetShowPlayerStatus(0);
+
+	zoptions->WriteString("internal", "menuAction", "RESUME_GAME", 0);
+	
+	if (exitGame)
+	{
+		g2::Log("Game", "Menu exitGame");
+		return;
+	}
+
+	auto noMenu = zoptions->Parm("NOMENU");
+
+	PreMenu();
+
+	if ( gameSession && gameSession->GetCamera() ) {
+		if ( noMenu ) {
+			exitGame = 1;
+			return;
+		}
+
+		g2::Log("Menu", "started");
+
+		if ( gameSession )
+			gameSession->Pause(exitSession);
+
+		auto inGameMenu = zCMenu::inGameMenu;
+		if ( !inGame )
+			zCMenu::inGameMenu = 0;
+
+		auto gameMenu = zCMenu::Create("MENU_MAIN");
+
+		gameMenu->Run();
+		gameMenu->Release();
+
+		zCMenu::inGameMenu = inGameMenu;
+
+		if ( gameSession )
+			gameSession->Unpause();
+
+		g2::Log("Menu", "finished");
+	} else {
+		if ( noMenu ) {
+			zoptions->WriteString("internal", "menuAction", "NEW_GAME", 0);
+		} else {
+			g2::Log("Menu", "started");
+
+			auto mainmenu = zCMenu::Create("MENU_MAIN");
+
+			mainmenu->Run();
+			mainmenu->Release();
+
+			g2::Log("Menu", "finished");
+		}
+	}
+
+	if ( zrenderer ) {
+		screen->DrawItems();
+		zrenderer->Vid_Blit(0, 0, 0);
+	}
+
+	auto menuAction = zoptions->ReadString("internal", "menuAction", 0);
+
+	g2::Log("Menu", menuAction); // 1430
+
+	if ( menuAction == "LEAVE_GAME")
+	{
+		zoptions->WriteBool("internal", "gameAbnormalExit", 0, 0);
+	}
+	else if (menuAction == "NEW_GAME")
+	{
+		std::string world;
+		if ( zgameoptions )
+			world = zgameoptions->ReadString("settings", "World", 0);
+		else
+			world = zoptions->ReadString("internal", "gamePath", 0);
+
+		if (world.empty())
+			world = "NewWorld\\NewWorld.zen";
+
+		GameSessionReset();
+		exitSession = 0;
+
+		g2::Log("Menu", "Loading new world");
+
+		gameSession->LoadGame(SAVEGAME_SLOT_NEW, world);
+
+		if ( zmusic )
+			zmusic->Stop();
+
+		g2::Log("Menu", "Loading done");
+
+		playTime = 0;
+	}
+	else if (menuAction == "SAVEGAME_LOAD")
+	{
+		Read_Savegame(menu_load->GetSelectedSlot());
+	}
+	else if (menuAction == "SAVEGAME_SAVE")
+	{
+		Write_Savegame(menu_save->GetSelectedSlot());
+	}
+	else if (menuAction == "RESUME_GAME")
+	{
+		//
+	}
+
+	g2::Log("Menu", "Finished processing action");
+
+	auto ini = zoptions->ParmValue("ini");
+	if (ini.empty())
+		ini = "Gothic.ini";
+
+	zoptions->Save(ini);
+
+	introActive = 0;
+
+	Thiscall<void(CGameManager*)> ApplySomeSettings{0x4276B0};
+
+	ApplySomeSettings(this);
+
+	if ( gameSession )
+		gameSession->UpdateScreenResolution();
+
+	zinput->ProcessInputEvents();
+	zinput->ClearKeyBuffer();
+	zinput->ResetRepeatKey(1);
+
+	if ( !exitSession )
+		gameSession->SetShowPlayerStatus(1);
+
+	zinput->ProcessInputEvents();
+	zinput->ClearKeyBuffer();
+	zinput->ResetRepeatKey(1);
+
+	g2::Log("Menu", "Menu return");
 }

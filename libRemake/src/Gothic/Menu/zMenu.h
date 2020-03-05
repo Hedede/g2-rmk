@@ -33,9 +33,14 @@ struct zCMenu_vt {
 	int  (__thiscall *GetSelectedSlot)(oCMenuSavegame *);
 };
 
-struct zCMenu {
+struct zCMenu /*::zCInputCallback*/ {
 	static zCParser*& menuParser;
 	static void CreateParser();
+	static zCMenu* Create(std::string const& name)
+	{
+		Cdecl<zCMenu*(zSTRING const&)> call{0x4DABE0};
+		return call(name);
+	}
 
 	static void Startup()
 	{
@@ -48,6 +53,11 @@ struct zCMenu {
 	static Callback& LeaveCallback;
 
 	static int& inGameMenu;
+	
+	zCMenu_vt& vtab()
+	{
+		return *reinterpret_cast<zCMenu_vt*>(_vtab);
+	}
 
 	zCMenu(std::string const& name)
 	{
@@ -57,7 +67,19 @@ struct zCMenu {
 
 	~zCMenu()
 	{
-		reinterpret_cast<zCMenu_vt*>(_vtab)->dtor(this, 1);
+		vtab().dtor(this, 1);
+	}
+
+	void Release()
+	{
+		Thiscall<void(zCMenu*)> call{0x4DAB80};
+		call(this);
+	}
+
+	void Run()
+	{
+		Thiscall<void(zCMenu*)> call{0x4DB9A0};
+		call(this);
 	}
 
 protected:

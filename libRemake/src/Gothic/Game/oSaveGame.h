@@ -39,5 +39,11 @@ struct oCSavegameManager {
 	int unk[6];
 };
 
+const int SAVEGAME_SLOT_NONE    = -3;
+const int SAVEGAME_SLOT_NEW     = -2;
+const int SAVEGAME_SLOT_CURRENT = -1;
+const int SAVEGAME_SLOT_QUICK   = 0;
+const int SAVEGAME_SLOT_MIN     = 1;
+const int SAVEGAME_SLOT_MAX     = 20;
 
 #endif//Gothic_oSaveGame_H

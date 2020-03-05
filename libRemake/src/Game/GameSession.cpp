@@ -217,6 +217,7 @@ void oCGame::Init()
 #include <Gothic/Game/oRtnManager.h>
 void oCGame::WorldInit()
 {
+	g2::Log("Game", "WorldInit");
 	world->bspTree.drawVobBBox3D = 0;
 
 	wldTimer = new oCWorldTimer();

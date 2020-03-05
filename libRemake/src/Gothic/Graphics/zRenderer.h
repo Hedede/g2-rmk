@@ -119,6 +119,11 @@ struct zCRenderer_vt {
 
 
 struct zCRenderer {
+	void Vid_Blit(int forceFlip, tagRECT *sourceRect, tagRECT *destRect)
+	{
+		vtab->Vid_Blit(this, forceFlip, sourceRect, destRect);
+	}
+
 	void Vid_SetDevice(int nr)
 	{
 		vtab->Vid_SetDevice(this, nr);
@@ -169,6 +174,7 @@ struct zCRenderer {
 	{
 		vtab->FlushPolys(this);
 	}
+
 
 	zCRenderer_vt *vtab;
 	int polySortMode;

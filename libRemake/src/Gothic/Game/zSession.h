@@ -83,6 +83,11 @@ struct zCSession : zCInputCallback {
 		_vtab = reinterpret_cast<void*>(0x832C4C);
 	}
 
+	zCSession_vt& vtab()
+	{
+		return *reinterpret_cast<zCSession_vt*>(_vtab);
+	}
+
 	zCCamera* GetCamera()
 	{
 		return camera;
@@ -136,7 +141,6 @@ constexpr int GAME_VIEW_MAX = 6;
 struct oCGame : zCSession {
 	oCGame();
 
-
 	void Init();
 	void WorldInit();
 
@@ -154,6 +158,33 @@ struct oCGame : zCSession {
 
 	bool LoadParserFile(std::string const& script);
 
+	void SetShowPlayerStatus(bool show)
+	{
+		Thiscall<void(oCGame*,int)> call{0x6C2D90};
+		call(this,show);
+	}
+
+	void Pause(int noscreen)
+	{
+		vtab().Pause(this, noscreen);
+	}
+
+	void Unpause()
+	{
+		vtab().Unpause(this);
+	}
+
+	void UpdateScreenResolution()
+	{
+		Thiscall<void(oCGame*)> call{0x6C2E00};
+		call(this);
+	}
+
+	void LoadGame(int slotID, std::string const& level)
+	{
+		Thiscall<void(oCGame*,int,const zSTRING& levelpath)> call{0x6C65A0};
+		call(this, slotID, level);
+	}
 
 	float cliprange;
 	float fogrange;

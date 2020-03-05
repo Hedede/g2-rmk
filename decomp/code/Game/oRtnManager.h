@@ -137,15 +137,18 @@ private:
 	}
 
 private:
-	char rtn0[24];
+	int indexStart[3];
+	int indexEnd[3];
 	zCWorld *world = nullptr;
-	zCListSort<oCRtnEntry> *nextEntry = nullptr;
+	zCListSort<oCRtnEntry>* nextEntry = nullptr;
 	zCListSort<oCRtnEntry> rtnEntries;
 	zCListSort<TRtn_WayBox> wayBoxes[3];
-	zCList<oCNoc*> npcs;
+	zCList<oCNpc*> activeNpcList;
 	zCArraySort<TRtn_WayBoxLimit*> wayBoxLimits[3];
 //0x88
 };
+
+oCRtnManager rtnMan;
 
 // _Ulf/oRoutine.cpp
 void oCRtnManager::InitWayBoxes()

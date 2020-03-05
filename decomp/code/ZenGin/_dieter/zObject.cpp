@@ -96,7 +96,7 @@ void zCObject::PrintClassHierarchy(int indent, zCClassDef* parentClassDef, int n
 				msg += " [ctor " + classDef->numCtorCalled + "]";
 			}
 
-			if ( classDef->numLiving > 0 && classDef->classFlags & zCLASS_FLAG_SHARED_OBJECT1 )
+			if ( classDef->numLiving > 0 && classDef->classFlags & zCLASS_FLAG_SHARED_OBJECT )
 			{
 				msg += "[hash" + classDef->CalcHashTableSpread() + "]"; // was inlined
 			}

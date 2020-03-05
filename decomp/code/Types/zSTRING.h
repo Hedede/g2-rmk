@@ -88,10 +88,9 @@ struct zSTRING {
 		return Search(0, substring.data.c_str(), nr);
 	}
 
-	char const*
-	PickWordPos(size_t nr, zSTRING const& delim1, zSTRING const& delim2) const;
-	zSTRING PickWord(size_t nr, zSTRING const& delim1, zSTRING const& delim2) const;
-	zSTRING PickWord_Old(size_t nr, zSTRING const& delim) const
+	char const* PickWordPos(size_t nr, zSTRING const& trenn, zSTRING const& skip) const;
+	zSTRING PickWord(size_t nr, zSTRING const& trenn, zSTRING const& skip) const;
+	zSTRING PickWord_Old(size_t nr, zSTRING const& trenn) const
 	{
 		return PickWord(nr, delim, " ");
 	}
@@ -112,46 +111,48 @@ private:
 	std::string data;
 };
 
-zSTRING operator+(zSTRING const& str, zSTRING const& str2)
+inline zSTRING operator+(zSTRING const& str, zSTRING const& str2)
 {
 	zSTRING tmp(str);
 	tmp += str2;
 	return tmp;
 }
 
-zSTRING operator+(zSTRING const& str, char const* str2)
+inline zSTRING operator+(zSTRING const& str, char const* str2)
 {
 	zSTRING tmp(str);
 	tmp += str2;
 	return tmp;
 }
 
-zSTRING operator+(char const* str, zSTRING const& str2)
+inline zSTRING operator+(char const* str, zSTRING const& str2)
 {
 	zSTRING tmp(str);
 	tmp += str2;
 	return tmp;
 }
 
-zSTRING operator+(zSTRING const& str, char c)
+inline zSTRING operator+(zSTRING const& str, char c)
 {
 	zSTRING tmp(str);
 	tmp += c;
 	return tmp;
 }
 
-zSTRING operator+(char c, zSTRING const& str)
+inline zSTRING operator+(char c, zSTRING const& str)
 {
 	zSTRING tmp(c);
 	tmp += str;
 	return tmp;
 }
 
-zSTRING operator ""_s (const char* str)
+inline zSTRING operator ""_s (const char* str)
 {
 	return str;
 }
 
 zSTRING Characters(char c, unsigned anzahl);
 zSTRING Spaces(unsigned num);
+
+const zSTRING zSTR_SKIP = "\r\t ";
 #endif//G2_zSTRING_h

@@ -471,15 +471,17 @@ void CGameManager::Init(HWND& hWndApp)
 
 [[noreturn]] void emergency_exit()
 {
-	zSTRING unk1,unk2;
+	{
+		// these strings are just destroyed and nothing more is done with them
+		zSTRING unk1,unk2;
+		zsound = nullptr;
+	}
 
-	zsound = nullptr;
-
-	_OSVERSIONINFOA osver;
+	_OSVERSIONINFO osver;
 	osver.dwOSVersionInfoSize = 148;
 
-	if (GetVersionExA(&osver) && osver.dwPlatformId == 1) {
-		zDieter_ShutDown(0);
+	if (GetVersionEx(&osver) == TRUE && osver.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS) {
+		zDieter_ShutDown();
 		zCarsten_ShutDown();
 	} else {
 		zDieter_ShutDown_Fast();
@@ -519,6 +521,7 @@ void CGameManager::InitScreen_Open()
 {
 	zINFO(4,"B: GMAN: Open InitScreen"); // 811
 
+
 	if (initScreen)
 		InitScreen_Close();
 
@@ -549,10 +552,7 @@ void CGameManager::InitScreen_Close()
 {
 	zINFO(4,"B: GMAN: Close InitScreen"); // 849
 
-	if (initScreen) {
-		delete initScreen;
-		initScreen = 0;
-	}
+	zDELETE(initScreen);
 }
 
 void CGameManager::PreMenu()
@@ -861,7 +861,7 @@ void CGameManager::ApplySomeSettings()
 	zINFO(3,""); 1337,
 }
 
-void CGameManager::Menu(int inMenu)
+void CGameManager::Menu(int inGame)
 {
 	zINFO(3,"B: GMAN: Entering Menu-Section"); //1350,
 
@@ -873,17 +873,12 @@ void CGameManager::Menu(int inMenu)
 	if (exitGame)
 		return;
 
-	std::string::string(&msg.data, "NOMENU", &v42);
-	msg.vtable = &zSTRING::`vftable';
-	LOBYTE(v49) = 3;
-	NOMENU = zoptions->Parm(&msg);
-	LOBYTE(v49) = 1;
-	msg.vtable = &zSTRING::`vftable';
-	std::string::_Tidy(&msg.data, 1);
+	auto noMenu = zoptions->Parm("NOMENU");
+
 	CGameManager::PreMenu();
-	gameSession = this->gameSession;
-	if ( gameSession && gameSession->GetCamera(gameSession) ) {
-		if ( NOMENU ) {
+
+	if ( gameSession && gameSession->GetCamera() ) {
+		if ( noMenu ) {
 			exitGame = 1;
 			return;
 		}
@@ -894,7 +889,7 @@ void CGameManager::Menu(int inMenu)
 			gameSession->Pause(exitSession);
 
 		auto inGameMenu = zCMenu::inGameMenu;
-		if ( !inMenu )
+		if ( !inGame )
 			zCMenu::inGameMenu = 0;
 
 		auto gameMenu = zCMenu::Create("MENU_MAIN");
@@ -909,7 +904,7 @@ void CGameManager::Menu(int inMenu)
 
 		zINFO("B: GMAN: Menu finished"); // 1410,
 	} else {
-		if ( NOMENU ) {
+		if ( noMenu ) {
 			zoptions->WriteString("internal", "menuAction", "NEW_GAME", 0);
 		} else {
 			zINFO(4,"B: GMAN: Menu started (outgame)"); //1375,
@@ -932,12 +927,14 @@ void CGameManager::Menu(int inMenu)
 
 	zINFO("B: MENU: " + menuAction); // 1430
 
-	if ( menuAction == "LEAVE_GAME") {
+	if ( menuAction == "LEAVE_GAME")
+	{
 		zINFO(5,"B: GMAN: Menu-Selection \"exit\"");// 1437,
 
 		zoptions->WriteBool(zOPT_SEC_INTERNAL, "gameAbnormalExit", 0, 0);
-		goto LABEL_85;
-	} else if (menuAction == "NEW_GAME") {
+	}
+	else if (menuAction == "NEW_GAME")
+	{
 		zSTRING world;
 		if ( zgameoptions )
 			world = zgameoptions->ReadString(zOPT_SEC_SETTINGS, "World", 0);
@@ -954,7 +951,6 @@ void CGameManager::Menu(int inMenu)
 
 		zINFO(1,"B: GMAN: Loading the World ..."); // 1470,
 
-		v40 = SAVEGAME_SLOT_NEW;
 		gameSession->LoadGame(SAVEGAME_SLOT_NEW, world);
 
 		if ( zmusic )
@@ -963,13 +959,21 @@ void CGameManager::Menu(int inMenu)
 		zINFO(1,"B: GMAN: Completed loading the world ..."); // 1476,
 
 		playTime = 0;
-	} else if (menuAction == "SAVEGAME_LOAD") {
+	}
+	else if (menuAction == "SAVEGAME_LOAD")
+	{
 		Read_Savegame(menu_load_savegame->GetSelectedSlot());
-	} else if (menuAction == "SAVEGAME_SAVE") {
+	}
+	else if (menuAction == "SAVEGAME_SAVE")
+	{
 		Write_Savegame(menu_save_savegame->GetSelectedSlot());
-	} else if (menuAction == "RESUME_GAME") {
+	}
+	else if (menuAction == "RESUME_GAME")
+	{
 		//
-	} else {
+	}
+	else
+	{
 		zFATAL("C: oGameManager.cpp(CGameManager::Menu()): Menu Selection not known :" + menuAction); // 1516,
 	}
 

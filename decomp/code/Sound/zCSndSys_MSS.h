@@ -158,6 +158,11 @@ zSTRING DIRECTLOAD_PREFIX = "%";
 zSTRING ID_CHANNEL_CHAR   = "V";
 zSTRING ID_FRAME_CHAR     = "A";
 
+void Exc_ReleaseSound()
+{
+	zDELETE(zsound);
+}
+
 void zCSndSys_MSS::~zCSndSys_MSS()
 {
 	zCExceptionHandler::RemoveUnhandledExceptionReleaseCallback(Exc_ReleaseSound);

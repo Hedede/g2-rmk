@@ -37,12 +37,10 @@ struct zCMenu : zCInputCallback {
 	virtual void SetByScript(zSTRING const &);
 	virtual void ExecCommand(zSTRING const &);
 
-	static void CreateParser()
-	{
-		zoptions->ChangeDir(8);
-		if ( !menuParser )
-			menuParser = new zCParser(100);
-	}
+	static void CreateParser();
+	static zCMenu* GetByName(zSTRING const& name);
+	static zCMenu* Create(zSTRING const& name);
+
 private:
 	static zCParser             menuParser;
 	static zCArraySort<zCMenu*> menuList;
@@ -167,6 +165,40 @@ class oCViewStatusBar : zCView
     zSTRING texValue;             //zSTRING 
 };
 
+// ZenGin/_Carsten/zmenu.cpp
+void zCMenu::CreateParser()
+{
+	zoptions->ChangeDir(DIR_SCRIPTS);
+	if ( !menuParser )
+		menuParser = new zCParser(100);
+}
+
+zCMenu* zCMenu::GetByName(zSTRING const& name)
+{
+	zCMenu menuCompareDummy;
+	menuCompareDummy.SetName(name);
+
+	int index = menuList.Search(menuCompareDummy);
+
+	menuCompareDummy.SetName("TMPITEM");
+
+	if (index < 0)
+		return nullptr;
+	return menuList[index];
+}
+
+zCMenu* zCMenu::Create(zSTRING const& name)
+{
+	zCMenu* menu = GetByName(name);
+
+	if (!menu)
+	{
+		menu = new zCMenu; // 301 g1alp, 0xCC4
+		menu->SetByScript(name);
+	}
+
+	return menu;
+}
 
 int zCMenu::ExecCommand(zSTRING& const cmdstr)
 {

@@ -92,7 +92,15 @@ zSTRING chapTGA;
 zSTRING chapWAV;
 float chapTime;
 
+const int SAVEGAME_SLOT_NONE    = -3;
+const int SAVEGAME_SLOT_NEW     = -2;
+const int SAVEGAME_SLOT_CURRENT = -1;
+const int SAVEGAME_SLOT_QUICK   = 0;
+const int SAVEGAME_SLOT_MIN     = 1;
+const int SAVEGAME_SLOT_MAX     = 20;
 
+
+// Gothic/_bert/oGameManager.cpp
 HANDLE CGameManager::ShowSplashScreen()
 {
 	SplashBitmap = (LPARAM)LoadBitmapA(hInstApp, (LPCSTR)0xA9);
@@ -704,7 +712,7 @@ void CGameManager::GameSessionDone()
 		zFATAL("B: GameMan: Call GameSessionInit before GameSessionDone"); // 1057,
 
 	gameSession->Done();
-	Delete(gameSession);
+	zDELETE(gameSession);
 	ogame = 0;
 }
 
@@ -1040,7 +1048,7 @@ void CGameManager::Write_Savegame(int slot)
 			sav->title = name;
 		}
 
-		zINFO(4,"B: GMAN: Saving game to slot "_s + slot); // 1574, _bert\\oGameManager.cpp
+		zINFO(4,"B: GMAN: Saving game to slot "_s + slot); // 1574, 
 
 		playTimeSeconds = GetPlaytimeSeconds();
 

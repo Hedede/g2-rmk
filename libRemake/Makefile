@@ -53,6 +53,9 @@ endif
 cxx_flags = -std=c++1z -g -fno-strict-aliasing -fexceptions -fno-rtti
 pp_flags  = -DNOMINMAX -DAW_STATIC_BUILD
 
+#optimization
+cxx_flags += -finline-functions-called-once -finline-small-functions
+
 linker_flags=$(libraries)
 ifeq ($(USE_WINE), true)
 static_gcc=-lstdc++ -lpthread

@@ -9,7 +9,9 @@ size_t FontMan::Load(std::string  name)
 
 	size_t idx = 0;
 	for (; idx < fontList.size(); ++idx) {
-		if (fontList[idx]->GetFontName() == name)
+		auto fontName = fontList[idx]->GetFontName();
+		aw::string::tolower(fontName);
+		if (fontName == name)
 			break;
 	}
 

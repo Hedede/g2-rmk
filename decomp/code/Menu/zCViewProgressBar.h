@@ -9,6 +9,9 @@ public:
 	virtual void Init();
 	virtual void HandleChange();
 	virtual void Draw();
+
+	void SetRange(int _low, int _high);
+
 private:
 	zCList<zTProgressRange> ranges;
 

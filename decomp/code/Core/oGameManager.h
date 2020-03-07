@@ -939,6 +939,7 @@ void CGameManager::Menu(int inGame)
 	{
 		zINFO(5,"B: GMAN: Menu-Selection \"exit\"");// 1437,
 
+		exitGame = 1;
 		zoptions->WriteBool(zOPT_SEC_INTERNAL, "gameAbnormalExit", 0, 0);
 	}
 	else if (menuAction == "NEW_GAME")
@@ -967,6 +968,7 @@ void CGameManager::Menu(int inGame)
 		zINFO(1,"B: GMAN: Completed loading the world ..."); // 1476,
 
 		playTime = 0;
+		time(&Time);
 	}
 	else if (menuAction == "SAVEGAME_LOAD")
 	{

@@ -1524,11 +1524,8 @@ void oCGame::EnterWorld(oCNpc* playerVob, int changePlayerPos, zSTRING const& st
 {
 	zINFO(9,"B: (oCGame::EnterWorld)"); // 3011,
 
-	if ( progressBar )
-		progressBar->SetPercent(0, "");
-
-	if ( progressBar )
-		progressBar->SetRange(0, 55);
+	if ( progressBar ) progressBar->SetPercent(0, "");
+	if ( progressBar ) progressBar->SetRange(0, 55);
 
 	if (changePlayerPos) {
 		SetupPlayers(playerVob, startpoint);
@@ -1547,25 +1544,21 @@ void oCGame::EnterWorld(oCNpc* playerVob, int changePlayerPos, zSTRING const& st
 
 	CamInit();
 
-	oCNpc::player->SetAsPlayer();
+	oCNpc::player->SetAsPlayer(); // 3044
 	if ( playerVob && playerVob->GetAnictrl() )
 		playerVob->GetAnictrl()->SetFightAnis(playerVob->GetWeaponMode());
 
-	if ( progressBar )
-		progressBar->SetPercent(60, "");
+	if ( progressBar ) progressBar->SetPercent(60, "");
 
 	EnvironmentInit();
 
-	if ( progressBar )
-		progressBar->SetPercent(75, "");
+	if ( progressBar ) progressBar->SetPercent(75, "");
 
 	NpcInit();
 
-	if ( progressBar )
-		progressBar->SetPercent(96, "");
+	if ( progressBar ) progressBar->SetPercent(96, "");
 
-	if ( progressBar )
-		progressBar->SetPercent(100, "");
+	if ( progressBar ) progressBar->SetPercent(100, "");
 
 	CloseLoadscreen();
 

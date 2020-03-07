@@ -216,7 +216,7 @@ void oCGame::LoadGame(int slotID, zSTRING const& levelpath)
 	if ( progressBar )
 		progressBar->SetRange(92, 100);
 
-	EnterWorld(0, 1, "");
+	EnterWorld(nullptr, true, "");
 
 	if ( progressBar )
 		progressBar->ResetRange();
@@ -328,7 +328,7 @@ void oCGame::LoadSavegame(int slotnr, int loadGlobals)
 	if ( !oCNpc::player )
 		zFATAL("U: GAME: No player found. Did you try to load an incompatible savgame ?"); // 2245,
 
-	EnterWorld(oCNpc::player, 0, "");
+	EnterWorld(oCNpc::player, false, "");
 
 	if ( progressBar )
 		progressBar->ResetRange();
@@ -368,7 +368,6 @@ void oCGame::LoadSavegame(int slotnr, int loadGlobals)
 				} else {
 					rand();
 
-					std::string::assign(&v95.data, , strlen("S_DEADB"));
 					npc->GetModel()->StartAni("S_DEADB", 0);
 					npc->GetModel()->AdvanceAnis();
 

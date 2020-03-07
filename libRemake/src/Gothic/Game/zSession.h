@@ -43,7 +43,7 @@ struct zCSession_vt : zCInputCallback_vt {
 	void (__thiscall *CutsceneSystemInit)(zCSession *);
 
 	// oCGame:
-	void (__thiscall *EnterWorld)(oCGame *, oCNpc *, int, const zSTRING *);
+	void (__thiscall *EnterWorld)(oCGame *, oCNpc *, int, const zSTRING&);
 	void (__thiscall *Pause)(oCGame *, int);
 	void (__thiscall *Unpause)(oCGame *);
 	void (__thiscall *SetDrawWaynet)(oCGame *, int);
@@ -174,16 +174,53 @@ struct oCGame : zCSession {
 		vtab().Unpause(this);
 	}
 
-	void UpdateScreenResolution()
+	void OpenLoadscreen(bool gameStart, std::string const& level)
 	{
-		Thiscall<void(oCGame*)> call{0x6C2E00};
-		call(this);
+		Thiscall<void(oCGame*, int, zSTRING)> call(0x6C2690);
+		call(this, gameStart, level);
 	}
 
-	void LoadGame(int slotID, std::string const& level)
+	void CloseLoadscreen()
 	{
-		Thiscall<void(oCGame*,int,const zSTRING& levelpath)> call{0x6C65A0};
-		call(this, slotID, level);
+		thiscall(0x6C2BD0, this);
+	}
+
+	void UpdateScreenResolution()
+	{
+		thiscall(0x6C2E00, this);
+	}
+
+	void ClearGameState()
+	{
+		thiscall(0x6C5ED0, this);
+	}
+
+	void InitNpcAttitudes()
+	{
+		thiscall(0x6C61D0, this);
+	}
+
+
+	void LoadGame(int slotID, std::string const& level); // 6C65A0
+
+	void LoadWorld(int slotID, std::string const& levelpath)
+	{
+		Thiscall<void(oCGame*, int, const zSTRING&)> call{0x6C90B0};
+		call(this, slotID, levelpath);
+	}
+
+	void EnterWorld(oCNpc* playerVob, bool changePlayerPos, std::string const& startPoint)
+	{
+		vtab().EnterWorld(this, playerVob, changePlayerPos, startPoint);
+		/*Thiscall<void(oCGame*, oCNpc*, int, const zSTRING&)> call{0x6C96F0};
+		call(this, playerVob, changePlayerPos, startPoint);
+
+		thiscall(0x6C4DE0, this, as<int>(changePlayerPos), as<const zSTRING&>(startPoint));*/
+	}
+
+	void SetTime(int day, int hour, int min)
+	{
+		thiscall(0x6C4DE0, this, day, hour, min);
 	}
 
 	float cliprange;

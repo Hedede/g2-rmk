@@ -41,6 +41,7 @@ void InitWin32Stuff(char const* cmdLine)
 {
 	using namespace g2;
 	Log("Win32", "Initializing");
+	
 	winMainThreadID = GetCurrentThreadId();
 	auto a = GetCurrentProcess();
 	auto b = GetCurrentThread();

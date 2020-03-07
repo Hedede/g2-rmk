@@ -459,7 +459,7 @@ void g2::InitRenderer(void* hwnd)
 	}
 
 	if ( !zrenderer ) {
-		Log("No renderer specified, initializing default: D3D7");
+		Log("Init", "No renderer specified, initializing default: D3D7");
 		zrenderer = new zCRnd_D3D;
 	}
 
@@ -790,7 +790,7 @@ void CGameManager::GameSessionReset()
 		g2::Warning("Game", "reset, gameSession == nullptr ???");
 
 	savegameManager->ClearCurrent();
-	gameSession->SetGameInfo(0);
+	gameSession->SetGameInfo(nullptr);
 }
 
 void CGameManager::Menu(int inGame)
@@ -864,6 +864,7 @@ void CGameManager::Menu(int inGame)
 
 	if ( menuAction == "LEAVE_GAME")
 	{
+		exitGame = true;
 		zoptions->WriteBool("internal", "gameAbnormalExit", 0, 0);
 	}
 	else if (menuAction == "NEW_GAME")

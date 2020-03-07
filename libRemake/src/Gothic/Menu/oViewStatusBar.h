@@ -1,6 +1,7 @@
 #ifndef GOTHIC_VIEWSTATUSBAR_H
 #define GOTHIC_VIEWSTATUSBAR_H
 #include <Gothic/Menu/zView.h>
+#include <Hook/Externals.h>
 
 struct zCViewStatusBar : zCView {
 	int minLow;
@@ -67,6 +68,16 @@ struct zCViewProgressBar {
 	{
 		Thiscall<void(zCViewProgressBar*,int,zSTRING)> call{0x46EEC0};
 		call(this,percent,text);
+	}
+
+	void SetRange(int min, int max)
+	{
+		thiscall(0x46F340, this, min, max);
+	}
+
+	void ResetRange()
+	{
+		thiscall(0x46F400, this);
 	}
 };
 

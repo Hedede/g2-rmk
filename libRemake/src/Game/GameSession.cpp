@@ -405,3 +405,44 @@ bool oCGame::LoadParserFile(std::string const& fileName)
 
 	return !zparser.Error();
 }
+
+void oCGame::LoadGame(int slotID, std::string const& levelpath)
+{
+	g2::Log("Game", "Loading world: ", levelpath);
+
+	//thiscall(0x6C65A0, this, slotID, as<zSTRING const&>(levelpath));
+	//return;
+
+	ClearGameState();
+
+	OpenLoadscreen(true, levelpath);
+
+	if ( progressBar )
+	{
+		progressBar->SetPercent(0, "");
+		progressBar->SetRange(0, 92);
+	}
+
+	LoadWorld(slotID, levelpath);
+
+	if ( progressBar )
+	{
+		progressBar->ResetRange();
+		progressBar->SetRange(92, 100);
+	}
+
+	EnterWorld(nullptr, true, "");
+
+	if ( progressBar )
+		progressBar->ResetRange();
+
+	if ( slotID == SAVEGAME_SLOT_NEW )
+		InitNpcAttitudes();
+
+	SetTime(0, initial_hour, initial_minute);
+
+	if ( progressBar )
+		progressBar->SetPercent(100, "");
+
+	CloseLoadscreen();
+}

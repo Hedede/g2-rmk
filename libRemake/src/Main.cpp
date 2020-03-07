@@ -56,6 +56,9 @@ void aw_main(char const* args)
 	using namespace g2;
 
 	Log("Main", "Successfully hooked.");
+	
+	if (!args)
+		args = "";
 
 	std::string cmdLine{args};
 	Log("Main", "Command line: ", cmdLine);

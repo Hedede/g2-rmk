@@ -118,4 +118,46 @@ struct Fastcall<R(Args...)> {
 	}
 
 };
+
+
+template<typename T>
+struct as {
+	as(T&& value)
+		: value(static_cast<T&&>(value))
+	{
+	}
+
+	T value;
+
+	operator T() const
+	{
+		return value;
+	}
+};
+
+template<typename T>
+struct extract_arg_t {
+	using type = T;
+};
+
+template<typename T>
+struct extract_arg_t<as<T>> {
+	using type = T;
+};
+
+template<typename T>
+using extract_arg = typename extract_arg_t<T>::type;
+
+template<typename R = void, typename...Args>
+R thiscall(uintptr_t addr, Args...args)
+{
+	static_assert(sizeof...(Args) > 0, "Thiscall must have at least one arg.");
+
+	using pointer_type = R(__thiscall*)(extract_arg<Args>...);
+
+	auto func = reinterpret_cast<pointer_type>(addr);
+	
+	func(args...);
+}
+
 #endif//Gothic_Remake_Externals_H

@@ -220,22 +220,23 @@ void zCConsole::AddChar(int w, int character)
 }
 
 //-----------------------------------------------------------------------------
-void zCConsole::Register(zSTRING const& command, zSTRING const& desc)
-{
-	auto condat = new zCConDat(command, desc, 0);
-	list.Insert(condat);
-}
-
-void zCConsole::Register(zSTRING const& command, zSTRING const& desc, int param)
-{
-	auto condat = new zCConDat(command, desc, param);
-	list.Insert(condat);
-}
-
 void zCConsole::InsertVar(zSTRING const& h, zSTRING const& s, int type, void* adr, int ele)
 {
 	_var = 1;
-	list.InsertLast(new zCConDat{h, s, type, adr, ele}); // 275
+	list.InsertLast(new zCConDat(h, s, type, adr, ele)); // 275
+}
+
+// originally "command, desc" were "h, s"
+void zCConsole::Register(zSTRING const& command, zSTRING const& desc, int param)
+{
+	auto condat = new zCConDat(command, desc, param); // 282
+	list.Insert(condat);
+}
+
+void zCConsole::Register(zSTRING const& command, zSTRING const& desc)
+{
+	auto condat = new zCConDat(command, desc, 0); // 288
+	list.Insert(condat);
 }
 
 zCConDat* zCConsole::Get(zSTRING const& what)

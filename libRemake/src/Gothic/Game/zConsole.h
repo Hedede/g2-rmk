@@ -26,18 +26,19 @@ struct zCConsole {
 		ctor(this, x, y, zSTRING{name});
 	}
 
+	void Register(std::string const& cmd, std::string const& desc, int param)
+	{
+		const zSTRING s = cmd;
+		const zSTRING h = desc;
+
+		thiscall(0x7829C0, this, &s, &h, param);
+	}
+
 	void Register(std::string const& cmd, std::string const& desc)
 	{
 		Thiscall<void(zCConsole*, zSTRING const&, zSTRING const&)> func{0x782AE0};
 
 		func(this, cmd, desc);
-	}
-
-	void Register(std::string const& cmd, std::string const& desc, int param)
-	{
-		Thiscall<void(zCConsole*, zSTRING const&, zSTRING const, int)> func{0x7829C0};
-
-		func(this, cmd, desc, param);
 	}
 
 	using EvalFunc = zBOOL( const zSTRING& s, zSTRING& msg );

@@ -121,8 +121,8 @@ struct Fastcall<R(Args...)> {
 
 
 template<typename T>
-struct as {
-	as(T&& value)
+struct pass {
+	pass(T&& value)
 		: value(static_cast<T&&>(value))
 	{
 	}
@@ -141,7 +141,7 @@ struct extract_arg_t {
 };
 
 template<typename T>
-struct extract_arg_t<as<T>> {
+struct extract_arg_t<pass<T>> {
 	using type = T;
 };
 

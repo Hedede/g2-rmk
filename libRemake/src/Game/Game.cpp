@@ -286,7 +286,7 @@ void Game_InitConsole()
 	zcon.Register("print slots", "print all inventory slots");
 
 	zcon.AddEvalFunc(oCGame_ConsoleEvalFunc);
-	zcon.Register("insert", "insert a script-instance [name]",2);
+	zcon.Register("insert", "insert a script-instance [name]", 2);
 	zcon.Register("goto waypoint", "beam player to waypoint [name]");
 	zcon.Register("toggle desktop", "desktop on/off");
 	zcon.Register("toggle debug", "debug-Messages on/off");

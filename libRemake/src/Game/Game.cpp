@@ -60,10 +60,7 @@ std::string handle_set_var(std::vector<string_view> const& args)
 	}
 	else if (sym->type == zPAR_TYPE_INT)
 	{
-		int i = 0;
-		try {
-			i = std::stoi(value);
-		} catch(...) {}
+		int i = parse(value, 0);
 
 		sym->SetValue(i);
 
@@ -73,10 +70,7 @@ std::string handle_set_var(std::vector<string_view> const& args)
 	}
 	else if (sym->type == zPAR_TYPE_FLOAT)
 	{
-		float f = 0;
-		try {
-			f = std::stof(value);
-		} catch(...) {}
+		float f = parse(value, 0.0f);
 
 		sym->SetValue(f);
 

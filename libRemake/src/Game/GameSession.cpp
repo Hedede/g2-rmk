@@ -215,6 +215,8 @@ void oCGame::Init()
 #include <aw/utility/string/split.h>
 #include <Gothic/Game/oWorldTimer.h>
 #include <Gothic/Game/oRtnManager.h>
+#include <Types/string_view.h>
+#include <Utility/String.h>
 void oCGame::WorldInit()
 {
 	g2::Log("Game", "WorldInit");
@@ -235,8 +237,8 @@ void oCGame::WorldInit()
 		if ( parts.size() > 1 )
 		try
 		{
-			initial_hour   = std::stol(std::string(parts[0]));
-			initial_minute = std::stol(std::string(parts[1]));
+			try_parse(std::string(parts[0]), initial_hour);
+			try_parse(std::string(parts[1]), initial_hour);
 		}
 		catch(...) {}
 	}

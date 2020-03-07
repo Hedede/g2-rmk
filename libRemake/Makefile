@@ -29,8 +29,11 @@ src/ZenGin/zVob.cpp \
 src/Gothic/Game/oItem.cpp \
 src/TypeInfo/oCWorld.cpp \
 
+optimized=src/Debug/debugger_tools.cpp
 
-objects=$(patsubst src/%.cpp, build/%.o, $(sources))
+objects =$(patsubst src/%.cpp, build/%.o, $(sources))
+
+objects+=$(patsubst src/%.cpp, build/opt/%.o, $(optimized))
 
 libraries=
 includes=\
@@ -50,11 +53,12 @@ CXX = i686-w64-mingw32-g++
 endif
 
 
-cxx_flags = -std=c++1z -g -fno-strict-aliasing -fexceptions -fno-rtti
+cxx_flags = -std=c++1z -g -fexceptions -fno-rtti
 pp_flags  = -DNOMINMAX -DAW_STATIC_BUILD
 
 #optimization
-cxx_flags += -finline-functions-called-once -finline-small-functions
+#cxx_flags += -Og -finline-functions -finline-functions-called-once  -fno-omit-frame-pointer
+cxx_flags += -fno-strict-aliasing
 
 linker_flags=$(libraries)
 ifeq ($(USE_WINE), true)
@@ -63,7 +67,12 @@ else
 #static_gcc=-static-libgcc -static-libstdc++ -static -lwinpthread
 #static_gcc=-lstdc++ -lpthread
 endif
-libs= -L$(lib_path) -lOpenAL32 -lgdi32 -lSDL2_image -lSDL2main -lSDL2 -lawaudio -lawio -lfs
+libs= -L$(lib_path) -ldbghelp -lOpenAL32 -lgdi32 -lSDL2_image -lSDL2main -lSDL2 -lawaudio -lawio -lfs
+
+build/opt/%.o: src/%.cpp
+	@ mkdir -p $(dir $@)
+	@ echo [Build] Compiling $@
+	@ $(CXX) $(includes) -masm=intel -Og $(cxx_flags) $(pp_flags) -c $< -o $@
 
 build/%.o: src/%.cpp
 	@ mkdir -p $(dir $@)

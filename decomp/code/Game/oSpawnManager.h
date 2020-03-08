@@ -1,6 +1,11 @@
 //_ulf/oSpawn.cpp
 // struct oSSpawnNode
-struct oTSpawnNode {
+struct oSSpawnNode {
+	~oSSpawnNode()
+	{
+		npc->Release();
+	}
+
 	oCNpc *   npc;
 	zVEC3     spawnPos;
 	zREAL     timer;
@@ -39,11 +44,7 @@ struct oCSpawnManager {
 
 	void ClearList()
 	{
-		for (auto* node : spawnList) {
-			node->npc->Release();
-			delete node;
-		}
-		spawnList.Clear();
+		spawnList.DeleteList();
 	}
 
 private:
@@ -80,7 +81,7 @@ private:
 	void CheckForInvalidDialogCamPos(float dist, oCNpc *npc);
 
 private:
-	zCArray<oTSpawnNode*> spawnList;
+	zCArray<oSSpawnNode*> spawnList;
 
 	zBOOL  spawningEnabled = true;
 	zVEC3  camPos;

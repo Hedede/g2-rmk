@@ -3072,44 +3072,40 @@ int* zCParser::CallFunc(int funcIdx, ...)
 {
 	retval = 0;
 
-	ayto sym = symtab.GetSymbol(funcIdx);
+	ayto sym = symtab.GetSymbol(funcIdx); // 1504
 
 	if ( sym && sym->GetType() == zPAR_TYPE_FUNC ) {
 		datastack.Clear();
 
-		char* arg = (char*)&funcIdx;
+		va_list vl;
+		va_start(vl, funcIdx);
+
 		for (unsigned i = 0; i < sym->ele; ++i) {
 			auto var = symtab.GetSymbol(funcIdx + i + 1);
 
-			if (var->GetType() == 1) {
-				arg += sizeof(float);
-
-				float value = *(float*)arg;
+			if (var->GetType() == zPAR_TYPE_FLOAT) {
+				float value = va_arg(vl,float);
 				var->SetValue(value, 0);
 
 				datastack.Push(value);
-				datastack.Push(64);
+				datastack.Push(zPAR_TOK_PUSHINT);
 				continue;
 			}
-			if (var->GetType() == 2) {
-				arg += sizeof(int);
-
-				int value = *(int*)arg;
+			if (var->GetType() == zPAR_TYPE_INT) {
+				int value = va_arg(vl,int);
 				var->SetValue(value, 0);
 
 				datastack.Push(value);
-				datastack.Push(64);
+				datastack.Push(zPAR_TOK_PUSHINT);
 				continue;
 			}
-			if (var->GetType() == 3) {
-				arg += sizeof(zSTRING);
-
-				zSTRING value = *(zSTRING*)arg;
+			if (var->GetType() == zPAR_TYPE_STRING) {
+				zSTRING value = va_arg(vl,zSTRING);
 				var->SetValue(value, 0);
 
 				auto adr = sym->GetDataAdr(0);
 				datastack.Push(adr);
-				datastack.Push(65);
+				datastack.Push(zPAR_TYPE_PUSHVAR);
 				continue;
 			}
 

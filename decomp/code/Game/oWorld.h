@@ -174,7 +174,8 @@ int oCWorld::LoadWorld(zSTRING const& fileName, zCWorld::zTWorldLoadMode mode)
 	auto fname = fileName;
 	fname.Upper();
 
-	if ( mode != 1 ) {
+	if ( mode != 1 )
+	{
 		worldFilename = fname;
 
 		zFILE_FILE file(worldFilename);
@@ -182,18 +183,20 @@ int oCWorld::LoadWorld(zSTRING const& fileName, zCWorld::zTWorldLoadMode mode)
 		worldName = file.GetFilename();
 	}
 
-	if ( fname.Search(0, ".3DS", 1u) <= 0 ) {
-		zoptions->ChangeDir(DIR_WORLD);
-		return zCWorld::LoadWorld(fname, mode);
+	if ( fname.Search(0, ".3DS", 1u) != -1 )
+	{
+		auto compo = new zCVobLevelCompo();
+		compo->SetVobName("Level-Vob");
+		compo->SetVisual(fname);
+		AddVob(compo);
+
+		zRELEASE(compo);
+
+		return 1;
 	}
 
-	auto compo = new zCVobLevelCompo();
-	compo->SetVobName("Level-Vob");
-	compo->SetVisual(fname);
-	AddVob(compo);
-	Release(compo);
-
-	return 1;
+	zoptions->ChangeDir(DIR_WORLD);
+	return zCWorld::LoadWorld(fname, mode);
 }
 
 zCTree<zCVob> * oCWorld::AddVobAsChild(zCVob * childVob, zCTree<zCVob> * tree)

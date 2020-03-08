@@ -482,10 +482,10 @@ void oCGame::LoadWorld(int slotID, zSTRING const& levelpath)
 			progressBar->ResetRange();
 
 		if ( !GetWorld()->compiled )
-			GetWorld()->CompileWorld();
+			CompileWorld();
 	} else {
 		auto file = GetGameWorld()->worldFilename.data;
-		if (file != "") {
+		if (file != levelpath) {
 			if ( progressBar )
 				progressBar->SetRange(15, 40);
 
@@ -499,7 +499,7 @@ void oCGame::LoadWorld(int slotID, zSTRING const& levelpath)
 			progressBar->SetPercent(42, "");
 
 		if ( !GetWorld()->compiled )
-			GetWorld()->CompileWorld();
+			CompileWorld();
 
 		inLoadSaveGame = 1;
 		if ( progressBar )

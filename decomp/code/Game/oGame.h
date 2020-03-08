@@ -2054,7 +2054,7 @@ void oCGame::LoadWorldStartup(zSTRING const& levelpath)
 	if ( progressBar )
 		progressBar->SetRange(0, 75);
 
-	GetWorld()->LoadWorld(levelpath, 0);
+	GetWorld()->LoadWorld(levelpath, zWLD_LOAD_GAME_STARTUP);
 
 	if ( progressBar )
 		progressBar->ResetRange();

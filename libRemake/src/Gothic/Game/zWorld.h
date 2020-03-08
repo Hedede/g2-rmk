@@ -97,7 +97,7 @@ struct zCWorld_vt
 	void (__thiscall *Archive)(zCWorld *, zCArchiver&);
 	void (__thiscall *Unarchive)(zCWorld *, zCArchiver&);
 	void (__thiscall *dtor)(zCWorld *, unsigned int);
-	zCWorld *(__thiscall *LoadWorld)(zCWorld*, const zSTRING&, zTWorldLoadMode);
+	int (__thiscall *LoadWorld)(zCWorld*, const zSTRING&, zTWorldLoadMode);
 	void (__thiscall *SaveWorld)(zCWorld *, const zSTRING *, unsigned int, int, int);
 	zCVob *(__thiscall *MergeVobSubtree)(zCWorld *, const zSTRING *, zCVob *, int);
 	void (__thiscall *SaveVobSubtree)(zCWorld *, const zSTRING *, zCVob *, int, int);
@@ -157,11 +157,7 @@ struct zCWorld : zCObject {
 		reinterpret_cast<zCWorld_vt*>(_vtab)->DisposeWorld(this);
 	}
 
-	void LoadWorld(std::string_view levelpath, zTWorldLoadMode loadMode)
-	{
-		reinterpret_cast<zCWorld_vt*>(_vtab)->LoadWorld(this, levelpath, loadMode);
-	}
-
+	bool LoadWorld(std::string_view levelpath, zTWorldLoadMode loadMode);
 
 
 	zCTree<zCVob> globalVobTree;
@@ -218,6 +214,8 @@ public:
 
 	void Render(zCCamera* cam);
 	bool HasLevelName();
+
+	bool LoadWorld(std::string_view fileName, zTWorldLoadMode mode);
 
 	zSTRING worldFilename;
 	zSTRING worldName;

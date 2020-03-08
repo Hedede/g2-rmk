@@ -16,6 +16,12 @@ static void __thiscall Unarchive_thunk(zCWorld* world, zCArchiver& arc)
 	g2::Log("World", "Unarchiving world done");
 }
 
+
+static int __thiscall LoadWorld_thunk(zCWorld* world, const zSTRING& name, zTWorldLoadMode mode)
+{
+	return static_cast<oCWorld*>(world)->LoadWorld(std::string_view(name), mode);
+}
+
 oCWorld_TypeInfo::oCWorld_TypeInfo()
 {
 	vt = *reinterpret_cast<zCWorld_vt*>(0x83E174);
@@ -24,6 +30,7 @@ oCWorld_TypeInfo::oCWorld_TypeInfo()
 		return;
 
 	vt.Unarchive = Unarchive_thunk;
+	vt.LoadWorld = LoadWorld_thunk;
 }
 
 oCWorld::oCWorld()
@@ -160,4 +167,42 @@ void oCWorld::Render(zCCamera *cam)
 	zCVertex::ResetVertexTransforms();
 	auto& zCTexAniCtrl__masterFrameCtr = Value<unsigned>(0x8D8774);
 	++zCTexAniCtrl__masterFrameCtr;
+}
+
+#include <Filesystem.h>
+#include <aw/utility/string/case.h>
+bool zCWorld::LoadWorld(std::string_view fileName, zTWorldLoadMode mode)
+{
+	zSTRING tmpstr = fileName;
+	return thiscall<int>(0x6270D0, this, &tmpstr, mode);
+	//return reinterpret_cast<zCWorld_vt*>(_vtab)->LoadWorld(this, levelpath, loadMode);
+}
+
+bool oCWorld::LoadWorld(std::string_view fileName, zTWorldLoadMode mode)
+{
+	g2::Log("U: (oCWorld::LoadWorld)", fileName);
+
+	auto fname = std::string(fileName);
+	aw::string::toupper(fname);
+
+	fs::path fpath(fname);
+
+	if ( mode != zWLD_LOAD_GAME_SAVED_DYN ) {
+		worldFilename = fname;
+		worldName = fpath.generic_u8string();
+	}
+
+	if ( fpath.extension() == ".3DS" )
+	{
+		auto compo = new zCVobLevelCompo();
+		compo->SetVobName("Level-Vob");
+		compo->SetVisual(fname);
+		AddVob(compo);
+		compo->Release();
+
+		return 1;
+	}
+
+	zoptions->ChangeDir(DIR_WORLD);
+	return zCWorld::LoadWorld(fname, mode);
 }

@@ -567,6 +567,8 @@ void oCGame::LoadWorldStartup(std::string_view levelpath)
 
 void oCGame::CallScriptStartup()
 {
+	g2::Fatal("Game", "Startup ", std::string_view(world->worldName));
+
 	if ( !scriptStartup )
 		return;
 

@@ -39,18 +39,9 @@ struct zCOptionEntry {
 
 struct zFILE;
 struct zCOptions {
-	zCOptions()
-	{
-		Thiscall<void(zCOptions*)> ctor{0x460350};
-		ctor(this);
+	zCOptions();
 
-	}
-
-	void Init(std::string const& cmdLine)
-	{
-		Thiscall<void(zCOptions*, zSTRING, int)> Init{0x463C20};
-		Init(this, cmdLine, 1);
-	}
+	void Init(std::string_view cmdLine);
 
 	bool RemoveEntry(std::string const& sec, std::string const& ent)
 	{
@@ -58,11 +49,7 @@ struct zCOptions {
 		return call(this, zSTRING{sec}, ent.data());
 	}
 
-	void ChangeDir(zTOptionPath dirId)
-	{
-		Thiscall<void(zCOptions*, zTOptionPath)> call{0x465160};
-		call(this, dirId);
-	}
+	void ChangeDir(zTOptionPath dirId);
 
 	using ChangeHandler = int(*)(zCOptionEntry* optentry);
 	void InsertChangeHandler(std::string const& sec, std::string name, ChangeHandler ccb)
@@ -151,17 +138,8 @@ struct zCOptions {
 		WriteString(sec, opt, value ? "1" : "0", temp);
 	}
 
-	bool Load(std::string const& filename)
-	{
-		Thiscall<int(zCOptions*, zSTRING filename)> call{0x4607B0};
-		return call(this, zSTRING{filename});
-	}
-
-	bool Save(std::string const& filename)
-	{
-		Thiscall<int(zCOptions*, zSTRING)> func{0x4616C0};
-		return func(this, filename);
-	}
+	bool Load(std::string_view filename);
+	bool Save(std::string_view filename);
 
 	std::string GetDirString(zTOptionPath path)
 	{

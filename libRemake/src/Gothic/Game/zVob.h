@@ -55,6 +55,11 @@ struct zCVob : zCObject {
 	char data2[0x64];
 };
 
+struct zCVobLevelCompo : zCVob {
+	zCLASS_DECLARATION(zCVobLevelCompo);
+public:
+};
+
 struct oCVob : zCVob {
 
 };

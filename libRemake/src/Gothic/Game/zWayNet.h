@@ -4,6 +4,8 @@
 
 #include <Gothic/Types/zCObject.h>
 
+struct zCCamera;
+
 struct zCWay {
 
 };
@@ -35,8 +37,18 @@ struct zCWaypoint : zCObject
 struct zCWayNet {
 	zCWaypoint* GetWaypoint(std::string const& name)
 	{
-		Fastcall<zCWaypoint*(zCWayNet*, zSTRING const&)> call{0x7B0330};
-		return call(this,name);
+		const zSTRING tmpstr = name;
+		return fastcall<zCWaypoint*>(0x7B0330,this,&tmpstr);
+	}
+
+	void CorrectHeight()
+	{
+		thiscall(0x7AD7B0, this);
+	}
+
+	void Draw(zCCamera* camera)
+	{
+		thiscall(0x7AD870, this, camera);
 	}
 };
 

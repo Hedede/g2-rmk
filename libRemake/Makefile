@@ -21,15 +21,17 @@ src/Sound/zCSndFX_OpenAL.cpp \
 src/Sound/SoundOpenAL.cpp \
 src/Sound/SourcePool.cpp \
 src/System/zResource.cpp \
-src/Filesystem/filesystem.cpp \
-src/Filesystem/find_files.cpp \
 src/Menu/zMenu.cpp \
 src/Input/InputCallback.cpp \
 src/ZenGin/zVob.cpp \
 src/Gothic/Game/oItem.cpp \
 src/TypeInfo/oCWorld.cpp \
 
-optimized=src/Debug/debugger_tools.cpp
+optimized=\
+src/Debug/debugger_tools.cpp \
+src/Utility/String.cpp \
+src/Filesystem/filesystem.cpp \
+src/Filesystem/find_files.cpp \
 
 objects =$(patsubst src/%.cpp, build/%.o, $(sources))
 
@@ -53,7 +55,7 @@ CXX = i686-w64-mingw32-g++
 endif
 
 
-cxx_flags = -std=c++1z -g -fexceptions -fno-rtti
+cxx_flags = -std=c++1z -g -fno-rtti
 pp_flags  = -DNOMINMAX -DAW_STATIC_BUILD
 
 #optimization
@@ -72,12 +74,12 @@ libs= -L$(lib_path) -ldbghelp -lOpenAL32 -lgdi32 -lSDL2_image -lSDL2main -lSDL2 
 build/opt/%.o: src/%.cpp
 	@ mkdir -p $(dir $@)
 	@ echo [Build] Compiling $@
-	@ $(CXX) $(includes) -masm=intel -Og $(cxx_flags) $(pp_flags) -c $< -o $@
+	@ $(CXX) $(includes) -masm=intel -fexceptions -Og $(cxx_flags) $(pp_flags) -c $< -o $@
 
 build/%.o: src/%.cpp
 	@ mkdir -p $(dir $@)
 	@ echo [Build] Compiling $@
-	@ $(CXX) $(includes) -masm=intel $(cxx_flags) $(pp_flags) -c $< -o $@
+	@ $(CXX) $(includes) -masm=intel -fno-exceptions $(cxx_flags) $(pp_flags) -c $< -o $@
 
 hook: $(objects)
 	@ echo [Build] Linking:

@@ -16,13 +16,24 @@
 #include <Gothic/System/System.h>
 
 #include <Logging/Log.h>
+#include <Gothic/Game/oNpc.h>
 
 constexpr float SPAWN_INSERTTIME_MAX = 1000.0;
 struct oCSpawnManager {
 	static float GetSpawnTime();
 	void CheckInsertNpcs();
+	
+	void ClearList()
+	{
+		spawnList.DeleteList();
+	}
 
 	struct oSSpawnNode {
+		~oSSpawnNode()
+		{
+			npc->Release();
+		}
+
 		oCNpc *npc;
 		zVEC3 pos;
 		float time;
@@ -235,16 +246,15 @@ void oCGame::WorldInit()
 
 		auto parts = aw::string::split_by(time, " :"sv);
 		if ( parts.size() > 1 )
-		try
 		{
 			try_parse(std::string(parts[0]), initial_hour);
 			try_parse(std::string(parts[1]), initial_hour);
 		}
-		catch(...) {}
 	}
 
 	rtnMan.SetWorld(world);
 }
+
 
 #include <Gothic/Graphics/zRenderer.h>
 #include <Gothic/Graphics/zSkyControler.h>
@@ -253,24 +263,21 @@ void oCGame::WorldInit()
 struct zCCamera {
 	void Activate()
 	{
-		Thiscall<void(zCCamera*)> call{0x54A700};
-		call(this);
+		thiscall(0x54A700, this);
 	}
 };
 
 struct zCResourceManager {
 	void DoFrameActivity()
 	{
-		Thiscall<void(zCResourceManager*)> call{0x5DD4F0};
-		call(this);
+		thiscall(0x5DD4F0, this);
 	}
 };
 
 struct zCViewDraw {
 	void Render()
 	{
-		Thiscall<void(zCViewDraw *)> call{0x6900E0};
-		call(this);
+		thiscall(0x6900E0, this);
 	}
 };
 
@@ -340,7 +347,7 @@ void oCGame::Render()
 
 
 	if ( game_drawall ) {
-		//RenderWaynet();
+		RenderWaynet();
 		//ShowDebugInfos();
 		Thiscall<void(oCGame*)> UpdatePlayerStatus{0x6C3140};
 		UpdatePlayerStatus(this);
@@ -410,7 +417,7 @@ bool oCGame::LoadParserFile(std::string const& fileName)
 
 void oCGame::LoadGame(int slotID, std::string const& levelpath)
 {
-	g2::Log("Game", "Loading world: ", levelpath);
+	g2::Log("Game", "Loading game: slot ", slotID, " level ", levelpath);
 
 	//thiscall(0x6C65A0, this, slotID, as<zSTRING const&>(levelpath));
 	//return;
@@ -448,3 +455,182 @@ void oCGame::LoadGame(int slotID, std::string const& levelpath)
 
 	CloseLoadscreen();
 }
+
+#include <Gothic/Game/zWayNet.h>
+void oCGame::LoadWorld(int slotID, std::string_view levelpath)
+{
+	g2::Log("Game", "Loading world: ", levelpath);
+
+	if (levelpath.empty()) {
+		g2::Warning("Game", "fileName is empty");
+		return;
+	}
+
+	if ( progressBar )
+		progressBar->SetPercent(12, "");
+
+	if ( slotID == SAVEGAME_SLOT_NEW ) {
+		spawnman->ClearList();
+		world->DisposeWorld();
+
+		if ( progressBar )
+			progressBar->SetRange(15, 97);
+
+		LoadWorldStartup(levelpath);
+
+		if ( progressBar )
+			progressBar->ResetRange();
+
+		if ( !world->compiled )
+			CompileWorld();
+	} else {
+		std::string_view fileName = world->worldFilename;
+		if (fileName != levelpath) {
+			if ( progressBar )
+				progressBar->SetRange(15, 40);
+
+			LoadWorldStat(fileName);
+
+			if ( progressBar )
+				progressBar->ResetRange();
+		}
+
+		if ( progressBar )
+			progressBar->SetPercent(42, "");
+
+		if ( !world->compiled )
+			CompileWorld();
+
+		inLoadSaveGame = 1;
+		if ( progressBar )
+			progressBar->SetRange(44, 97);
+
+		LoadWorldDyn(levelpath);
+
+		if ( progressBar )
+			progressBar->ResetRange();
+
+		inLoadSaveGame = 0;
+	}
+
+	world->wayNet->CorrectHeight();
+
+	// TODO: don't care for now, as sound is only half-implemented
+	/*auto skyCtrl = world->GetActiveSkyControler();
+	if (zDYNAMIC_CAST<zCSkyControler_Indoor>(skyCtrl))
+		zsound->SetGlobalReverbPreset(8, 0.4);
+	else
+		zsound->SetGlobalReverbPreset(0, 0.0);*/
+
+	if ( progressBar )
+		progressBar->SetPercent(100, "");
+}
+
+
+
+void oCGame::LoadWorldStartup(std::string_view levelpath)
+{
+	g2::Log("U: GAM:", "Loading startup-data: \"", levelpath, "\"...");
+
+	if ( progressBar )
+		progressBar->SetRange(0, 75);
+
+	world->LoadWorld(levelpath, zWLD_LOAD_GAME_STARTUP);
+
+	if ( progressBar )
+		progressBar->ResetRange();
+
+	g2::Log("U: GAM:", "Loading startup-data \"", levelpath, "\" finished.");
+
+	if ( progressBar )
+		progressBar->SetPercent(76, "");
+
+	g2::Log("U: GAM:", "Cleaning world...");
+
+	RemoveHelperVobs(world->globalVobTree.firstChild);
+
+	g2::Log("U: GAM:", "GAM: .. finished");
+
+	if ( progressBar )
+		progressBar->SetPercent(79, "");
+
+	if ( progressBar )
+		progressBar->SetRange(80, 100);
+
+	CallScriptStartup();
+	CallScriptInit();
+
+	if ( progressBar )
+		progressBar->ResetRange();
+}
+
+
+void oCGame::CallScriptStartup()
+{
+	if ( !scriptStartup )
+		return;
+
+	auto worldName = std::string(world->worldName);
+
+	auto startup_global = zparser.GetIndex("STARTUP_GLOBAL");
+	auto startup_world  = zparser.GetIndex("STARTUP_" + worldName);
+	
+	if (startup_global <= 0)
+		g2::Fatal("U: GAM:", "Global Startup Function not found.");
+
+	inScriptStartup = 1;
+
+	zparser.CallFunc(startup_global);
+
+	if ( startup_world > 0 ) {
+		g2::Log("U: GAM:", "Calling Startup-Script ...");
+
+		zparser.SetProgressBar(progressBar);
+		zparser.CallFunc(startup_world);
+		zparser.SetProgressBar(0);
+
+		g2::Log("U: GAM:", "Startup-Script finished.");
+	}
+
+	inScriptStartup = 0;
+}
+
+void oCGame::CallScriptInit()
+{
+	auto worldName = std::string(world->worldName);
+
+	auto init_global = zparser.GetIndex("INIT_GLOBAL");
+	auto init_world  = zparser.GetIndex("INIT_" + worldName);
+
+	if (init_global <= 0)
+		g2::Fatal("U:GAM", "Global Init Function not found.");
+
+	inScriptStartup = 1;
+
+	zparser.CallFunc(init_global);
+
+	if ( init_world > 0 ) {
+		g2::Log("U: GAM", "Calling Init-Script ...");
+
+		zparser.SetProgressBar(progressBar);
+		zparser.CallFunc(init_world);
+		zparser.SetProgressBar(0);
+
+		g2::Log("U: GAM", "Init-Script finished.");
+	}
+
+	inScriptStartup = 0;
+}
+
+void oCGame::RenderWaynet()
+{
+	if ( game_showwaynet )
+	{
+		if ( world->wayNet )
+		{
+			world->wayNet->Draw(camera);
+		}
+	}
+}
+
+

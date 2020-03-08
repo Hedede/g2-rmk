@@ -2,6 +2,8 @@
 #define Gothic_zSession_H
 #include <Gothic/Input/zCInputCallback.h>
 #include <Gothic/Types/zSTRING.h>
+#include <Gothic/Types/zTree.h>
+#include <Hook/Externals.h>
 
 struct zCCSManager;
 struct zCWorld;
@@ -66,7 +68,7 @@ struct zCSession_vt : zCInputCallback_vt {
 	void (__thiscall *ChangeLevel)(oCGame *, const zSTRING *, const zSTRING *);
 	void (__thiscall *LoadWorldStartup)(oCGame *, const zSTRING *);
 	void (__thiscall *LoadWorldStat)(oCGame *, zSTRING);
-	void (__thiscall *LoadWorldDyn)(oCGame *, const zSTRING *);
+	void (__thiscall *LoadWorldDyn)(oCGame *, const zSTRING&);
 	void (__thiscall *InitWorldSavegame)(oCGame *, int *, zSTRING *);
 	int (__thiscall *CheckIfSavegameExists)(oCGame *, const zSTRING *);
 	void (__thiscall *CompileWorld)(oCGame *);
@@ -101,6 +103,11 @@ struct zCSession : zCInputCallback {
 	void RenderBlit()
 	{
 		reinterpret_cast<zCSession_vt*>(_vtab)->RenderBlit(this);
+	}
+
+	oCWorld* GetWorld()
+	{
+		return world;
 	}
 
 
@@ -145,15 +152,11 @@ struct oCGame : zCSession {
 	void WorldInit();
 
 	void Render();
+	void RenderWaynet();
 
 	void SetGameInfo(oCGameInfo* info)
 	{
 		reinterpret_cast<zCSession_vt*>(_vtab)->SetGameInfo(this, info);
-	}
-
-	oCWorld* GetGameWorld()
-	{
-		return reinterpret_cast<oCWorld*>(reinterpret_cast<zCSession_vt*>(_vtab)->GetWorld(this));
 	}
 
 	bool LoadParserFile(std::string const& script);
@@ -200,13 +203,23 @@ struct oCGame : zCSession {
 		thiscall(0x6C61D0, this);
 	}
 
+	void CompileWorld()
+	{
+		vtab().CompileWorld(this);
+	}
+
 
 	void LoadGame(int slotID, std::string const& level); // 6C65A0
 
-	void LoadWorld(int slotID, std::string const& levelpath)
+	void LoadWorld(int slotID, std::string_view levelpath);
+	void LoadWorldStartup(std::string_view levelpath);
+	void LoadWorldStat(std::string_view levelpath)
 	{
-		Thiscall<void(oCGame*, int, const zSTRING&)> call{0x6C90B0};
-		call(this, slotID, levelpath);
+		vtab().LoadWorldStat(this,levelpath);
+	}
+	void LoadWorldDyn(std::string_view levelpath)
+	{
+		vtab().LoadWorldDyn(this,levelpath);
 	}
 
 	void EnterWorld(oCNpc* playerVob, bool changePlayerPos, std::string const& startPoint)
@@ -222,6 +235,14 @@ struct oCGame : zCSession {
 	{
 		thiscall(0x6C4DE0, this, day, hour, min);
 	}
+
+	void RemoveHelperVobs(zCTree<zCVob> *node)
+	{
+		stdcall(0x6C3C10, node);
+	}
+
+	void CallScriptStartup();
+	void CallScriptInit();
 
 	float cliprange;
 	float fogrange;

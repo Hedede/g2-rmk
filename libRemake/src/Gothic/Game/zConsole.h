@@ -16,29 +16,26 @@ constexpr int zCON_MAX_EVAL = 15;
 struct zCConsole {
 	zCConsole()
 	{
-		Thiscall<void(zCConsole*)> ctor{0x781EA0};
-		ctor(this);
+		thiscall(0x781EA0, this);
 	}
 
 	zCConsole(int x, int y, std::string const& name)
 	{
-		Thiscall<void(zCConsole*, int,int,zSTRING const&)> ctor{0x7820B0};
-		ctor(this, x, y, zSTRING{name});
+		checked::thiscall<void(zCConsole*, int,int,zSTRING const&)>(0x7820B0, this, x, y, name);
 	}
 
 	void Register(std::string const& cmd, std::string const& desc, int param)
 	{
 		const zSTRING s = cmd;
 		const zSTRING h = desc;
-
 		thiscall(0x7829C0, this, &s, &h, param);
 	}
 
 	void Register(std::string const& cmd, std::string const& desc)
 	{
-		Thiscall<void(zCConsole*, zSTRING const&, zSTRING const&)> func{0x782AE0};
-
-		func(this, cmd, desc);
+		const zSTRING s = cmd;
+		const zSTRING h = desc;
+		thiscall(0x782AE0, this, &s, &h);
 	}
 
 	using EvalFunc = zBOOL( const zSTRING& s, zSTRING& msg );

@@ -81,6 +81,15 @@ struct zCWorldPerFrameCallback;
 struct zCViewProgressBar;
 struct zCPlayerGroup;
 
+enum zTWorldLoadMode : unsigned int{
+	zWLD_LOAD_GAME_STARTUP,
+	zWLD_LOAD_GAME_SAVED_DYN,
+	zWLD_LOAD_GAME_SAVED_STAT,
+	zWLD_LOAD_EDITOR_COMPILED,
+	zWLD_LOAD_EDITOR_UNCOMPILED,
+	zWLD_LOAD_MERGE
+};
+
 struct zCWorld_vt
 {
 	//zCWorld
@@ -88,7 +97,7 @@ struct zCWorld_vt
 	void (__thiscall *Archive)(zCWorld *, zCArchiver&);
 	void (__thiscall *Unarchive)(zCWorld *, zCArchiver&);
 	void (__thiscall *dtor)(zCWorld *, unsigned int);
-	zCWorld *(__thiscall *LoadWorld)(zCWorld *, const zSTRING *, unsigned int);
+	zCWorld *(__thiscall *LoadWorld)(zCWorld*, const zSTRING&, zTWorldLoadMode);
 	void (__thiscall *SaveWorld)(zCWorld *, const zSTRING *, unsigned int, int, int);
 	zCVob *(__thiscall *MergeVobSubtree)(zCWorld *, const zSTRING *, zCVob *, int);
 	void (__thiscall *SaveVobSubtree)(zCWorld *, const zSTRING *, zCVob *, int, int);
@@ -120,8 +129,6 @@ struct zCWorld_vt
 	void (__thiscall *DisposeVobs2)(oCWorld *);
 };
 
-
-
 struct zCWorld : zCObject {
 	zCSkyControler* GetActiveSkyControler()
 	{
@@ -132,8 +139,7 @@ struct zCWorld : zCObject {
 
 	void ProcessZones()
 	{
-		Thiscall<void(zCWorld*)> ProcessZones{0x6207F0};
-		ProcessZones(this);
+		thiscall(0x6207F0, this);
 	}
 
 	void AddVob(zCVob* vob)
@@ -145,6 +151,18 @@ struct zCWorld : zCObject {
 	{
 		reinterpret_cast<zCWorld_vt*>(_vtab)->SearchVobByName(this, name);
 	}
+
+	void DisposeWorld()
+	{
+		reinterpret_cast<zCWorld_vt*>(_vtab)->DisposeWorld(this);
+	}
+
+	void LoadWorld(std::string_view levelpath, zTWorldLoadMode loadMode)
+	{
+		reinterpret_cast<zCWorld_vt*>(_vtab)->LoadWorld(this, levelpath, loadMode);
+	}
+
+
 
 	zCTree<zCVob> globalVobTree;
 	zTTraceRayReport traceRayReport;

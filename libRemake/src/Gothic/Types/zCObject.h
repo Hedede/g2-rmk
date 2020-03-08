@@ -11,13 +11,18 @@ struct zCObject_vt
 	zCClassDef *(__thiscall *GetClassDef)(zCObject *);
 	void (__thiscall *Archive)(zCObject *, zCArchiver *);
 	void (__thiscall *Unarchive)(zCObject *, zCArchiver *);
-	void (__thiscall *dtor)(int);
+	void (__thiscall *dtor)(zCObject*, int);
 };
 
 struct zCObject {
 	zCClassDef* GetClassDef()
 	{
 		return reinterpret_cast<zCObject_vt*>(_vtab)->GetClassDef(this);
+	}
+
+	~zCObject()
+	{
+		reinterpret_cast<zCObject_vt*>(_vtab)->dtor(this,1);
 	}
 
 	void Release()

@@ -6,7 +6,6 @@
 #include <aw/utility/string/case.h>
 #include <aw/utility/to_string.h>
 
-
 std::string handle_set_var(std::vector<string_view> const& args)
 {
 	using aw::to_string;

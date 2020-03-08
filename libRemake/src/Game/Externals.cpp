@@ -18,7 +18,7 @@ int Wld_InsertItem()
 	parser.GetParameter(insertPoint);
 	parser.GetParameter(instanceItem);
 
-	auto world = ogame->GetGameWorld();
+	auto world = ogame->GetWorld();
 	auto vob = oCItem::CreateItem(instanceItem);
 	if ( vob ) {
 		zVEC3 pos;

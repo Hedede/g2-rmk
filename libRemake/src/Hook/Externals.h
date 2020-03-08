@@ -7,6 +7,8 @@
 #define __stdcall __attribute__((__stdcall__))
 #endif
 
+#define FORCE_INLINE __attribute__((always_inline)) inline
+
 /*!
  * Obtain reference to object at address addr.
  */
@@ -87,6 +89,8 @@ template<typename R, typename...Args>
 struct Thiscall<R(Args...)> {
 	static_assert(sizeof...(Args) > 0, "Thiscall must have at least one arg.");
 
+	using type = R(__thiscall*)(Args...);
+
 	uintptr_t addr;
 	Thiscall(uintptr_t addr)
 		: addr(addr)
@@ -149,7 +153,7 @@ template<typename T>
 using extract_arg = typename extract_arg_t<T>::type;
 
 template<typename R = void, typename...Args>
-R thiscall(uintptr_t addr, Args...args)
+FORCE_INLINE R thiscall(uintptr_t addr, Args...args)
 {
 	static_assert(sizeof...(Args) > 0, "Thiscall must have at least one arg.");
 
@@ -157,7 +161,48 @@ R thiscall(uintptr_t addr, Args...args)
 
 	auto func = reinterpret_cast<pointer_type>(addr);
 	
-	func(args...);
+	return func(args...);
 }
 
+template<typename R = void, typename...Args>
+FORCE_INLINE R fastcall(uintptr_t addr, Args...args)
+{
+	using pointer_type = R(__fastcall*)(extract_arg<Args>...);
+
+	auto func = reinterpret_cast<pointer_type>(addr);
+	
+	return func(args...);
+}
+
+template<typename R = void, typename...Args>
+FORCE_INLINE R stdcall(uintptr_t addr, Args...args)
+{
+	using pointer_type = R(__stdcall*)(extract_arg<Args>...);
+
+	auto func = reinterpret_cast<pointer_type>(addr);
+	
+	return func(args...);
+}
+
+template<typename R = void, typename...Args>
+FORCE_INLINE R call(uintptr_t addr, Args...args)
+{
+	using pointer_type = R(*)(extract_arg<Args>...);
+
+	auto func = reinterpret_cast<pointer_type>(addr);
+	
+	return func(args...);
+}
+
+namespace checked {
+template<typename Signature, typename...Args>
+FORCE_INLINE auto thiscall(uintptr_t addr, Args&&...args)
+{
+	using pointer_type = typename Thiscall<Signature>::type;
+
+	auto func = reinterpret_cast<pointer_type>(addr);
+	
+	return func(static_cast<Args&&>(args)...);
+}
+} // namespace checked
 #endif//Gothic_Remake_Externals_H

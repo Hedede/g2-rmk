@@ -277,12 +277,17 @@ struct zCParser {
 		call(this, zName, newOffset);
 	}
 
-	zCPar_Symbol* GetSymbol(std::string const& name)
+	int GetIndex(std::string_view name)
 	{
-		Thiscall<zCPar_Symbol*(zCParser*, zSTRING const&)> call{0x7938D0};
-		return call(this, name);
+		const zSTRING tmpstring = name;
+		return thiscall<int>(0x793470, this, &tmpstring);
 	}
 
+	zCPar_Symbol* GetSymbol(std::string const& name)
+	{
+		const zSTRING tmpstring = name;
+		return thiscall<zCPar_Symbol*>(0x7938D0, this, &tmpstring);
+	}
 
 	zCPar_Symbol* GetSymbol(int index)
 	{
@@ -294,6 +299,13 @@ struct zCParser {
 		Thiscall<int(zCParser*, zSTRING const&, void*)> call{0x792F20};
 		return call( this, name, adr );
 	}
+
+	template<typename...Args>
+	FORCE_INLINE void CallFunc(int index, Args...args)
+	{
+		call(0x7929F0, this, index, args...);
+	}
+
 
 
 	template<typename...Args>
@@ -333,6 +345,11 @@ struct zCParser {
 	bool Error() const
 	{
 		return error;
+	}
+
+	void SetProgressBar(zCViewProgressBar* pb)
+	{
+		progressBar = pb;
 	}
 
 private:

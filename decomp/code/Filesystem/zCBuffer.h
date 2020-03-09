@@ -46,11 +46,17 @@ public:
 	{
 		return hasError;
 	}
+
 private:
 	zTBufferMode mode;
 	char* buffer;
 	int pos;
+	int posBits;
 	int maxSize;
+	int maxSizeBits;
 	int size;
+	int sizeBits;
+	char unk[3];
 	bool hasError;
 };
+// 0x28

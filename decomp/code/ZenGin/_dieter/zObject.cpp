@@ -1,11 +1,27 @@
-#include <zObject.h>
-#include <zClassDef.h>
+#include "ZenGin/_ulf/zEventMan.h"
+#include "ZenGin/_ulf/zWaynet.h"
+#include "ZenGin/_dieter/zWorld.h"
+#include "ZenGin/_dieter/zContainer.h"
 
-zOBJECT_CLASSDEF_ABSTRACT(zCObject, NULL, 0, 0);
+//------------------------------------------------------------------------------
+zCLASS_DEFINITION(zCObjectFactory, NULL, 0); // 104
+zCEventManager* zCObjectFactory::CreateEventManager(zCVob *vob) { return new zCEventManager(vob); }
+zFILE* zCObjectFactory::CreateZFile(zSTRING const& fn) { return zFILE_VDFS(fn); }
+zCSession* zCObjectFactory::CreateSession() { return new zCSession; }
+zCCSManager* zCObjectFactory::CreateCSManager() { return new zCCSManager; }
+zCNetVobControl* zCObjectFactory::CreateNetVobControl(zCVob *vob) { return new zCNetVobControl(vob); }
+zCGameInfo* zCObjectFactory::CreateGameInfo() { return 0; }
+zCPlayerInfo* zCObjectFactory::CreatePlayerInfo() { return 0; }
+zCWorld* zCObjectFactory::CreateWorld() { return new zCWorld; }
+zCWayPoint* zCObjectFactory::CreateWaypoint() { return zCWayPoint; }
+zCWay* zCObjectFactory::CreateWay() { return new zCWay; }
+
+//------------------------------------------------------------------------------
+zCLASS_DEFINITION_ABSTRACT(zCObject, NULL, 0);
 
 zCObject::~zCObject()
 {
-	zASSERT(refCtr<=0, "D: OBJ: tried to delete zCObject with refCtr greater than 0 !"); // 131
+	zASSERT(refCtr<=0,  "D: OBJ: tried to delete zCObject with refCtr greater than 0 !"); // 131
 	zASSERT(refCtr>=-1, "D: OBJ: deleting an already deleted zCObject ?!"); // 132
 
 	refCtr = -999;
@@ -16,6 +32,17 @@ zCObject::_GetClassDef() const
 	return &classDef;
 }
 
+bool zCObject::CheckInheritance(zCClassDef const* sought, zCClassDef const* classDef);
+{
+	while (classDef != nullptr)
+	{
+		if (classDef == sought)
+			return true;
+		classDef = classDef->baseClassDef;
+	}
+	return false;
+}
+
 bool zCObject::CheckInheritance(zSTRING const& class1, zSTRING const& class2)
 {
 	auto classDef1 = zCClassDef::GetClassDef(class1);
@@ -23,11 +50,11 @@ bool zCObject::CheckInheritance(zSTRING const& class1, zSTRING const& class2)
 	return CheckInheritance(classDef1, classDef2);
 }
 
-bool zCObject::CheckInheritance(zCObject const* o1, zCObject const* o2)
+bool zCObject::CheckInheritance(zCObject const* baseObject, zCObject const* subObject)
 {
-	if ( o1 && o2 ) {
-		auto classDef1 = zCClassDef::GetClassDef(class1);
-		auto classDef2 = zCClassDef::GetClassDef(class2);
+	if ( baseObject && subObject ) {
+		auto classDef1 = zCClassDef::GetClassDef(baseObject);
+		auto classDef2 = zCClassDef::GetClassDef(subObject);
 		return CheckInheritance(classDef1, classDef2);
 	}
 	return 0;
@@ -209,6 +236,18 @@ zCClassDef::zCClassDef(
 	}
 
 	classDefList->Insert(this);
+}
+
+zCClassDef::~zCClassDef()
+{
+	ReportLeaks();
+	delete[] hashTable;
+
+	classDefList.Remove(this);
+	if (classDefList.IsEmpty()) {
+		delete classDefList;
+		delete classDefSearchDummy;
+	}
 }
 
 void zCClassDef::Init()

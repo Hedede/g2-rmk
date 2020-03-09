@@ -1,8 +1,8 @@
-#include "../ZenGin/_dieter/zZone.h"
-#include "../ZenGin/_dieter/zWorld.h"
-#include "../ZenGin/_ulf/zWaynet.h"
-#include "../ZenGin/_dieter/zContainer.h"
-#include "../ZenGin/_dieter/zFile3d.h"
+#include "ZenGin/_dieter/zZone.h"
+#include "ZenGin/_dieter/zWorld.h"
+#include "ZenGin/_ulf/zWaynet.h"
+#include "ZenGin/_dieter/zContainer.h"
+#include "ZenGin/_dieter/zFile3d.h"
 
 zCWorld::zCWorld()
 	: zCObject(), activeVobList(128)

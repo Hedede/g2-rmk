@@ -5,8 +5,33 @@ enum zTArchiveMode {
 	zARC_MODE_BIN_SAFE,
 };
 
+class zCArchiverFactory {
+private:
+	static int EndOfArchive(zCBuffer *buffer, zFILE *file);
+	void ReadLine(zSTRING& line, zCBuffer *buffer, zFILE *file);
+	void ReadLineArg(zSTRING& line, zSTRING& arg, zCBuffer *buffer, zFILE *file);
+	void ReadHeader(int arcFlags, zCBuffer *buffer, zFILE *file, zCArchiver*& arc, zTArchiveMode& arcMode, int& inSaveGame);
+
+	static zCArchiver* CreateArchiverFromMode(zTArchiveMode mode);
+
+	void WriteLine(const zSTRING& line, zCBuffer *buffer, zFILE *file);
+	void WriteLine(const char* line, zCBuffer *buffer, zFILE *file);
+	void WriteHeader(zCArchiver *arc, zTArchiveMode arcMode, int saveGame, char arcFlags, zCBuffer *buffer, zFILE *file);
+
+public:
+	virtual zCArchiver* CreateArchiverRead(zCBuffer* bufffer, int arcFlags);
+	virtual zCArchiver* CreateArchiverRead(zFILE* fileRead, int arcFlags);
+	virtual zCArchiver* CreateArchiverRead(zSTRING const& fileNameRead,int arcFlags);
+
+	virtual zCArchiver* CreateArchiverWrite(zCBuffer*, zTArchiveMode arcMode, int saveGame, int arcFlags);
+	virtual zCArchiver* CreateArchiverWrite(zFILE* fileWrite, zTArchiveMode arcMode, int saveGame, int arcFlags);
+	virtual zCArchiver* CreateArchiverWrite(zTArchiveMode arcMode, int saveGame, int arcFlags);
+	virtual zCArchiver* CreateArchiverWrite(zSTRING const& fileNameWrite, zTArchiveMode arcMode, int saveGame, int arcFlags);
+
+};
+
 class zCArchiver : public zCObject {
-	Z_OBJECT(zCArchiver);
+	zCLASS_DECLARATION(zCArchiver)
 public:
 	struct zTChunkRecord {
 		zTChunkRecord() = default;

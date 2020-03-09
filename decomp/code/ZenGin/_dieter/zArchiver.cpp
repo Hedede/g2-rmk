@@ -1,29 +1,7 @@
-class zCArchiverFactory {
-private:
-	static int EndOfArchive(zCBuffer *buffer, zFILE *file);
-	void ReadLine(zSTRING& line, zCBuffer *buffer, zFILE *file);
-	void ReadLineArg(zSTRING& line, zSTRING& arg, zCBuffer *buffer, zFILE *file);
-	void ReadHeader(int arcFlags, zCBuffer *buffer, zFILE *file, zCArchiver*& arc, zTArchiveMode& arcMode, int& inSaveGame);
+#include "ZenGin/_dieter/zArchiverGeneric.h"
+#include "ZenGin/_bert/zstring.h"
+#include "ZenGin/_dieter/zArchiver2.h"
 
-	static zCArchiver* CreateArchiverFromMode(zTArchiveMode mode);
-
-	void WriteLine(const zSTRING& line, zCBuffer *buffer, zFILE *file);
-	void WriteLine(const char* line, zCBuffer *buffer, zFILE *file);
-	void WriteHeader(zCArchiver *arc, zTArchiveMode arcMode, int saveGame, char arcFlags, zCBuffer *buffer, zFILE *file);
-
-public:
-	virtual zCArchiver* CreateArchiverRead(zCBuffer* bufffer, int arcFlags);
-	virtual zCArchiver* CreateArchiverRead(zFILE* fileRead, int arcFlags);
-	virtual zCArchiver* CreateArchiverRead(zSTRING const& fileNameRead,int arcFlags);
-
-	virtual zCArchiver* CreateArchiverWrite(zCBuffer*, zTArchiveMode arcMode, int saveGame, int arcFlags);
-	virtual zCArchiver* CreateArchiverWrite(zFILE* fileWrite, zTArchiveMode arcMode, int saveGame, int arcFlags);
-	virtual zCArchiver* CreateArchiverWrite(zTArchiveMode arcMode, int saveGame, int arcFlags);
-	virtual zCArchiver* CreateArchiverWrite(zSTRING const& fileNameWrite, zTArchiveMode arcMode, int saveGame, int arcFlags);
-
-};
-
-// _dieter/zArchiver.cpp
 zSTRING s_arcModeString[4] = {"BINARY", "ASCII", "ASCII_PROPS", "BIN_SAFE"};
 zSTRING s_arcHeaderTag = "ZenGin Archive";
 
@@ -338,3 +316,4 @@ zCArchiver* zCArchiverFactory::CreateArchiverWrite(zFILE *fileWrite, zTArchiveMo
 	arc->OpenWriteFile(arc, fileWrite, arcMode, saveGame, arcFlags, 1);
 	return are;
 }
+

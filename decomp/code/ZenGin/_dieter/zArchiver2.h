@@ -1,5 +1,20 @@
+enum zTArchiveTypeID {
+	zARC2_ID_STRING = 1,
+	zARC2_ID_INTEGER,
+	zARC2_ID_FLOAT,
+	zARC2_ID_BYTE,
+	zARC2_ID_WORD,
+	zARC2_ID_int,
+	zARC2_ID_VEC3,
+	zARC2_ID_COLOR,
+	zARC2_ID_RAW,
+	zARC2_ID_RAWFLOAT = 16,
+	zARC2_ID_ENUM,
+	zARC2_ID_HASH
+};
+
 class zCArchiverBinSafe : public zCArchiver {
-	Z_OBJECT(zCArchiverBinSafe);
+	zCLASS_DECLARATION(zCArchiverBinSafe);
 public:
 	virtual ~zCArchiverBinSafe();
 	virtual void WriteInt(char const *,int);
@@ -104,18 +119,5 @@ public:
 	virtual void RestoreSeek(ulong);
 	virtual void DeleteBuffer();
 };
-
-
-zCObject* zCArchiverBinSafe::CreateObject(zSTRING const& objName)
-{
-	zCClassDef* classdef = GetClassDefByString(objname);
-	if (!classdef)
-		return nullptr;
-
-	zCObject* newinst = classdef->CreateNewInstance();
-	if ( !newinst )
-		zFAULT("D: zArchiver(zCArchiverBinSafe::CreateObject): could not create object for: " + objName);
-	return newinst;
-}
 
 

@@ -122,7 +122,7 @@ void InitWin32Stuff(char const* cmdLine)
 			nWidth, nHeight,
 	                0, 0, (HINSTANCE)hInstApp, 0);
 
-	if (hInstApp)
+	if (hWndApp)
 		Log("Win32", "Window created: ", uintptr_t(hWndApp));
 	else
 		Error("Win32", "Could not create window: ", GetLastError());

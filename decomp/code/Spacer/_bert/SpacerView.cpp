@@ -1,4 +1,3 @@
-// P:\\dev\\g2addon\\release\\Spacer\\_bert\\SpacerView.cpp
 void CSpacerView::VobApplyPhysics(zCVob *vob, zVEC3 vec)
 {
 	doc->SetDirty(true);

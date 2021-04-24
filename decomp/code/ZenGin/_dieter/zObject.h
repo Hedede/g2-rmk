@@ -80,7 +80,8 @@ public:
 
 	void Init();
 
-	static zCClassDef* GetClassDef()
+	static zCClassDef* GetClassDef(zSTRING const& className);
+	static zCClassDef* GetClassDefTypeInsensitive(zSTRING const& className);
 	{
 		classDefSearchDummy->SetClassName(className);
 
@@ -162,8 +163,8 @@ private:
 	zSTRING scriptClassName;
 	zCClassDef*  baseClassDef;
 
-	zCObject* ( *createNewInstance) (void);
-	zCObject* ( *createNewInstanceBackup) (void);
+	zCObject* (*createNewInstance) (void);
+	zCObject* (*createNewInstanceBackup) (void);
 
 	uint32_t   classFlags = 0;
 	uint32_t   classSize  = 0;

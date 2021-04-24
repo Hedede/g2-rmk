@@ -71,10 +71,10 @@ zCObject* zCObject::CreateNewInstance(const zSTRING& className)
 
 zCObject* zCObject::CreateCopy()
 {
-	zCObject* copy = GetClassDef()->CreateNewInstance();
+	zCObject* copy = _GetClassDef()->CreateNewInstance();
 	if ( copy )
 	{
-		zCArchiver* arcwrite = zarcFactory.CreateArchiverWrite(0, 0, 1, 0);
+		zCArchiver* arcwrite = zarcFactory.CreateArchiverWrite(nullptr, 0, 1, 0);
 		arcwrite->WriteObject(this);
 		zCBuffer* buffer = arcwrite->GetBuffer();
 		if ( buffer )
@@ -297,6 +297,32 @@ void zCClassDef::EndStartup()
 	zCClassDef::startupFinished = 1;
 }
 
+zCClassDef* zCClassDef::GetClassDef(zSTRING const& className)
+{
+	classDefSearchDummy->SetClassName(className);
+
+	auto index = classDefList.Search(zCClassDef::classDefSearchDummy);
+	if (index < 0)
+		return nullptr;
+	return classDefList[index];
+}
+
+zCClassDef* zCClassDef::GetClassDefTypeInsensitive(zSTRING const& className);
+{
+	zSTRING name = className;
+	name.Upper();
+
+	for (auto* classDef : classDefList)
+	{
+		zSTRING name2 = classDef->GetClassName();
+		name2.Upper();
+		if (name == name2)
+			return classDef;
+	}
+
+	return nullptr;
+}
+
 
 zCObject* zCClassDef::CreateNewInstance();
 {
@@ -308,22 +334,17 @@ zCObject* zCClassDef::CreateNewInstance();
 }
 
 
-void zCClassDef::ObjectCreated(zCObject *obj, zCClassDef *def)
+void zCClassDef::ObjectCreated(zCObject *object, zCClassDef *objClassDef)
 {
-	++def->numCtorCalled;
-	++def->numLiving;
-	if ( def->classFlags & zCLASS_FLAG_SHARED_OBJECTS )
+	++objClassDef->numCtorCalled;
+	++objClassDef->numLiving;
+	if ( objClassDef->classFlags & zCLASS_FLAG_SHARED_OBJECTS )
 	{
-		objectList.Insert(obj);
+		objectList.Insert(object);
 	}
 
-	if ( def == &zCObject::classDef )
+	if ( objClassDef == &zCObject::classDef )
 	{
 		zFAULT("D: created instance of abstract 'zCObject' ?! => missing zCLASS_DECLARATION ?"); // 640
 	}
 }
-
-
-
-#include <zObjectFactory.h>
-zOBJECT_CLASSDEF(zCObjectFactory, zCObject, 0, 0);

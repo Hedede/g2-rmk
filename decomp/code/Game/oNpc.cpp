@@ -1235,13 +1235,6 @@ int oCNpc::FreeLineOfSight(zCVob* vob)
 	return FreeLineOfSight(v3, vob);
 }
 
-void oCNpc::ClearVobList()
-{
-	for ( auto vob : vobList )
-		Release(vob);
-	vobList.DeleteList();
-}
-
 void oCNpc::ClearEM()
 {
 	GetEM()->Clear();
@@ -1303,17 +1296,6 @@ void oCNpc::SetAsPlayer()
 	SetWalkStopChasm(0);
 }
 
-void oCNpc::CreateVobList(zCArray<zCVob*>& vobs, float dist)
-{
-	if ( homeWorld ) {
-		auto pos = GetPositionWorld();
-		zTBBox3D bbox {
-			pos.x - dist, pos.y - dist, pos.z - dist,
-			pos.x + dist, pos.y + dist, pos.z + dist
-		};
-		homeWorld->bspTree.bspRoot->CollectVobsInBBox3D(vobs, bbox);
-	}
-}
 
 zCVobSpot* oCNpc::FindSpot(zSTRING const& fpName, int strict, float dist)
 {

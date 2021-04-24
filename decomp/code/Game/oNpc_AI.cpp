@@ -37,15 +37,3 @@ void oCNpc::DeleteHumanAI()
 }
 
 
-bool oCNpc::IsMoreImportant(zCVob* vob1, zCVob* vob2)
-{
-	if (!vob1)
-		return 0;
-	if (!vob2)
-		return 1;
-
-	if (GetDistanceToVob2(vob2) > GetDistanceToVob2(vob1))
-		return 1;
-
-	return 0;
-}

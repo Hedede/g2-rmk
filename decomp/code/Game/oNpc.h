@@ -120,15 +120,11 @@ public:
 		return slot && slot->object == nullptr;
 	}
 
-	static void ReleaseStatics()
-	{
-		oCNpc::ExitFightAI();
-	}
+	static void InitStatics();
+	static void ReleaseStatics();
 
-	static void EnableDamageDebugOutput(zBOOL b)
-	{
-		oCNpc::isEnabledDamageDebug = b;
-	}
+	static void EnableDamageDebugOutput(zBOOL b);
+	void NotifyDamageToSpy(zSTRING& str);
 
 	static bool HasFlag(unsigned flag, unsigned value)
 	{
@@ -205,8 +201,10 @@ public:
 		int vv;
 
 		struct {
-			unsigned unk1 : 1;
-			unsigned unk2 : 2;
+			unsigned once          : 1;
+			unsigned finished      : 1;
+			unsigned isDead        : 1;
+			unsigned isUnconscious : 1;
 		} flags;
 		int rest[2];
 
@@ -1163,7 +1161,7 @@ public:
 
 	bool IsUnconscious() const
 	{
-		return states.IsInState(ZS_Unconscious); // -4
+		return states.IsInState(NPC_AISTATE_UNCONSCIOUS); // -4
 	}
 
 	bool IsFadingAway() const

@@ -1,6 +1,7 @@
 class zCPolyStrip : zCVisual {
 	Z_OBJECT(zCPolyStrip);
 public:
+	zCPolyStrip();
 	void ~zCPolyStrip()
 	{
 		FreeResources();
@@ -9,7 +10,10 @@ public:
 
 	virtual void Render(zTRenderContext&);
 	bool IsBBox3DLocal() override { return flags.isBBox3DLocal; };
+
 	zTBBox3D GetBBox3D() override;
+	void CalcBBox3d();
+
 	zSTRING GetVisualName() override { return ""; }
 	void SetVisualUsedBy(zCVob* vob) override
 	{
@@ -21,20 +25,20 @@ public:
 	virtual void FreeResources();
 
 private:
-	zCMaterial *mat;
+	zCMaterial* material = nullptr;
 
-	zCVertex *verts;
-	zCPolygon *polys;
+	zCVertex*  verts = nullptr;
+	zCPolygon* polys = nullptr;
 
-	int numMaxSegments;
-	int numMaxVerts;
+	int numPoly = 0;
+	int numVert = 0;
 
 	zVEC3 *segmentCenter;
 	float *segmentAlpha;
 
 	float width;
 
-	zCVob *owner;
+	zCVob* connectedVob;
 
 	zTBBox3D bbox;
 
@@ -49,10 +53,11 @@ private:
 	float lastRemaider;
 	float firstRemainder;
 
-	float fadeSpeed;
-	int unk3;
+	float alphaFadeSpeed;
+	float newAlphaFadeSpeed;
 
 	float __defaultAlpha;
+
 	int unk5;
 	zVEC3 unk4;
 
@@ -63,20 +68,49 @@ private:
 
 //-------------------------------------------------------------------------------
 // _Dieter/zPolyStrip.cpp
+zCPolyStrip::zCPolyStrip()
+{
+}
+
 zTBBox3D zCPolyStrip::GetBBox3D()
 {
 	if ( numSegments <= 0 ) {
-		zVEC3 mins, maxs;
-		if ( owner ) {
-			zmins = owner.GetPositionWorld();
-			zmaxs = mins + 1.0;
+		if ( connectedVob ) {
+			bbox.mins = owner.GetPositionWorld();
+			bbox.maxs = mins + 1.0;
 		} else {
-			mins = {0,0,0};
-			maxs = {1,1,1};
+			bbox.mins = {0 ,0, 0};
+			bbox.maxs = {1, 1, 1};
 		}
-		return {mins, maxs};
 	}
 	return bbox;
+}
+
+void zCPolyStrip::CalcBBox3d()
+{
+	if (numSegments <= 0)
+	{
+		bbox.maxs = {0, 0, 0};
+		bbox.mins = {0, 0, 0};
+	}
+	else
+	{
+		bbox.Init();
+
+		int i = firstSeg;
+		for ( int num = numSegments - 1; num > 0; --i) {
+			bbox.addPoint( segmentCenter[i++] );
+			if ( i >= numPoly )
+				i = 0;
+		}
+	}
+	if (connectedVob)
+	{
+		connectedVob->BeginMovement();
+		connectedVob->SetPositionWorld(bbox.GetCenter());
+		connectedVob->UpdateVisualDependencies(1);
+		connectedVob->EndMovement(1);
+	}
 }
 
 void zCPolyStrip::UpdateSegment(int segNr, const zVEC3& posUp, const zVEC3& posDown, const zVEC3& center)

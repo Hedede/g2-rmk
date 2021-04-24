@@ -59,19 +59,21 @@ std::string handle_set_var(std::vector<string_view> const& args)
 	}
 	else if (sym->type == zPAR_TYPE_INT)
 	{
-		int i = parse(value, 0);
+		int v = parse(value, 0);
 
-		sym->SetValue(i);
+		for (int i = 0; i < sym->ele; ++i)
+			sym->SetValue(v, i);
 
 		result += varname;
 		result += " set to ";
-		result += to_string(i);
+		result += to_string(v);
 	}
 	else if (sym->type == zPAR_TYPE_FLOAT)
 	{
 		float f = parse(value, 0.0f);
 
-		sym->SetValue(f);
+		for (int i = 0; i < sym->ele; ++i)
+			sym->SetValue(f, i);
 
 		result += varname;
 		result += " set to ";
@@ -126,15 +128,17 @@ std::string handle_get_var(std::vector<string_view> const& args)
 		result += ": int";
 		if (sym->ele > 1)
 		{
-			result += '[';
+			result += '(';
 			result += to_string(sym->ele);
-			result += ']';
+			result += ") = ";
 		}
 		else
 		{
 			result += " = ";
-			result += to_string(sym->GetValue<int>());
 		}
+
+		result += sym->DebugPrint();
+
 	}
 	else if (sym->type == zPAR_TYPE_FLOAT)
 	{
@@ -142,15 +146,16 @@ std::string handle_get_var(std::vector<string_view> const& args)
 		result += ": float";
 		if (sym->ele > 1)
 		{
-			result += '[';
+			result += '(';
 			result += to_string(sym->ele);
-			result += ']';
+			result += ") = ";
 		}
 		else
 		{
 			result += " = ";
-			result += to_string(sym->GetValue<float>());
 		}
+
+		result += sym->DebugPrint();
 	}
 	else if (sym->type == zPAR_TYPE_STRING)
 	{
@@ -160,13 +165,14 @@ std::string handle_get_var(std::vector<string_view> const& args)
 		{
 			result += '[';
 			result += to_string(sym->ele);
-			result += ']';
+			result += ") = ";
 		}
 		else
 		{
 			result += " = ";
-			result += to_string(sym->GetValue<std::string>());
 		}
+
+		result += sym->DebugPrint();
 	}
 	else if (sym->type == zPAR_TYPE_FUNC)
 	{

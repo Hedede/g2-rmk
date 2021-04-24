@@ -2,12 +2,52 @@
 #include <Logging/Log.h>
 
 #include <Hook/size_checker.h>
-
+#include <aw/utility/to_string.h>
 
 namespace {
 	size_checker<zCParser, 0x21C4>  sc_zparsize;
 	size_checker<zCPar_Symbol, 0x3C>  sc_zsymsize;
 }
+
+std::string zCPar_Symbol::DebugPrintValue(int index) const
+{
+	switch (type) {
+		case zPAR_TYPE_FLOAT:
+			return aw::to_string(GetValue<float>(index));
+
+		case zPAR_TYPE_INT:
+			return aw::to_string(GetValue<int>(index));
+
+		case zPAR_TYPE_STRING:
+		{
+			std::string result{ '"' };
+			result += aw::to_string(GetValue<std::string>(index));
+			result += '"';
+			return result;
+		}
+	}
+	return {};
+}
+
+std::string zCPar_Symbol::DebugPrint() const
+{
+	std::string result;
+
+	if (ele > 1) result += "( ";
+
+	result += DebugPrintValue(0);
+
+	for (int i = 1; i < ele; ++i)
+	{
+		result += ", ";
+		result += DebugPrintValue(i);
+	}
+
+	if (ele > 1) result += " )";
+
+	return result;
+}
+
 
 void zCParser::DefineExternal(std::string const& name, int (*func)(), zPAR_TYPE ret, std::vector<zPAR_TYPE> args)
 {

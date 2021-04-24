@@ -189,7 +189,7 @@ bool oCWorld::LoadWorld(std::string_view fileName, zTWorldLoadMode mode)
 
 	if ( mode != zWLD_LOAD_GAME_SAVED_DYN ) {
 		worldFilename = fname;
-		worldName = fpath.generic_u8string();
+		worldName = fpath.stem().generic_u8string();
 	}
 
 	if ( fpath.extension() == ".3DS" )

@@ -567,7 +567,7 @@ void oCGame::LoadWorldStartup(std::string_view levelpath)
 
 void oCGame::CallScriptStartup()
 {
-	g2::Fatal("Game", "Startup ", std::string_view(world->worldName));
+	g2::Log("Game", "Startup ", std::string_view(world->worldName));
 
 	if ( !scriptStartup )
 		return;
@@ -578,23 +578,27 @@ void oCGame::CallScriptStartup()
 	auto startup_world  = zparser.GetIndex("STARTUP_" + worldName);
 	
 	if (startup_global <= 0)
-		g2::Fatal("U: GAM:", "Global Startup Function not found.");
+		g2::Fatal("U: GAM", "Global Startup Function not found.");
 
 	inScriptStartup = 1;
 
 	zparser.CallFunc(startup_global);
 
 	if ( startup_world > 0 ) {
-		g2::Log("U: GAM:", "Calling Startup-Script ...");
+		g2::Log("U: GAM", "Calling Startup-Script ...");
 
 		zparser.SetProgressBar(progressBar);
 		zparser.CallFunc(startup_world);
 		zparser.SetProgressBar(0);
 
-		g2::Log("U: GAM:", "Startup-Script finished.");
+		g2::Log("U: GAM", "Startup-Script finished.");
+	} else {
+		g2::Warning("Game", "STARTUP_", worldName, " not found");
 	}
 
 	inScriptStartup = 0;
+
+	g2::Log("Game", "Startup end");
 }
 
 void oCGame::CallScriptInit()

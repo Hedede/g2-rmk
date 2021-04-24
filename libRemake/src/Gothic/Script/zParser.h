@@ -38,7 +38,7 @@ inline zPAR_FLAG operator|(zPAR_FLAG a, zPAR_FLAG b)
 struct zCPar_File;
 struct zCPar_Symbol {
 	template<typename T>
-	T GetValue(int index = 0);
+	T GetValue(int index = 0) const;
 
 	template<typename T>
 	void SetValue(T value, int index = 0);
@@ -78,6 +78,9 @@ struct zCPar_Symbol {
 		this->parent = parent;
 	}
 
+	std::string DebugPrintValue(int index) const;
+	std::string DebugPrint() const;
+
 	zSTRING name;
 
 	zCPar_Symbol *next;
@@ -108,7 +111,7 @@ struct zCPar_Symbol {
 };
 
 template<>
-inline float zCPar_Symbol::GetValue(int index)
+inline float zCPar_Symbol::GetValue(int index) const
 {
 	if (ele <= 1)
 		return data_float;
@@ -118,7 +121,7 @@ inline float zCPar_Symbol::GetValue(int index)
 }
 
 template<>
-inline int zCPar_Symbol::GetValue(int index)
+inline int zCPar_Symbol::GetValue(int index) const
 {
 	if (ele <= 1)
 		return data_int;
@@ -128,7 +131,7 @@ inline int zCPar_Symbol::GetValue(int index)
 }
 
 template<>
-inline zSTRING zCPar_Symbol::GetValue(int index)
+inline zSTRING zCPar_Symbol::GetValue(int index) const
 {
 	if (index >= ele)
 		return "";
@@ -136,7 +139,7 @@ inline zSTRING zCPar_Symbol::GetValue(int index)
 }
 
 template<>
-inline std::string zCPar_Symbol::GetValue(int index)
+inline std::string zCPar_Symbol::GetValue(int index) const
 {
 	if (index >= ele)
 		return {};

@@ -56,7 +56,7 @@ CXX = i686-w64-mingw32-g++
 endif
 
 
-cxx_flags = -std=c++1z -g -fno-rtti
+cxx_flags = -std=c++20 -g -fno-rtti
 pp_flags  = -DNOMINMAX -DAW_STATIC_BUILD
 
 #optimization

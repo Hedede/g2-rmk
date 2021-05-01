@@ -13,6 +13,7 @@ struct zCArray {
 		numInArray = num;
 		for (int i = 0; i < num; ++i )
 			array[i] = other[i];
+		return *this;
 	}
 
 	void DeleteList()

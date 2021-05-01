@@ -22,7 +22,7 @@ struct TypeInfo {
 	{
 		g2::Log("zCSndFX_OpenAL", "initializing vtable");
 		vt.LoadResourceData =
-		[] (zCSoundFX* sfx) __thiscall -> void
+		[] (zCSoundFX* sfx) __thiscall// -> void
 		{
 			reinterpret_cast<zCSndFX_OpenAL*>(sfx)->LoadResourceData();
 		};

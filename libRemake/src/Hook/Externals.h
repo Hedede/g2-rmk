@@ -55,7 +55,7 @@ struct Cdecl<R(Args...)> {
 
 	R operator()(Args... args)
 	{
-		(func<R(__cdecl*)(Args...)>(addr))(args...);
+		return (func<R(__cdecl*)(Args...)>(addr))(args...);
 	}
 };
 
@@ -74,7 +74,7 @@ struct Stdcall<R(Args...)> {
 
 	R operator()(Args... args)
 	{
-		(func<R(__stdcall*)(Args...)>(addr))(args...);
+		return (func<R(__stdcall*)(Args...)>(addr))(args...);
 	}
 
 };
@@ -98,7 +98,7 @@ struct Thiscall<R(Args...)> {
 
 	R operator()(Args... args)
 	{
-		(func<R(__thiscall*)(Args...)>(addr))(args...);
+		return (func<R(__thiscall*)(Args...)>(addr))(args...);
 	}
 
 };
@@ -118,7 +118,7 @@ struct Fastcall<R(Args...)> {
 
 	R operator()(Args... args)
 	{
-		(func<R(__fastcall*)(Args...)>(addr))(args...);
+		return (func<R(__fastcall*)(Args...)>(addr))(args...);
 	}
 
 };

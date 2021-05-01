@@ -10,6 +10,7 @@ struct zVEC3 {
 		z += other.z;
 		x += other.x;
 		y += other.y;
+		return *this;
 	}
 	float Length()
 	{

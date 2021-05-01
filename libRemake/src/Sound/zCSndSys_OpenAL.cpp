@@ -49,19 +49,19 @@ struct TypeInfo {
 	{
 		g2::Log("OpenAL", "initializing vtable");
 		vt.LoadSoundFX =
-		[] (zCSoundSystem* ss, zSTRING const& name) __thiscall -> zCSoundFX*
+		[] (zCSoundSystem* ss, zSTRING const& name) __thiscall// -> zCSoundFX*
 		{
 			return oal(ss)->LoadSoundFX(std::string(name));
 		};
 
 		vt.LoadSoundFXScript =
-		[] (zCSoundSystem* ss, zSTRING const& name) __thiscall -> zCSoundFX*
+		[] (zCSoundSystem* ss, zSTRING const& name) __thiscall// -> zCSoundFX*
 		{
 			return oal(ss)->LoadSoundFXScript(std::string(name));
 		};
 
 		vt.PlaySound2 =
-		[] (zCSoundSystem* ss, zCSoundFX* sfx, int slot) __thiscall -> zTSndHandle
+		[] (zCSoundSystem* ss, zCSoundFX* sfx, int slot) __thiscall// -> zTSndHandle
 		{
 			if (sfx)
 				return oal(ss)->PlaySound(*sfx, slot);
@@ -70,7 +70,7 @@ struct TypeInfo {
 		};
 
 		vt.PlaySound3D2 =
-		[] (zCSoundSystem* ss, zCSoundFX* sfx, zCVob* source, int slot, zTSound3DParams* params) __thiscall -> zTSndHandle
+		[] (zCSoundSystem* ss, zCSoundFX* sfx, zCVob* source, int slot, zTSound3DParams* params) __thiscall// -> zTSndHandle
 		{
 			return oal(ss)->PlaySound3D(sfx, source, slot, params);
 		};

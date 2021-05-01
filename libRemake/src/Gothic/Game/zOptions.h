@@ -124,7 +124,7 @@ struct zCOptions {
 
 	bool WriteInt(std::string const& sec, std::string const& opt, int value, bool temp)
 	{
-		WriteString(sec, opt, std::to_string(value), temp);
+		return WriteString(sec, opt, std::to_string(value), temp);
 	}
 
 	bool WriteReal(std::string const& sec, std::string const& opt, float value, bool temp)
@@ -135,7 +135,7 @@ struct zCOptions {
 
 	bool WriteBool(std::string const& sec, std::string const& opt, bool value, bool temp)
 	{
-		WriteString(sec, opt, value ? "1" : "0", temp);
+		return WriteString(sec, opt, value ? "1" : "0", temp);
 	}
 
 	bool Load(std::string_view filename);

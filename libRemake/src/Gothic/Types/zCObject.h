@@ -39,7 +39,7 @@ struct zCObject {
 	int SetObjectName(std::string const& name)
 	{
 		Thiscall<int(zCObject*, zSTRING const&)> call{0x5A9CE0};
-		call( this, zSTRING{name} );
+		return call( this, zSTRING{name} );
 	}
 
 	void* _vtab;

@@ -149,7 +149,7 @@ struct zCWorld : zCObject {
 
 	zCVob* SearchVobByName(std::string const& name)
 	{
-		reinterpret_cast<zCWorld_vt*>(_vtab)->SearchVobByName(this, name);
+		return reinterpret_cast<zCWorld_vt*>(_vtab)->SearchVobByName(this, name);
 	}
 
 	void DisposeWorld()

@@ -134,7 +134,7 @@ struct zCRenderer {
 		vtab->Vid_SetScreenMode(this, zTRnd_ScreenMode(mode));
 	}
 
-	int Vid_SetMode(int newXDim, int newYDim, int newBpp, void *&hwnd)
+	void Vid_SetMode(int newXDim, int newYDim, int newBpp, void *&hwnd)
 	{
 		Thiscall<void(zCRenderer*,int,int,int,void*&)> func{0x5D3C20};
 		func(this,newXDim, newYDim, newBpp, hwnd);

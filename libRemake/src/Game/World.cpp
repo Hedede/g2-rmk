@@ -173,9 +173,52 @@ void oCWorld::Render(zCCamera *cam)
 #include <aw/utility/string/case.h>
 bool zCWorld::LoadWorld(std::string_view fileName, zTWorldLoadMode mode)
 {
-	zSTRING tmpstr = fileName;
-	return thiscall<int>(0x6270D0, this, &tmpstr, mode);
-	//return reinterpret_cast<zCWorld_vt*>(_vtab)->LoadWorld(this, levelpath, loadMode);
+	g2::Log("D: WORLD", "Loading WorldFile.. ", fileName);
+
+	zCWorld::s_worldLoadMode = mode;
+
+	DisposeVobs(nullptr);
+
+	zCVob::ResetIDCtr();
+
+	if (aw::in(mode,0,2,3,4))
+		DisposeStaticWorld();
+
+	zvertexBufferMan.StartChangeWorld();
+
+	zoptions->ChangeDir(DIR_WORLD);
+
+	g2::Log("D: WORLD", "Opening ZEN archive...");
+	auto arc = zarcFactory.CreateArchiverRead(fileName, 0);
+	bool ret = arc != nullptr;
+
+	if ( arc ) {
+		g2::Log("D: WORLD", "Reading world...");
+		arc->ReadObject(this);
+		g2::Log("D: WORLD", "Closing archive");
+		arc->Close();
+		arc->Release();
+	}
+
+	zvertexBufferMan.EndChangeWorld();
+
+	zCWorld::s_bFadeOutFarVerts = zoptions->ReadBool("ENGINE", "zFarClipAlphaFade", 1);
+
+	if (compiled && bspTree.bspTreeMode == 0)
+		zCWorld::s_bFadeOutFarVerts = 0;
+
+	g2::Log("D: WORLD", " ", fileName);
+
+	if ( ret ) {
+		fs::path path(fileName);
+		auto filename = path.stem().string();
+
+		levelName = aw::string::toupper(filename);
+
+		bspTree.renderedFirstTime = 1;
+	}
+
+	return ret;
 }
 
 bool oCWorld::LoadWorld(std::string_view fileName, zTWorldLoadMode mode)

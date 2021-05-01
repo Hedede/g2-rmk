@@ -101,6 +101,11 @@ struct zCVob : zCObject {
 		thiscall(0x5FFDD0, this, &tmpstr);
 	}
 
+	static void ResetIDCtr()
+	{
+		call(0x5FE8C0);
+	}
+
 	zCTree<zCVob>* globalVobTreeNode;
 
 	int      lastTimeDrawn;

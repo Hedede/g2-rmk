@@ -130,6 +130,9 @@ struct zCWorld_vt
 };
 
 struct zCWorld : zCObject {
+	static zTWorldLoadMode& s_worldLoadMode;
+	static zBOOL& s_bFadeOutFarVerts;
+
 	zCSkyControler* GetActiveSkyControler()
 	{
 		return activeSkyControler;
@@ -156,6 +159,9 @@ struct zCWorld : zCObject {
 	{
 		reinterpret_cast<zCWorld_vt*>(_vtab)->DisposeWorld(this);
 	}
+
+	void DisposeStaticWorld();
+	void DisposeVobs(zCTree<zCVob>* root);
 
 	bool LoadWorld(std::string_view levelpath, zTWorldLoadMode loadMode);
 

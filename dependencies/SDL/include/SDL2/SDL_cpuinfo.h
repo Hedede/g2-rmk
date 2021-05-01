@@ -41,7 +41,7 @@
 #define __SSE__
 #define __SSE2__
 #elif defined(__MINGW64_VERSION_MAJOR)
-#include <intrin.h>
+//#include <intrin.h>
 #else
 #ifdef __ALTIVEC__
 #if HAVE_ALTIVEC_H && !defined(__APPLE_ALTIVEC__)

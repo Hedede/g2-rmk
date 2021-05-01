@@ -88,7 +88,7 @@ hook: $(objects)
 	cp -f build/testlib.dll $(gothic_path)/System
 
 rebuild:
-	touch $(sources)
+	touch $(sources) $(optimized)
 
 linecount:
 	wc -l $(sources)

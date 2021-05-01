@@ -46,37 +46,3 @@ int oCNpc::GetWeaponDamage(oCItem* item)
 	return result;
 }
 
-// appears to be unused
-void oCNpc::Burn(int damage, float timems)
-{
-	zCParticleFX *pfx = nullptr;
-	if ( damage > 0 && !fireVob )
-	{
-		pfx = new zCParticleFX;
-
-		zCVob* vob = new zCVob;
-		vob->SetVobName("Particle_Test_Vob");
-		vob->SetVisual(pfx);
-		pfx->SetAndStartEmitter("FIRE", 0);
-		pfx->flags.2 = true;
-
-		vob->SetCollDetStat(false);
-		vob->SetCollDetDyn(false);
-
-		vob->SetPositionWorld(this->GetPositionWorld());
-		homeWorld->AddVobAsChild(vob, this);
-		vob->SetPositionWorld(this->GetPositionWorld());
-
-		fireVob = vob;
-
-		pfx->Release();
-	}
-
-	if ( damage > fireDamage )
-	{
-		fireDamageTimer = 0;
-		fireDamage = damage;
-	}
-
-	SetBodyStateModifier(BS_MOD_BURNING);
-}

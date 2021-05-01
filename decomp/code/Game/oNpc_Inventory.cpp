@@ -204,34 +204,6 @@ oCItem* oCNpc::GetWeapon()
 	return nullptr;
 }
 
-oCItem* oCNpc::HasEquippedStolenItem(oCNpc *owner)
-{
-	if (auto item = GetWeapon()) // was inlined
-	{
-		int ownerInst = owner->GetInstance();
-		if ( item->IsOwned(ownerInst, 0) )
-			return item;
-	}
-
-	// doesn't make a whole lot of sense
-	//
-	// GetInvSlot takes a name, not a number,
-	// looks like developer got burned by his own implicit string conversions
-	// (either that, or GetInvSlot changed between versions)
-	for (int i = 0; i < invSlots.GetSize(); ++i)
-	{
-		auto invSlot = GetInvSlot(i); // was inlined
-		if (!invSlot)
-			continue;
-		if ( auto item = zDYNAMIC_CAST<oCItem>(invSlot->object) )
-		{
-			int ownerInst = owner->GetInstance();
-			if ( item->IsOwned(ownerInst, 0) )
-				return item;
-		}
-	}
-	return nullptr;
-}
 
 bool oCNpc::IsInvSlotAvailable(zSTRING const& slotName)
 {

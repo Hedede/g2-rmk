@@ -1159,6 +1159,9 @@ public:
 		return states.IsInState(funcInst);
 	}
 
+
+	bool IsConditionValid() const;
+
 	bool IsUnconscious() const
 	{
 		return states.IsInState(NPC_AISTATE_UNCONSCIOUS); // -4
@@ -1166,7 +1169,7 @@ public:
 
 	bool IsFadingAway() const
 	{
-		return states.IsInState(-5);
+		return states.IsInState(NPC_AISTATE_FADEAWAY); // -5
 	}
 
 	bool IsDead() const

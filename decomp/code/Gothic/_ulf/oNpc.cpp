@@ -7,6 +7,205 @@ int playerPercAssessStopMagic = -1;
 
 zCArray<int> s_npc_VarReferenceList(1200);
 
+void oCNpc::ResetToHumanAI()
+{
+	if (callback_ai != human_ai)
+	{
+		if (human_ai)
+		{
+			human_ai->Release();
+			human_ai = nullptr;
+		}
+
+		human_ai = zDYNAMIC_CAST<oCAIHuman*>(callback_ai);
+	}
+}
+
+void oCNpc::SetEnemy(oCNpc* e)
+{
+	if (e && e == enemy && e->IsConditionValid())
+	{
+		return;
+	}
+
+	if (enemy)
+	{
+		enemy->Release();
+		enemy = nullptr;
+	}
+
+	if (this == e)
+	{
+		zINFO(5, "U: NPC: NPC attacks himself !");
+	}
+	else if (e && e->IsConditionValid())
+	{
+		enemy = e;
+		enemt->AddRef();
+	}
+}
+
+oCNpc* oCNpc::GetNextEnemy()
+{
+	if (enemy && enemy->IsConditionValid()) // was inlined
+	{
+		return enemy;
+	}
+
+	oCNpc* found  = nullptr;
+	float minDist = FLT_MAX;
+	for (zCVob* vob : vobList)
+	{
+		if (auto npc = zDYNAMIC_CAST<oCNpc*>(vob))
+		{
+			if (npc == this)
+				continue;
+			if (npc->IsInGlobalCutscene()) // was inlined
+				continue;
+			if (GetAttitude(npc) == ATT_HOSTILE && npc->IsConditionValid())
+			{
+				float dist = GetDistanceToVob2(npc);
+				if (dist < minDist)
+				{
+					minDist = dist;
+					found = npc;
+				}
+			}
+		}
+	}
+	setEnemy(found);
+	return found;
+}
+
+zBOOL oCNpc::IsConditionValid()
+{
+	// everything was inlined
+	if (!IsDead() && !IsUnconscious() && !IsFadingAway())
+	{
+		if (IsSpellActive(SPL_IceCube) ||
+		    IsSpellActive(SPL_Whirlwind) ||
+		    IsSpellActive(SPL_GreenTentacle) ||
+		    IsSpellActive(SPL_IceWave) ||
+		    IsSpellActive(SPL_Pyrokinesis) ||
+		    IsSpellActive(SPL_SuckEnergy))
+		{
+			return false;
+		}
+		return true;
+	}
+
+	return false;
+}
+
+zBOOL oCNpc::IsInFightFocus(zCVob *target)
+{
+	 if (target)
+	 {
+		 float azi, elev
+		 GetAngles(target, azi, elev);
+		 if ( abs(azi) < 30 && abs(elev) < 50 &&
+		      GetDistanceToVob2(target) < 9000000.0 )
+		 {
+			 return 1;
+		 }
+	 }
+
+	 return 0;
+}
+
+oCItem* oCNpc::HasEquippedStolenItem(oCNpc *owner)
+{
+	if (auto item = GetWeapon()) // was inlined
+	{
+		int ownerInst = owner->GetInstance();
+		if ( item->IsOwned(ownerInst, 0) )
+			return item;
+	}
+
+	// doesn't make a whole lot of sense
+	//
+	// GetInvSlot takes a name, not a number,
+	// looks like developer got burned by his own implicit string conversions
+	// (either that, or GetInvSlot changed between versions)
+	for (int i = 0; i < invSlots.GetSize(); ++i)
+	{
+		auto invSlot = GetInvSlot(i); // was inlined
+		if (!invSlot)
+			continue;
+		if ( auto item = zDYNAMIC_CAST<oCItem>(invSlot->object) )
+		{
+			int ownerInst = owner->GetInstance();
+			if ( item->IsOwned(ownerInst, 0) )
+				return item;
+		}
+	}
+	return nullptr;
+}
+
+// appears to be unused
+void oCNpc::Burn(int damage, float timems)
+{
+	zCParticleFX *pfx = nullptr;
+	if ( damage > 0 && !fireVob )
+	{
+		pfx = new zCParticleFX;
+
+		zCVob* vob = new zCVob;
+		vob->SetVobName("Particle_Test_Vob");
+		vob->SetVisual(pfx);
+		pfx->SetAndStartEmitter("FIRE_SMOKE_ONCE", 0);
+		pfx->flags.2 = true; // dontKillPFXWhenDone
+
+		vob->SetCollDetStat(false);
+		vob->SetCollDetDyn(false);
+
+		vob->SetPositionWorld(this->GetPositionWorld());
+		homeWorld->AddVobAsChild(vob, this);
+		vob->SetPositionWorld(this->GetPositionWorld());
+
+		fireVob = vob;
+
+		pfx->Release();
+	}
+
+	if ( damage > fireDamage )
+	{
+		fireDamageTimer = 0;
+		fireDamage = damage;
+	}
+
+	SetBodyStateModifier(BS_MOD_BURNING);
+}
+
+void oCNpc::StopBurn()
+{
+	zCParticleFX *pfx = nullptr;
+	if (fireVob && homeWorld)
+	{
+		pfx = new zCParticleFX;
+
+		zCVob* vob = new zCVob;
+		vob->SetVobName("Particle_Test_Vob");
+		vob->SetVisual(pfx);
+		pfx->SetAndStartEmitter("FIRE", 0);
+
+		vob->SetCollDetStat(false);
+		vob->SetCollDetDyn(false);
+
+		vob->SetPositionWorld(this->GetPositionWorld());
+		homeWorld->AddVobAsChild(vob, this);
+		vob->SetPositionWorld(this->GetPositionWorld());
+
+		fireDamageTimer = 0;
+		fireDamage      = 0;
+
+		zCLEAR(fireVob);
+		zRELEASE(pfx);
+	}
+
+	ClearBodyStateModifier(BS_MOD_BURNING);
+}
+
 void oCNpc::ClearPerceptionLists()
 {
 	if (focus_vob)

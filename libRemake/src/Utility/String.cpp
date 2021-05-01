@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <limits>
 #include <cstdlib>
+#include <charconv>
+
 template<>
 bool try_parse(string_view in, double& out)
 {
@@ -23,10 +25,8 @@ bool try_parse(string_view in, int& out)
 template<>
 bool try_parse(string_view in, long& out)
 {
-	char const* begin = in.data();
-	char* end;
-	out = strtol(begin, &end, 0);
-	return (out != 0) || (end != begin);
+	auto result = std::from_chars(in.data(), in.data() + in.size(), out);
+	return result.ec == std::errc();
 }
 
 template<>

@@ -197,7 +197,7 @@ private:
 	static int Sort_Routine(TObjectRoutine* entry1, TObjectRoutine* entry2)
 	{
 		if (entry1->hour >= entry2->hour) {
-			if (entry1->hour1 > entry2->hour || entry1->min >= entry2->min)
+			if (entry1->hour > entry2->hour || entry1->min >= entry2->min)
 				return 1;
 			return -1;
 		}
@@ -355,11 +355,13 @@ oCGame::oCGame()
 	debugAllInstances = zoptions->ReadBool(zOPT_SEC_INTERNAL, "debugAllInstances", 0);
 	if ( !debugChannels ) {
 		auto channels = zoptions->ReadString(zOPT_SEC_INTERNAL, "debugChannels", 0);
-		for (size_t i = 1; !word.IsEmpty(); ++i) {
-			auto word = channels.PickWord(i, ",; ", ",; ");
+		size_t  i = 1;
+		zSTRING word = channels.PickWord(i++, ",; ", ",; ");
+		while (!word.isEmpty()) {
 			auto chan = word.ToLong();
 			if ( chan >= 1 && chan <= 32 )
 				debugChannels |= 1 << (chan - 1);
+			word = channels.PickWord(i++, ",; ", ",; ");
 		}
 	}
 }

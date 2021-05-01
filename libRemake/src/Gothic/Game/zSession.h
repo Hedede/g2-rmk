@@ -111,23 +111,37 @@ struct zCSession : zCInputCallback {
 	}
 
 
-	zCCSManager*  csMan    = 0;
-	oCWorld*      world    = 0;
-	zCCamera*     camera   = 0;
-	zCAICamera*   aiCam    = 0;
-	zCVob*        camVob   = 0;
-	zCView*       viewport = 0;
+	zCCSManager*  csMan    = nullptr;
+	oCWorld*      world    = nullptr;
+	zCCamera*     camera   = nullptr;
+	zCAICamera*   aiCam    = nullptr;
+	zCVob*        camVob   = nullptr;
+	zCView*       viewport = nullptr;
 };
 
 
 #include <Gothic/Types/zVEC3.h>
 #include <Gothic/Types/zArray.h>
 
-struct TObjectRoutine;
+struct TObjectRoutine {
+	~TObjectRoutine() = default;
+
+	void Release()
+	{
+		delete this;
+	}
+
+	zSTRING objectName;
+	int hour;
+	int min;
+	int state;
+	int type;
+};
+
 struct TObjectRoutineList {
 	void *compareFunc;
-	TObjectRoutine *data;
-	TObjectRoutineList *next;
+	TObjectRoutine *data     = nullptr;
+	TObjectRoutineList *next = nullptr;
 };
 
 struct oCSavegameManager;

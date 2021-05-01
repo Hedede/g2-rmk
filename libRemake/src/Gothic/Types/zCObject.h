@@ -22,13 +22,14 @@ struct zCObject {
 
 	~zCObject()
 	{
-		reinterpret_cast<zCObject_vt*>(_vtab)->dtor(this,1);
+		thiscall(0x5A8C50, this);
 	}
 
 	void Release()
 	{
 		if (1 >= refCtr--)
-			delete this;
+			reinterpret_cast<zCObject_vt*>(_vtab)->dtor(this,1);
+			//delete this;
 	}
 
 	zSTRING const& GetObjectName() const

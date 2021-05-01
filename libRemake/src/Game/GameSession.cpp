@@ -109,12 +109,57 @@ static zCSession_vt* init_vt(zCSession_vt* from)
 	return &oGameVt;
 }
 
+static int Sort_Routine(TObjectRoutine* entry1, TObjectRoutine* entry2)
+{
+	if (entry1->hour > entry2->hour)
+		return 1;
+
+	if (entry1->hour == entry2->hour && entry1->min >= entry2->min)
+		return 1;
+
+	return -1;
+}
+
+#include <Hook/size_checker.h>
+CHECK_SIZE(zCSession, 0x1C);
+CHECK_SIZE(oCGame, 0x18C);
+
+#include <aw/utility/string/split.h>
+#include <Types/string_view.h>
+#include <Utility/String.h>
 oCGame::oCGame() : zCSession()
 {
-	Thiscall<void(oCGame*)> ctor{0x6BF810};
-	ctor(this);
-	static zCSession_vt* cvt = init_vt((zCSession_vt*)_vtab);
+	static zCSession_vt* cvt = init_vt((zCSession_vt*)(0x83C28C));
 	_vtab = cvt;
+
+	for (auto& v : array_view_enabled)
+		v = 1;
+
+	game_testmode = zoptions->Parm("DEVMODE");
+	game_testmode = true; // TODO: remove
+
+	objRoutineList.compareFunc = (void*)(0x06CA930)/*Sort_Routine*/;
+
+	SetEnableHandleEvent(true);
+
+	worldEntered    = 0;
+	enterWorldTimer = 0;
+
+	debugChannels     = -(zoptions->ReadBool("internal", "debugAllChannels", 0));
+	debugAllInstances = zoptions->ReadBool("internal", "debugAllInstances", 0);
+	if ( !debugChannels ) {
+		using namespace std::string_view_literals;
+
+		auto channels = zoptions->ReadString("internal", "debugChannels", 0);
+
+		auto words = aw::string::split_by(channels, ",; "sv);
+		for (auto word : words)
+		{
+			long chan = parse(word, 0l);
+			if ( chan >= 1 && chan <= 32 )
+				debugChannels |= 1 << (chan - 1);
+		}
+	}
 }
 
 void oCGame::Init()
@@ -223,11 +268,8 @@ void oCGame::Init()
 	Log("Game", "Initializing done");
 }
 
-#include <aw/utility/string/split.h>
 #include <Gothic/Game/oWorldTimer.h>
 #include <Gothic/Game/oRtnManager.h>
-#include <Types/string_view.h>
-#include <Utility/String.h>
 void oCGame::WorldInit()
 {
 	g2::Log("Game", "WorldInit");

@@ -258,6 +258,11 @@ struct oCGame : zCSession {
 	void CallScriptStartup();
 	void CallScriptInit();
 
+	oCSpawnManager* GetSpawnManager()
+	{
+		return spawnman;
+	}
+
 public:
 	float cliprange = 1600.0;
 	float fogrange  = 400.0;

@@ -26,6 +26,11 @@ struct oCRtnManager {
 		this->world = world;
 	}
 	
+	void UpdateSingleRoutine(oCNpc *npc)
+	{
+		thiscall(0x00775080, this, npc);
+	}
+
 private:
 	int indexStart[3];
 	int indexEnd[3];

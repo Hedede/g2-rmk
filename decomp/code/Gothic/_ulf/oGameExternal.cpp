@@ -6058,7 +6058,6 @@ int Wld_InsertNpc()
 	parser->GetParameter(spawnPoint);
 	parser->GetParameter(instanceNpc);
 
-	instanceNpc = inst;
 	oCSpawnManager* spawnManager = ogame->GetSpawnManager();
 	npc = spawnManager->SpawnNpc(instanceNpc, spawnPoint, 0.0);
 	if ( !npc )
@@ -6070,7 +6069,7 @@ int Wld_InsertNpc()
 		return 0;
 	}
 
-	npc->flags &= 0xFFFFFFEF;
+	npc->flags.respawnOn = false;
 	if ( !ogame->inScriptStartup && npc->states.hasRoutine )
 		rtnMan.UpdateSingleRoutine(npc);
 	return 0;

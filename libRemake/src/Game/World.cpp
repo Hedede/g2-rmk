@@ -169,8 +169,26 @@ void oCWorld::Render(zCCamera *cam)
 	++zCTexAniCtrl__masterFrameCtr;
 }
 
+void zCWorld::DisposeStaticWorld()
+{
+	reinterpret_cast<zCWorld_vt*>(_vtab)->DisposeStaticWorld(this);
+}
+
+void zCWorld::DisposeVobs(zCTree<zCVob>* root)
+{
+	reinterpret_cast<zCWorld_vt*>(_vtab)->DisposeVobs(this, root);
+}
+
 #include <Filesystem.h>
 #include <aw/utility/string/case.h>
+#include <Gothic/System/zArchiver.h>
+#include <Gothic/System/zArchiverFactory.h>
+#include <Gothic/Graphics/zVertexBufferManager.h>
+auto& zvertexBufferMan = Value<zCVertexBufferManager>(0x9A341C);
+auto& zarcFactory = Value<zCArchiverFactory>(0x8D472C);
+
+zTWorldLoadMode& zCWorld::s_worldLoadMode    = Value<zTWorldLoadMode>(0x9A435C);
+zBOOL&           zCWorld::s_bFadeOutFarVerts = Value<zBOOL>(0x8A8AB8);
 bool zCWorld::LoadWorld(std::string_view fileName, zTWorldLoadMode mode)
 {
 	g2::Log("D: WORLD", "Loading WorldFile.. ", fileName);

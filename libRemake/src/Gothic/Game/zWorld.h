@@ -212,7 +212,7 @@ struct zCWorld : zCObject {
 	zCArray<zCVob*> vobHashTable[2048];
 };
 
-
+enum zTVobType {};
 struct oCWorld : zCWorld {
 	zCLASS_DECLARATION(oCWorld);
 public:
@@ -222,6 +222,11 @@ public:
 	bool HasLevelName();
 
 	bool LoadWorld(std::string_view fileName, zTWorldLoadMode mode);
+
+	zCVob* CreateVob(int vobType, int instanceId)
+	{
+		return reinterpret_cast<zCWorld_vt*>(_vtab)->CreateVob(this, vobType, instanceId);
+	}
 
 	zSTRING worldFilename;
 	zSTRING worldName;

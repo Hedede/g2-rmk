@@ -56,7 +56,7 @@ int zCPar_SymbolTable::Search(zSTRING const& name, int begin, int end)
 
 int zCPar_SymbolTable::GetIndex(zSTRING const& name)
 {
-	return Search(name, 0, table.size() - 1);
+	return Search(name, 0, table.size() - 1); // was inlined
 }
 
 int zCPar_SymbolTable::GetIndex(zSTRING const& name, int index)
@@ -215,4 +215,31 @@ void zCPar_SymbolTable::SetSize(int size)
 {
 	table.AllocAbs(size);
 	tablesort.AllocAbs(size);
+}
+
+int zCPar_SymbolTable::Insert(zCPar_Symbol *symbol)
+{
+	int index = Search(symbol); // was inlined
+
+	if (index < 0)
+	{
+		cur_table = this;
+		InsertEnd(symbol); // was inlined?
+		return true;
+	}
+
+	return false;
+}
+
+void zCPar_SymbolTable::InsertEnd(zCPar_Symbol *symbol)
+{
+	cur_table = this;
+	table.Insert(symbol);
+	tableSort.Insert(table.GetNumInArray() - 1);
+	symbol->AllocSpace();
+	if (!firstsym)
+		firstsym = symbol;
+	if (lastsym)
+		lastsym->next = symbol;
+	lastsym = symbol;
 }

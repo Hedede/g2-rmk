@@ -51,6 +51,7 @@ struct zCPar_Symbol {
 	void SetName(std::string const& name)
 	{
 		this->name = name;
+		this->name.Upper();
 	}
 
 	void SetType(zPAR_TYPE type)
@@ -255,10 +256,13 @@ struct zCParser {
 		return call(this);
 	}
 
-	int PopString()
+	std::string PopString()
 	{
-		Thiscall<int(zCParser*)> call{0x791940};
-		return call(this);
+		Thiscall<zSTRING*(zCParser*)> call{0x791940};
+		zSTRING* str = call(this);
+		if (str)
+			return std::string(*str);
+		return "-NOSTRING-";
 	}
 
 	void Reset()
@@ -332,6 +336,7 @@ struct zCParser {
 
 	void GetParameter(std::string& value)
 	{
+		//g2::Log("PARSER","Stack ptr: ", datastack.sptr);
 		value = PopString();
 	}
 
@@ -353,6 +358,11 @@ struct zCParser {
 	void SetProgressBar(zCViewProgressBar* pb)
 	{
 		progressBar = pb;
+	}
+
+	void SetStopOnError(bool stop)
+	{
+		stop_on_error = stop;
 	}
 
 private:

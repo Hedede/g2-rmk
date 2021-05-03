@@ -65,6 +65,7 @@ void zCParser::DefineExternal(std::string const& name, int (*func)(), zPAR_TYPE 
 	if ( !symtab.Insert(funcsym) ) {
 		if ( !compiled ) {
 			//TODO: Error();
+			//right now we can't, because we are abusing it
 			g2::Warning("Parser", "Redefined External ", name);
 			return;
 		}

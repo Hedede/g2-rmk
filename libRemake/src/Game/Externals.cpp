@@ -1,5 +1,5 @@
-#include <Gothic/Script/zParser.h>
 #include <Logging/Log.h>
+#include <Gothic/Script/zParser.h>
 #include <Gothic/Types/zVEC3.h>
 #include <Gothic/Game/zSession.h>
 #include <Gothic/Game/oSpawnManager.h>
@@ -10,10 +10,14 @@
 #include <Gothic/Game/oNpc.h>
 #include <ZenGin/zRigidBody.h>
 
+zCParser*& cur_parser = Value<zCParser*>(0xAB628C);
+
 zCParser& GetParser()
 {
-	return *reinterpret_cast<zCParser*>(0xAB628C);
+	return *cur_parser;
 }
+
+auto VOB_TYPE_ITEM = 0x81;
 
 int Wld_InsertItem()
 {
@@ -27,7 +31,10 @@ int Wld_InsertItem()
 	parser.GetParameter(instanceItem);
 
 	auto world = ogame->GetWorld();
+	//auto vob = world->CreateVob(VOB_TYPE_ITEM, instanceItem);
 	auto vob = oCItem::CreateItem(instanceItem);
+
+	g2::Log("Wld_InsertItem", "insert item: ", instanceItem, " at: ", insertPoint);
 	if ( vob ) {
 		zVEC3 pos;
 		zCWaypoint* wp = world->wayNet->GetWaypoint(insertPoint);
@@ -38,17 +45,17 @@ int Wld_InsertItem()
 			if ( posVob ) {
 				pos = posVob->GetPositionWorld();
 			} else {
-				g2::Warning("Wld_InsertItemGravity", "Position-Vob ", insertPoint, " not found.");
+				g2::Warning("Wld_InsertItem", "Position-Vob ", insertPoint, " not found.");
 			}
 		}
 		vob->SetPositionWorld(pos);
 		world->AddVob(vob);
-		vob->GetRigidBody()->ApplyImpulseCM({0.0, 0.0, -100.0});
+		//vob->GetRigidBody()->ApplyImpulseCM({0.0, 0.0, -100.0});
 		vob->Release();
 	} else {
 		auto sym = parser.GetSymbol(instanceItem);
 		std::string name = sym ? std::string(sym->name) : "[UNKNOWN]";
-		g2::Warning("Wld_InsertItemGravity()", "item could not be inserted: itemname: ", name, ", position: ", insertPoint);
+		g2::Warning("Wld_InsertItem", "item could not be inserted: itemname: ", name, ", position: ", insertPoint);
 	}
 	return 0;
 }
@@ -74,6 +81,8 @@ int Wld_InsertNpc()
 		return 0;
 	}
 
+	g2::Log("Wld_InsertNpc()", "insert npc: ", std::string(npc->name[0]));
+
 	npc->flags.respawnOn = 0;
 	if ( !ogame->inScriptStartup && npc->states.hasRoutine )
 		rtnMan.UpdateSingleRoutine(npc);
@@ -83,9 +92,14 @@ int Wld_InsertNpc()
 
 void DefineExternals2(zCParser& parser)
 {
+	parser.SetStopOnError(false);
 	g2::Log("Parser", "Registering externals");
 	parser.DefineExternal(
 		"Wld_InsertItem", Wld_InsertItem,
+		zPAR_TYPE_VOID,
+		{zPAR_TYPE_INT, zPAR_TYPE_STRING});
+	parser.DefineExternal(
+		"Wld_InsertNpc", Wld_InsertNpc,
 		zPAR_TYPE_VOID,
 		{zPAR_TYPE_INT, zPAR_TYPE_STRING});
 }

@@ -8,6 +8,7 @@
 
 class oCVisualFX;
 class oCItemContainer;
+class zCWaypoint;
 
 struct TNpcSlot
 {
